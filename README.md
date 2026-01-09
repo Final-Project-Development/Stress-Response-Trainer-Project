@@ -1,7 +1,8 @@
 # VR Stress Response Trainer
 
 **Project Number: 26-1-D-18** 
-**Braude College of Engineering | Software Engineering Department**
+**Braude College of Engineering**
+**Software Engineering Department**
 
 ## 📖 Overview
 
@@ -15,6 +16,8 @@ The project utilizes a **Distributed Data Pipeline** across four primary nodes t
 2. **Gateway Node (Android App):** Intercepts data via BLE and relays it to the workstation over Wi-Fi/Serial.
 3. **Processing Node (Unity Engine):** The central hub that runs the **SCI (Stress Change Index) Algorithm** to analyze stress levels against a baseline.
 4. **Visualization Node (VR Headset):** Renders immersive scenarios (Indoor Survival & First Aid) and provides visual feedback.
+   
+<img width="987" height="189" alt="image" src="https://github.com/user-attachments/assets/1fc7485d-1689-4361-a11c-f613639c2a9d" />
 
 ## 🛠 Tech Stack
 
