@@ -21,7 +21,7 @@ The project utilizes a **Distributed Data Pipeline** across four primary nodes t
 * **Game Engine:** Unity 3D (C#).
 * **VR Toolkit:** XR Interaction Toolkit & OpenXR.
 * **Mobile:** Android SDK
-* **Hardware:** Meta Quest , Smartwatch.
+* **Hardware:** VR Headset , Smartwatch.
 
 ## 👥 Authors
 
