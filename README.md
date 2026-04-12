@@ -4,6 +4,11 @@
 **Braude College of Engineering**
 **Software Engineering Department**
 
+## Repository layout
+
+* **`Phase A/`** — prototype deliverables from the previous semester (presentation, PDF, video).
+* **`Phase B/`** — current **Unity project**. Open the **`Phase B`** folder in Unity Hub as the project root (not the repository root).
+
 ## 📖 Overview
 
 The **VR Stress Response Trainer** is an immersive simulation platform designed to enhance self-regulation and cognitive functioning under extreme pressure. Inspired by real-world emergency events, the system monitors physiological markers (HR and HRV) in real-time to create a personalized stress profile and provide actionable biofeedback.
