@@ -6,8 +6,8 @@
 
 ## Repository layout
 
-* **`Phase A/`** — prototype deliverables from the previous semester (presentation, PDF, video).
-* **`Phase B/`** — current **Unity project**. Open the **`Phase B`** folder in Unity Hub as the project root (not the repository root).
+* **`Phase A/`** - prototype deliverables from the previous semester.
+* **`Phase B/`** - Unity project.
 
 ## 📖 Overview
 
