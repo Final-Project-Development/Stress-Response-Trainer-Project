@@ -7,6 +7,20 @@ public class WoundedMan : MonoBehaviour
     public KeyCode step2Key = KeyCode.Alpha2;
     public KeyCode step3Key = KeyCode.Alpha3;
 
+    [Header("Wounded animation (Mixamo)")]
+    [Tooltip("Animator on the wounded character. If empty, tries to find one on this object/children.")]
+    public Animator woundedAnimator;
+    [Tooltip("Trigger fired when player presses E to start/remind first aid.")]
+    public string startAidTrigger = "FirstAidStart";
+    [Tooltip("Trigger fired when step 1 key is pressed correctly.")]
+    public string step1Trigger = "FirstAidStep1";
+    [Tooltip("Trigger fired when step 2 key is pressed correctly.")]
+    public string step2Trigger = "FirstAidStep2";
+    [Tooltip("Trigger fired when step 3 key is pressed correctly.")]
+    public string step3Trigger = "FirstAidStep3";
+    [Tooltip("Optional trigger fired when all steps are complete.")]
+    public string completeTrigger = "FirstAidComplete";
+
     private GameManager gameManager;
     private bool helped = false;
     private bool treatmentStarted = false;
@@ -15,6 +29,9 @@ public class WoundedMan : MonoBehaviour
     void Start()
     {
         gameManager = FindObjectOfType<GameManager>();
+
+        if (woundedAnimator == null)
+            woundedAnimator = GetComponentInChildren<Animator>();
     }
 
     void Update()
@@ -25,6 +42,13 @@ public class WoundedMan : MonoBehaviour
         KeyCode expected = GetExpectedKey();
         if (Input.GetKeyDown(expected))
         {
+            if (currentStep == 0)
+                PlayAnimationTrigger(step1Trigger);
+            else if (currentStep == 1)
+                PlayAnimationTrigger(step2Trigger);
+            else
+                PlayAnimationTrigger(step3Trigger);
+
             currentStep++;
             if (currentStep >= 3)
             {
@@ -51,11 +75,13 @@ public class WoundedMan : MonoBehaviour
         {
             treatmentStarted = true;
             currentStep = 0;
+            PlayAnimationTrigger(startAidTrigger);
             ShowStepInstruction();
             return;
         }
 
         // If E is pressed again during treatment, remind the player what key is expected.
+        PlayAnimationTrigger(startAidTrigger);
         ShowStepInstruction();
     }
 
@@ -88,6 +114,7 @@ public class WoundedMan : MonoBehaviour
     {
         helped = true;
         treatmentStarted = false;
+        PlayAnimationTrigger(completeTrigger);
 
         if (gameManager != null)
             gameManager.OnFirstAidFinished();
@@ -98,6 +125,14 @@ public class WoundedMan : MonoBehaviour
             rend.material.color = Color.green;
 
         Debug.Log("First aid sequence completed.");
+    }
+
+    private void PlayAnimationTrigger(string triggerName)
+    {
+        if (woundedAnimator == null || string.IsNullOrWhiteSpace(triggerName))
+            return;
+
+        woundedAnimator.SetTrigger(triggerName);
     }
 
     private static string FormatKey(KeyCode key)

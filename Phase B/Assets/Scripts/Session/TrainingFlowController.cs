@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -45,6 +46,15 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject safetyWarningPanel;
     public TextMeshProUGUI safetyWarningText;
     [TextArea] public string stressWarningMessage = "Warning: this simulation contains stress stimuli (alarm audio, time pressure, emergency context). You can pause at any time with Esc and quit safely.";
+
+    [Header("Safety warning presentation")]
+    [Tooltip("If true, the warning is a centered card instead of stretching across the whole canvas.")]
+    public bool safetyWarningUseCenterCard = true;
+    public Vector2 safetyWarningCardSize = new Vector2(680f, 420f);
+    public Color safetyWarningCardColor = new Color(0.32f, 0.11f, 0.13f, 0.98f);
+    [Tooltip("Dark overlay behind the card so the scene stays visible but de-emphasized.")]
+    public bool safetyWarningShowDimBackdrop = true;
+    public Color safetyWarningDimColor = new Color(0f, 0f, 0f, 0.55f);
 
     [Header("Optional: hide gameplay until mission starts")]
     public GameObject simulation1GameplayRoot;
@@ -100,11 +110,38 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI missionBriefingBodyText;
     public TextMeshProUGUI calibrationStatusText;
     public TextMeshProUGUI resultsSummaryText;
+    [Tooltip("Optional: when both Sim 1 metrics + recommendations are set, the summary is split into two columns.")]
+    public TextMeshProUGUI sim1ResultsMetricsText;
+    public TextMeshProUGUI sim1ResultsRecommendationsText;
     public TextMeshProUGUI sim2BriefingBodyText;
     public TextMeshProUGUI sim2ResultsSummaryText;
+    [Tooltip("Optional: when both Sim 2 metrics + recommendations are set, the summary is split into two columns.")]
+    public TextMeshProUGUI sim2ResultsMetricsText;
+    public TextMeshProUGUI sim2ResultsRecommendationsText;
     public TextMeshProUGUI simulationActiveHudText;
     public SimpleStressLineGraph sim2HrvResultsGraph;
     public float sim2HrvGraphMaxDisplay = 100f;
+
+    [Header("Results two-column layout")]
+    [Tooltip("Horizontal gap between the metrics and recommendations columns (world space in canvas units).")]
+    public float resultsColumnGap = 20f;
+
+    [Header("Results screen readability")]
+    [Tooltip("Darken full-screen results panels and add card backgrounds behind column text.")]
+    public bool applyResultsReadabilityStyle = true;
+    [Tooltip("Full-panel tint (simulates a modal overlay over the 3D view).")]
+    public Color resultsScreenDimColor = new Color(0.02f, 0.04f, 0.08f, 0.82f);
+    [Tooltip("Background behind each metrics / recommendations column.")]
+    public Color resultsCardColor = new Color(0.07f, 0.09f, 0.13f, 0.96f);
+    public Color resultsColumnTextColor = new Color(0.93f, 0.95f, 1f, 1f);
+    [Tooltip("Extra horizontal inset so text does not touch screen edges (increase if text clips on world-space canvas).")]
+    public float resultsExtraSideMargin = 72f;
+    [Tooltip("Extra space from the top so columns sit below the SCI graph / header area (Sim 1).")]
+    public float resultsSim1TopInset = 260f;
+    [Tooltip("Extra space from the top for Sim 2 results (HRV graph).")]
+    public float resultsSim2TopInset = 220f;
+    [Tooltip("Padding between card edge and text inside each column.")]
+    public float resultsCardInnerPadding = 20f;
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
@@ -185,6 +222,7 @@ public class TrainingFlowController : MonoBehaviour
     private bool _sim2Subscribed;
     private bool _paused;
     private PendingStart _pendingStart = PendingStart.None;
+    private GameObject _safetyWarningDimBackdrop;
 
     private enum PendingStart
     {
@@ -195,8 +233,14 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
+        EnsureRuntimeResultsSplitTexts();
+
         if (autoPolishUi)
             ApplyUiPolish();
+
+        SetupResultsColumnLayouts();
+
+        ApplySafetyWarningCardLayout();
 
         ApplyDefaultCopyToUi();
         ApplyPhaseUI();
@@ -209,7 +253,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(gatewayDisconnectWarningRoot, false);
         SetHudVisible(false);
         SetActiveSafe(pausePanel, false);
-        SetActiveSafe(safetyWarningPanel, false);
+        SetSafetyWarningVisible(false);
         SetSimulation2Status(sim2BriefingBody);
     }
 
@@ -357,34 +401,68 @@ public class TrainingFlowController : MonoBehaviour
         if (resultsGraph != null && recorder != null)
             resultsGraph.SetFromSciPoints(recorder.SciHistory);
 
-        if (resultsSummaryText != null && physiology != null && recorder != null)
+        if (physiology != null && recorder != null)
         {
             float peakSci = recorder.SciHistory.Count > 0 ? MaxSci(recorder.SciHistory) : 0f;
             float meanSci = recorder.SciHistory.Count > 0 ? MeanSci(recorder.SciHistory) : 0f;
             var peakBand = StressChangeIndexCalculator.Classify(peakSci);
             SessionHistoryStore.UpdateAfterSim1(recorder.SciHistory, physiology.HrvBaselineMs, recorder.sampleIntervalSeconds);
-            string tips = StressRecommendations.BuildFromSciHistory(recorder.SciHistory);
             string nextStage = StressRecommendations.BeforeNextStageBreathingTip();
 
-            var sb = new StringBuilder();
-            sb.AppendLine("Simulation 1 — Results");
-            sb.AppendLine();
-            sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
-            sb.AppendLine(
-                "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
-            sb.AppendLine();
-            sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
-            sb.AppendLine($"Average SCI: {meanSci:F1}%");
-            sb.AppendLine($"Samples: {recorder.SciHistory.Count}");
-            sb.AppendLine();
-            sb.AppendLine("Recommendations:");
-            sb.AppendLine(tips);
-            sb.AppendLine();
-            sb.AppendLine(nextStage);
-            resultsSummaryText.text = sb.ToString();
+            if (UseSim1SplitColumns())
+            {
+                if (resultsSummaryText != null)
+                    resultsSummaryText.gameObject.SetActive(false);
+
+                var metrics = new StringBuilder();
+                metrics.AppendLine("<b>Results</b>");
+                metrics.AppendLine();
+                metrics.AppendLine("<color=#B8D4EE>Simulation 1</color>");
+                metrics.AppendLine();
+                metrics.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
+                metrics.AppendLine(
+                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
+                metrics.AppendLine();
+                metrics.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
+                metrics.AppendLine($"Average SCI: {meanSci:F1}%");
+                metrics.AppendLine($"Samples: {recorder.SciHistory.Count}");
+
+                var rec = new StringBuilder();
+                rec.AppendLine("<b>Recommendations</b>");
+                rec.AppendLine();
+                rec.AppendLine(StressRecommendations.BuildBehavioralTips(recorder.SciHistory));
+                rec.AppendLine();
+                rec.AppendLine(nextStage);
+
+                sim1ResultsMetricsText.text = metrics.ToString().TrimEnd();
+                sim1ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+            }
+            else if (resultsSummaryText != null)
+            {
+                resultsSummaryText.gameObject.SetActive(true);
+                string tips = StressRecommendations.BuildFromSciHistory(recorder.SciHistory);
+
+                var sb = new StringBuilder();
+                sb.AppendLine("Simulation 1 — Results");
+                sb.AppendLine();
+                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
+                sb.AppendLine(
+                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
+                sb.AppendLine();
+                sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
+                sb.AppendLine($"Average SCI: {meanSci:F1}%");
+                sb.AppendLine($"Samples: {recorder.SciHistory.Count}");
+                sb.AppendLine();
+                sb.AppendLine("Recommendations:");
+                sb.AppendLine(tips);
+                sb.AppendLine();
+                sb.AppendLine(nextStage);
+                resultsSummaryText.text = sb.ToString();
+            }
         }
 
         ApplyPhaseUI();
+        FinalizeResultsScreenPresentation(true);
     }
 
     private static float MaxSci(System.Collections.Generic.IReadOnlyList<float> list)
@@ -448,14 +526,14 @@ public class TrainingFlowController : MonoBehaviour
         MovePlayerToSpawn(gateSpawnPoint, gateSpawnUseWorldCoordinates, gateSpawnWorldPosition, gateSpawnWorldEuler);
         SetActiveSafe(highStressWarningRoot, false);
         SetActiveSafe(gatewayDisconnectWarningRoot, false);
-        SetActiveSafe(safetyWarningPanel, false);
+        SetSafetyWarningVisible(false);
         SetHudVisible(false);
         ApplyPhaseUI();
     }
 
     public void UI_ConfirmSafetyWarning()
     {
-        SetActiveSafe(safetyWarningPanel, false);
+        SetSafetyWarningVisible(false);
         var action = _pendingStart;
         _pendingStart = PendingStart.None;
 
@@ -468,7 +546,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_CancelSafetyWarning()
     {
         _pendingStart = PendingStart.None;
-        SetActiveSafe(safetyWarningPanel, false);
+        SetSafetyWarningVisible(false);
     }
 
     public void UI_TogglePause() => SetPaused(!_paused);
@@ -563,6 +641,272 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (go != null && go.activeSelf != on)
             go.SetActive(on);
+    }
+
+    private bool UseSim1SplitColumns() =>
+        sim1ResultsMetricsText != null && sim1ResultsRecommendationsText != null;
+
+    private bool UseSim2SplitColumns() =>
+        sim2ResultsMetricsText != null && sim2ResultsRecommendationsText != null;
+
+    private void SetupResultsColumnLayouts()
+    {
+        ApplyResultsPanelsRootDim();
+
+        if (UseSim1SplitColumns() && sim1ResultsPanel != null)
+        {
+            ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
+            if (resultsSummaryText != null)
+                resultsSummaryText.gameObject.SetActive(false);
+        }
+
+        if (UseSim2SplitColumns() && sim2ResultsPanel != null)
+        {
+            ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
+            if (sim2ResultsSummaryText != null)
+                sim2ResultsSummaryText.gameObject.SetActive(false);
+        }
+
+        if (applyResultsReadabilityStyle)
+        {
+            if (!UseSim1SplitColumns() && resultsSummaryText != null)
+                ApplyReadabilityToResultsText(resultsSummaryText);
+            if (!UseSim2SplitColumns() && sim2ResultsSummaryText != null)
+                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
+        }
+    }
+
+    /// <summary>
+    /// If split column TMPs are not wired in the Inspector, clone the existing summary text so the two-column layout works without manual scene edits.
+    /// </summary>
+    private void EnsureRuntimeResultsSplitTexts()
+    {
+        if (sim1ResultsMetricsText == null && sim1ResultsRecommendationsText == null
+            && resultsSummaryText != null && sim1ResultsPanel != null)
+        {
+            sim1ResultsMetricsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
+            sim1ResultsMetricsText.gameObject.name = "ResultsMetricsColumn";
+            sim1ResultsRecommendationsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
+            sim1ResultsRecommendationsText.gameObject.name = "ResultsRecommendationsColumn";
+            sim1ResultsMetricsText.transform.SetAsLastSibling();
+            sim1ResultsRecommendationsText.transform.SetAsLastSibling();
+            resultsSummaryText.gameObject.SetActive(false);
+        }
+
+        if (sim2ResultsMetricsText == null && sim2ResultsRecommendationsText == null
+            && sim2ResultsSummaryText != null && sim2ResultsPanel != null)
+        {
+            sim2ResultsMetricsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
+            sim2ResultsMetricsText.gameObject.name = "Sim2ResultsMetricsColumn";
+            sim2ResultsRecommendationsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
+            sim2ResultsRecommendationsText.gameObject.name = "Sim2ResultsRecommendationsColumn";
+            sim2ResultsMetricsText.transform.SetAsLastSibling();
+            sim2ResultsRecommendationsText.transform.SetAsLastSibling();
+            sim2ResultsSummaryText.gameObject.SetActive(false);
+        }
+    }
+
+    private void ApplyResultsPanelsRootDim()
+    {
+        if (!applyResultsReadabilityStyle)
+            return;
+
+        DimResultsPanelRoot(sim1ResultsPanel);
+        DimResultsPanelRoot(sim2ResultsPanel);
+    }
+
+    private void DimResultsPanelRoot(GameObject panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        var img = panelRoot.GetComponent<Image>();
+        if (img != null)
+        {
+            img.color = resultsScreenDimColor;
+            img.raycastTarget = true;
+        }
+    }
+
+    private void ApplyReadabilityToResultsText(TextMeshProUGUI tmp)
+    {
+        if (tmp == null || !applyResultsReadabilityStyle)
+            return;
+
+        tmp.color = resultsColumnTextColor;
+    }
+
+    private void ConfigureResultsSplitColumns(
+        TextMeshProUGUI leftColumn,
+        TextMeshProUGUI rightColumn,
+        float extraTopInset,
+        Transform panelRoot)
+    {
+        if (leftColumn == null || rightColumn == null || panelRoot == null)
+            return;
+
+        float halfGap = resultsColumnGap * 0.5f;
+        float side = panelSidePadding + resultsExtraSideMargin;
+        float top = panelTopPadding + extraTopInset;
+
+        DestroyLegacyCardBackdropsUnder(panelRoot);
+
+        var leftOuterMin = new Vector2(side, panelBottomPadding);
+        var leftOuterMax = new Vector2(-halfGap, -top);
+        var rightOuterMin = new Vector2(halfGap, panelBottomPadding);
+        var rightOuterMax = new Vector2(-side, -top);
+
+        PlaceColumnInCard(leftColumn, panelRoot, leftOuterMin, leftOuterMax, true);
+        PlaceColumnInCard(rightColumn, panelRoot, rightOuterMin, rightOuterMax, false);
+
+        ApplyReadabilityToResultsText(leftColumn);
+        ApplyReadabilityToResultsText(rightColumn);
+
+        if (leftColumn.transform.parent != null)
+            leftColumn.transform.parent.SetAsLastSibling();
+        if (rightColumn.transform.parent != null)
+            rightColumn.transform.parent.SetAsLastSibling();
+
+        BringPanelButtonsToFront(panelRoot);
+    }
+
+    private void DestroyLegacyCardBackdropsUnder(Transform panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        const string legacyBackdropSuffix = "_CardBackdrop";
+        for (int i = panelRoot.childCount - 1; i >= 0; i--)
+        {
+            var ch = panelRoot.GetChild(i);
+            if (ch.name.EndsWith(legacyBackdropSuffix, StringComparison.Ordinal))
+            {
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(ch.gameObject);
+                else
+                    UnityEngine.Object.DestroyImmediate(ch.gameObject);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Puts column text inside a card with a fixed rect + RectMask2D so TMP wraps inside the column and cannot bleed into the other column.
+    /// </summary>
+    private void PlaceColumnInCard(
+        TextMeshProUGUI tmp,
+        Transform panelRoot,
+        Vector2 outerOffsetMin,
+        Vector2 outerOffsetMax,
+        bool leftHalfOfScreen)
+    {
+        if (tmp == null || panelRoot == null)
+            return;
+
+        float pad = resultsCardInnerPadding;
+        const string cardSuffix = "_ColumnCard";
+
+        Transform cardT = tmp.transform.parent;
+        GameObject cardGo;
+        RectTransform cardRt;
+
+        if (cardT != null && cardT.name.EndsWith(cardSuffix, StringComparison.Ordinal) && cardT.parent == panelRoot)
+        {
+            cardGo = cardT.gameObject;
+            cardRt = cardGo.GetComponent<RectTransform>();
+            var imgEx = cardGo.GetComponent<Image>();
+            if (imgEx != null)
+                imgEx.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
+            if (cardGo.GetComponent<RectMask2D>() == null)
+                cardGo.AddComponent<RectMask2D>();
+        }
+        else
+        {
+            if (tmp.transform.parent != panelRoot)
+                tmp.transform.SetParent(panelRoot, false);
+
+            cardGo = new GameObject(tmp.name + cardSuffix);
+            cardRt = cardGo.AddComponent<RectTransform>();
+            cardGo.transform.SetParent(panelRoot, false);
+            tmp.transform.SetParent(cardRt, false);
+
+            var img = cardGo.AddComponent<Image>();
+            img.sprite = GetUiWhiteSprite();
+            img.type = Image.Type.Simple;
+            img.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
+            img.raycastTarget = false;
+            cardGo.AddComponent<RectMask2D>();
+        }
+
+        cardRt.anchorMin = leftHalfOfScreen ? new Vector2(0f, 0f) : new Vector2(0.5f, 0f);
+        cardRt.anchorMax = leftHalfOfScreen ? new Vector2(0.5f, 1f) : new Vector2(1f, 1f);
+        cardRt.pivot = new Vector2(0.5f, 0.5f);
+        cardRt.offsetMin = outerOffsetMin;
+        cardRt.offsetMax = outerOffsetMax;
+
+        var textRt = tmp.rectTransform;
+        textRt.anchorMin = Vector2.zero;
+        textRt.anchorMax = Vector2.one;
+        textRt.pivot = new Vector2(0.5f, 0.5f);
+        textRt.offsetMin = new Vector2(pad, pad);
+        textRt.offsetMax = new Vector2(-pad, -pad);
+        textRt.localScale = Vector3.one;
+
+        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.richText = true;
+        tmp.margin = Vector4.zero;
+        tmp.alignment = TextAlignmentOptions.TopLeft;
+    }
+
+    private static Sprite _uiWhiteSprite;
+
+    private static Sprite GetUiWhiteSprite()
+    {
+        if (_uiWhiteSprite == null)
+        {
+            var tex = Texture2D.whiteTexture;
+            _uiWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        return _uiWhiteSprite;
+    }
+
+    /// <summary>Re-apply dim/cards after the results panel becomes active (layout was first computed while hidden).</summary>
+    private void FinalizeResultsScreenPresentation(bool simulation1)
+    {
+        if (applyResultsReadabilityStyle)
+            ApplyResultsPanelsRootDim();
+        if (simulation1)
+        {
+            if (UseSim1SplitColumns() && sim1ResultsPanel != null)
+                ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
+            else if (resultsSummaryText != null)
+                ApplyReadabilityToResultsText(resultsSummaryText);
+        }
+        else
+        {
+            if (UseSim2SplitColumns() && sim2ResultsPanel != null)
+                ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
+            else if (sim2ResultsSummaryText != null)
+                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
+        }
+
+        BringPanelButtonsToFront(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
+        Canvas.ForceUpdateCanvases();
+    }
+
+    private static void BringPanelButtonsToFront(Transform panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] != null)
+                buttons[i].transform.SetAsLastSibling();
+        }
     }
 
     private void SetSimulationGameplayState(bool simulation1On, bool simulation2On)
@@ -721,6 +1065,90 @@ public class TrainingFlowController : MonoBehaviour
         ApplyPhaseUI();
     }
 
+    private void ApplySafetyWarningCardLayout()
+    {
+        if (!safetyWarningUseCenterCard || safetyWarningPanel == null)
+            return;
+
+        var cardRt = safetyWarningPanel.GetComponent<RectTransform>();
+        if (cardRt == null)
+            return;
+
+        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRt.pivot = new Vector2(0.5f, 0.5f);
+        cardRt.sizeDelta = safetyWarningCardSize;
+        cardRt.anchoredPosition = Vector2.zero;
+
+        var img = safetyWarningPanel.GetComponent<Image>();
+        if (img != null)
+            img.color = safetyWarningCardColor;
+
+        if (safetyWarningShowDimBackdrop)
+            EnsureSafetyWarningDimBackdrop(cardRt.parent);
+
+        if (safetyWarningText != null)
+        {
+            var tr = safetyWarningText.rectTransform;
+            tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0.5f);
+            tr.pivot = new Vector2(0.5f, 0.5f);
+            tr.anchoredPosition = new Vector2(0f, 48f);
+            tr.sizeDelta = new Vector2(safetyWarningCardSize.x - 48f, 220f);
+            safetyWarningText.enableWordWrapping = true;
+            safetyWarningText.textWrappingMode = TextWrappingModes.Normal;
+            safetyWarningText.alignment = TextAlignmentOptions.Center;
+            safetyWarningText.margin = Vector4.zero;
+        }
+
+        var buttons = safetyWarningPanel.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            var brt = buttons[i].GetComponent<RectTransform>();
+            if (brt == null)
+                continue;
+
+            brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
+            brt.pivot = new Vector2(0.5f, 0.5f);
+            brt.sizeDelta = new Vector2(240f, 52f);
+            string n = buttons[i].gameObject.name.ToLowerInvariant();
+            if (n.Contains("continue"))
+                brt.anchoredPosition = new Vector2(0f, -52f);
+            else if (n.Contains("cancel"))
+                brt.anchoredPosition = new Vector2(0f, -126f);
+        }
+    }
+
+    private void EnsureSafetyWarningDimBackdrop(Transform panelParent)
+    {
+        if (panelParent == null || safetyWarningPanel == null)
+            return;
+
+        if (_safetyWarningDimBackdrop == null)
+        {
+            _safetyWarningDimBackdrop = new GameObject("SafetyWarningDimBackdrop");
+            _safetyWarningDimBackdrop.transform.SetParent(panelParent, false);
+            var dimRt = _safetyWarningDimBackdrop.AddComponent<RectTransform>();
+            dimRt.anchorMin = Vector2.zero;
+            dimRt.anchorMax = Vector2.one;
+            dimRt.offsetMin = Vector2.zero;
+            dimRt.offsetMax = Vector2.zero;
+            var dimImg = _safetyWarningDimBackdrop.AddComponent<Image>();
+            dimImg.sprite = GetUiWhiteSprite();
+            dimImg.color = safetyWarningDimColor;
+            dimImg.raycastTarget = true;
+        }
+
+        int panelIdx = safetyWarningPanel.transform.GetSiblingIndex();
+        _safetyWarningDimBackdrop.transform.SetSiblingIndex(panelIdx);
+    }
+
+    private void SetSafetyWarningVisible(bool visible)
+    {
+        SetActiveSafe(safetyWarningPanel, visible);
+        if (_safetyWarningDimBackdrop != null)
+            SetActiveSafe(_safetyWarningDimBackdrop, visible && safetyWarningShowDimBackdrop);
+    }
+
     private bool ShowSafetyWarningFor(PendingStart startAction)
     {
         if (safetyWarningPanel == null)
@@ -729,7 +1157,7 @@ public class TrainingFlowController : MonoBehaviour
         _pendingStart = startAction;
         if (safetyWarningText != null)
             safetyWarningText.text = stressWarningMessage;
-        SetActiveSafe(safetyWarningPanel, true);
+        SetSafetyWarningVisible(true);
         return true;
     }
 
@@ -748,7 +1176,7 @@ public class TrainingFlowController : MonoBehaviour
         Time.timeScale = paused ? 0f : 1f;
         SetActiveSafe(pausePanel, paused);
         if (paused)
-            SetActiveSafe(safetyWarningPanel, false);
+            SetSafetyWarningVisible(false);
     }
 
     private void SubscribeSimulation2IfNeeded()
@@ -806,8 +1234,38 @@ public class TrainingFlowController : MonoBehaviour
             avgHrv = MeanValue(recorder.HrvHistory);
         }
 
-        if (sim2ResultsSummaryText != null)
+        if (UseSim2SplitColumns())
         {
+            if (sim2ResultsSummaryText != null)
+                sim2ResultsSummaryText.gameObject.SetActive(false);
+
+            var metrics = new StringBuilder();
+            metrics.AppendLine("<b>Results</b>");
+            metrics.AppendLine();
+            metrics.AppendLine("<color=#B8D4EE>Simulation 2</color>");
+            metrics.AppendLine();
+            metrics.AppendLine($"Peak SCI: {peakSci:F1}%");
+            metrics.AppendLine($"Average SCI: {meanSci:F1}%");
+            metrics.AppendLine();
+            metrics.AppendLine("HRV summary (this simulation only):");
+            metrics.AppendLine($"Min HRV: {minHrv:F1} ms");
+            metrics.AppendLine($"Max HRV: {maxHrv:F1} ms");
+            metrics.AppendLine($"Avg HRV: {avgHrv:F1} ms");
+            metrics.AppendLine($"Samples: {(recorder != null ? recorder.HrvHistory.Count : 0)}");
+
+            var rec = new StringBuilder();
+            rec.AppendLine("<b>Recommendations</b>");
+            rec.AppendLine();
+            rec.AppendLine(tips);
+            rec.AppendLine();
+            rec.AppendLine("Press <b>Back To Hub</b> when ready.");
+
+            sim2ResultsMetricsText.text = metrics.ToString().TrimEnd();
+            sim2ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+        }
+        else if (sim2ResultsSummaryText != null)
+        {
+            sim2ResultsSummaryText.gameObject.SetActive(true);
             var sb = new StringBuilder();
             sb.AppendLine("Simulation 2 — Results");
             sb.AppendLine();
@@ -837,6 +1295,7 @@ public class TrainingFlowController : MonoBehaviour
             Debug.LogWarning("Sim2 HRV graph was not rendered. Check sim2HrvResultsGraph reference and recorded HRV samples.");
 
         ApplyPhaseUI();
+        FinalizeResultsScreenPresentation(false);
     }
 
     private static float MinValue(System.Collections.Generic.IReadOnlyList<float> list)
@@ -879,19 +1338,27 @@ public class TrainingFlowController : MonoBehaviour
         StylePanel(sim1CalibrationPanel);
         StylePanel(sim1ResultsPanel);
         StylePanel(sim2BriefingPanel);
+        StylePanel(sim2ResultsPanel);
 
         if (introBodyText != null) introBodyText.fontSize = bodyTextSize;
         if (missionBriefingBodyText != null) missionBriefingBodyText.fontSize = bodyTextSize;
         if (calibrationStatusText != null) calibrationStatusText.fontSize = bodyTextSize;
         if (resultsSummaryText != null) resultsSummaryText.fontSize = bodyTextSize - 2f;
+        if (sim1ResultsMetricsText != null) sim1ResultsMetricsText.fontSize = bodyTextSize - 2f;
+        if (sim1ResultsRecommendationsText != null) sim1ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
         if (sim2BriefingBodyText != null) sim2BriefingBodyText.fontSize = bodyTextSize;
+        if (sim2ResultsSummaryText != null) sim2ResultsSummaryText.fontSize = bodyTextSize - 2f;
+        if (sim2ResultsMetricsText != null) sim2ResultsMetricsText.fontSize = bodyTextSize - 2f;
+        if (sim2ResultsRecommendationsText != null) sim2ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
 
         FixPanelLayoutCollisions(hubPanel, hubConnectionStatusText);
         FixPanelLayoutCollisions(introPanel, introBodyText);
         FixPanelLayoutCollisions(sim1MissionBriefingPanel, missionBriefingBodyText);
         FixPanelLayoutCollisions(sim1CalibrationPanel, calibrationStatusText);
-        FixPanelLayoutCollisions(sim1ResultsPanel, resultsSummaryText);
+        FixPanelLayoutCollisions(sim1ResultsPanel, UseSim1SplitColumns() ? null : resultsSummaryText);
         FixPanelLayoutCollisions(sim2BriefingPanel, sim2BriefingBodyText);
+        if (!UseSim2SplitColumns())
+            FixPanelLayoutCollisions(sim2ResultsPanel, sim2ResultsSummaryText);
     }
 
     private void StylePanel(GameObject panelRoot)
