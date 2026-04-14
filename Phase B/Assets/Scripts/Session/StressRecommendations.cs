@@ -6,19 +6,30 @@ using System.Linq;
 /// </summary>
 public static class StressRecommendations
 {
-    public static string BuildFromSciHistory(IReadOnlyList<float> sciHistory)
+    /// <summary>One-line SCI summary (mean + peak bands). Empty history returns a short placeholder.</summary>
+    public static string BuildStatsSummary(IReadOnlyList<float> sciHistory)
     {
         if (sciHistory == null || sciHistory.Count == 0)
-            return "Complete another session to receive tailored feedback.";
+            return "No SCI samples recorded for this session.";
 
         float peak = sciHistory.Max();
         float mean = sciHistory.Average();
         var peakBand = StressChangeIndexCalculator.Classify(peak);
         var meanBand = StressChangeIndexCalculator.Classify(mean);
+        return
+            $"Average SCI: {mean:F1}% ({StressChangeIndexCalculator.BandLabel(meanBand)}). Peak: {peak:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)}).";
+    }
+
+    /// <summary>Behavioral tips only (no numeric summary). Suited for a dedicated “recommendations” column.</summary>
+    public static string BuildBehavioralTips(IReadOnlyList<float> sciHistory)
+    {
+        if (sciHistory == null || sciHistory.Count == 0)
+            return "Complete another session to receive tailored feedback.";
+
+        float peak = sciHistory.Max();
+        var peakBand = StressChangeIndexCalculator.Classify(peak);
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"Average SCI: {mean:F1}% ({StressChangeIndexCalculator.BandLabel(meanBand)}). Peak: {peak:F1}%.");
-
         if (peakBand == StressChangeIndexCalculator.StressBand.High)
         {
             sb.AppendLine("Under high load, try box breathing (4s in, 4s hold, 4s out) between tasks.");
@@ -35,6 +46,14 @@ public static class StressRecommendations
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    public static string BuildFromSciHistory(IReadOnlyList<float> sciHistory)
+    {
+        if (sciHistory == null || sciHistory.Count == 0)
+            return "Complete another session to receive tailored feedback.";
+
+        return $"{BuildStatsSummary(sciHistory)}\n\n{BuildBehavioralTips(sciHistory)}".TrimEnd();
     }
 
     public static string BeforeNextStageBreathingTip()
