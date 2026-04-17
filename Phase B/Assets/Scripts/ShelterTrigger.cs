@@ -8,7 +8,10 @@ public class ShelterTrigger : MonoBehaviour
 {
     public string playerTag = "Player";
     public bool autoCreateTriggerCollider = true;
-    public Vector3 autoTriggerSize = new Vector3(6f, 3f, 6f);
+    [Tooltip("World-space box size for the trigger when auto-created.")]
+    public Vector3 autoTriggerSize = new Vector3(18f, 14f, 18f);
+    [Tooltip("Local-space center offset (often negative Y for stairs / underground entrance).")]
+    public Vector3 triggerCenter = new Vector3(0f, -4f, 0f);
 
     private GameManager _gameManager;
     private bool _triggered;
@@ -20,17 +23,34 @@ public class ShelterTrigger : MonoBehaviour
 
     void Start()
     {
-        _gameManager = FindObjectOfType<GameManager>();
+        _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
     }
 
     void OnTriggerEnter(Collider other)
     {
         if (_triggered) return;
+        if (_gameManager == null)
+            _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
         if (_gameManager == null) return;
-        if (!other.CompareTag(playerTag)) return;
+        if (!IsPlayerCollider(other)) return;
 
         _triggered = true;
         _gameManager.ReachShelter();
+    }
+
+    private bool IsPlayerCollider(Collider other)
+    {
+        if (other == null) return false;
+        if (other.CompareTag(playerTag)) return true;
+
+        var t = other.transform;
+        while (t != null)
+        {
+            if (t.CompareTag(playerTag)) return true;
+            t = t.parent;
+        }
+
+        return false;
     }
 
     private void EnsureTriggerCollider()
@@ -39,6 +59,7 @@ public class ShelterTrigger : MonoBehaviour
         if (col == null && autoCreateTriggerCollider)
         {
             var box = gameObject.AddComponent<BoxCollider>();
+            box.center = triggerCenter;
             box.size = autoTriggerSize;
             col = box;
         }
