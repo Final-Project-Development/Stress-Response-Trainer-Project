@@ -211,14 +211,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void ReachShelter()
+    /// <returns>True if the shelter objective was completed now; false if prerequisites are not met yet.</returns>
+    public bool ReachShelter()
     {
-        if (_shelterReached) return;
-        if (!_itemsCollectionComplete) return;
+        if (_shelterReached) return false;
+        if (!_itemsCollectionComplete) return false;
 
         _shelterReached = true;
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();
+        return true;
     }
 
     private void TryCompleteSimulation1Goals()
