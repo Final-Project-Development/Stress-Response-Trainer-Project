@@ -124,7 +124,6 @@ public class LoginFlowPanel : MonoBehaviour
         if (statusText == null) return;
         statusText.text = msg;
         statusText.color = isError ? new Color(1f, 0.4f, 0.4f) : new Color(0.7f, 0.95f, 0.75f);
-        // Avoid RTL reversing English login errors; keep RTL for Hebrew (e.g. register flow).
         if (statusText is TextMeshProUGUI tmp)
             tmp.isRightToLeftText = ContainsHebrew(msg);
     }
