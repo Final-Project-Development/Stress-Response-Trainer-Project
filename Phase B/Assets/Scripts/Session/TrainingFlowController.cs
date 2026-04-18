@@ -310,12 +310,19 @@ public class TrainingFlowController : MonoBehaviour
         ApplyPhaseUI();
     }
 
-    /// <summary>Called from <see cref="LoginFlowPanel"/> after successful login.</summary>
+    /// <summary>Called from <see cref="LoginFlowPanel"/> after successful login — returns to Hub only.</summary>
     public void UI_LoginSuccess()
     {
         CurrentPhase = Phase.Gate;
         RefreshHubConnectionStatusText();
         ApplyPhaseUI();
+    }
+
+    /// <summary>After successful login from the Login panel — refresh Hub status for later, then open Intro.</summary>
+    public void UI_CompleteLoginAndStartIntro()
+    {
+        RefreshHubConnectionStatusText();
+        UI_StartIntro();
     }
 
     private void RefreshHubConnectionStatusText()
