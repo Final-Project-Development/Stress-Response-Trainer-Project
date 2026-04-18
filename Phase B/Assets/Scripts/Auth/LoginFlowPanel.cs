@@ -75,13 +75,15 @@ public class LoginFlowPanel : MonoBehaviour
     {
         string email = loginEmail != null ? loginEmail.text : "";
         string pass = loginPassword != null ? loginPassword.text : "";
-        if (LocalAuthStore.TryLogin(email, pass, out string err))
+
+        if (!LocalAuthStore.TryLogin(email, pass, out string err))
         {
-            SetStatus("", false);
-            trainingFlow?.UI_LoginSuccess();
-        }
-        else
             SetStatus(err, true);
+            return;
+        }
+
+        SetStatus("", false);
+        trainingFlow?.UI_CompleteLoginAndStartIntro();
     }
 
     private void OnRegisterClicked()
@@ -122,5 +124,19 @@ public class LoginFlowPanel : MonoBehaviour
         if (statusText == null) return;
         statusText.text = msg;
         statusText.color = isError ? new Color(1f, 0.4f, 0.4f) : new Color(0.7f, 0.95f, 0.75f);
+        // Avoid RTL reversing English login errors; keep RTL for Hebrew (e.g. register flow).
+        if (statusText is TextMeshProUGUI tmp)
+            tmp.isRightToLeftText = ContainsHebrew(msg);
+    }
+
+    private static bool ContainsHebrew(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return false;
+        foreach (char c in s)
+        {
+            if (c >= '\u0590' && c <= '\u05FF')
+                return true;
+        }
+        return false;
     }
 }

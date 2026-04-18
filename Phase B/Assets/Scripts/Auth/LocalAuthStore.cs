@@ -27,6 +27,15 @@ public static class LocalAuthStore
 
     private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
+    /// <summary>Returns whether an account exists for this email (after normalization).</summary>
+    public static bool IsEmailRegistered(string email)
+    {
+        email = NormalizeEmail(email);
+        if (string.IsNullOrEmpty(email))
+            return false;
+        return FindIndex(Load().accounts, email) >= 0;
+    }
+
     public static bool TryRegister(string email, string password, out string error)
     {
         error = null;
@@ -65,7 +74,7 @@ public static class LocalAuthStore
         email = NormalizeEmail(email);
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
-            error = "נא למלא אימייל וסיסמה.";
+            error = "Please enter email and password.";
             return false;
         }
 
@@ -73,14 +82,14 @@ public static class LocalAuthStore
         int i = FindIndex(data.accounts, email);
         if (i < 0)
         {
-            error = "משתמש לא נמצא.";
+            error = "User not registered. Please register before signing in.";
             return false;
         }
 
         string h = HashPassword(email, password);
         if (data.accounts[i].passwordHashHex != h)
         {
-            error = "סיסמה שגויה.";
+            error = "Wrong password.";
             return false;
         }
 
