@@ -1,0 +1,20 @@
+# Unity (any subfolder e.g. Phase B)
+**/Library/
+**/Temp/
+**/Obj/
+**/Logs/
+**/UserSettings/
+**/MemoryCaptures/
+
+# Visual Studio / Rider
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+
+# OS
+.DS_Store
+Thumbs.db

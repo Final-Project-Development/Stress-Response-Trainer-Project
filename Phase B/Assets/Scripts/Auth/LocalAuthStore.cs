@@ -1,0 +1,157 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using UnityEngine;
+
+/// <summary>
+/// Local demo auth: stores accounts on disk (JSON). Not suitable for real security — use a backend for production.
+/// </summary>
+public static class LocalAuthStore
+{
+    private const string FileName = "local_auth_accounts.json";
+
+    [Serializable]
+    private class AccountDto
+    {
+        public string email;
+        public string passwordHashHex;
+    }
+
+    [Serializable]
+    private class FileDto
+    {
+        public List<AccountDto> accounts = new List<AccountDto>();
+    }
+
+    private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
+
+    public static bool TryRegister(string email, string password, out string error)
+    {
+        error = null;
+        email = NormalizeEmail(email);
+        if (string.IsNullOrEmpty(email))
+        {
+            error = "נא להזין אימייל.";
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(password) || password.Length < 4)
+        {
+            error = "סיסמה חייבת להכיל לפחות 4 תווים.";
+            return false;
+        }
+
+        var data = Load();
+        if (FindIndex(data.accounts, email) >= 0)
+        {
+            error = "האימייל כבר רשום.";
+            return false;
+        }
+
+        data.accounts.Add(new AccountDto
+        {
+            email = email,
+            passwordHashHex = HashPassword(email, password)
+        });
+        Save(data);
+        return true;
+    }
+
+    public static bool TryLogin(string email, string password, out string error)
+    {
+        error = null;
+        email = NormalizeEmail(email);
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            error = "נא למלא אימייל וסיסמה.";
+            return false;
+        }
+
+        var data = Load();
+        int i = FindIndex(data.accounts, email);
+        if (i < 0)
+        {
+            error = "משתמש לא נמצא.";
+            return false;
+        }
+
+        string h = HashPassword(email, password);
+        if (data.accounts[i].passwordHashHex != h)
+        {
+            error = "סיסמה שגויה.";
+            return false;
+        }
+
+        PlayerPrefs.SetString("local_auth_last_email", email);
+        PlayerPrefs.Save();
+        return true;
+    }
+
+    public static string GetLastLoggedInEmail()
+    {
+        return PlayerPrefs.GetString("local_auth_last_email", "");
+    }
+
+    public static void Logout()
+    {
+        PlayerPrefs.DeleteKey("local_auth_last_email");
+        PlayerPrefs.Save();
+    }
+
+    private static string NormalizeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return "";
+        return email.Trim().ToLowerInvariant();
+    }
+
+    private static int FindIndex(List<AccountDto> list, string email)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i] != null && list[i].email == email)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private static FileDto Load()
+    {
+        try
+        {
+            if (!File.Exists(FilePath))
+                return new FileDto();
+            string json = File.ReadAllText(FilePath, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(json))
+                return new FileDto();
+            var dto = JsonUtility.FromJson<FileDto>(json);
+            return dto ?? new FileDto();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("LocalAuthStore load failed: " + e.Message);
+            return new FileDto();
+        }
+    }
+
+    private static void Save(FileDto data)
+    {
+        string json = JsonUtility.ToJson(data, true);
+        File.WriteAllText(FilePath, json, Encoding.UTF8);
+    }
+
+    private static string HashPassword(string email, string password)
+    {
+        string salted = email + "::" + password + "::local_auth_v1";
+        using (var sha = SHA256.Create())
+        {
+            byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(salted));
+            var sb = new StringBuilder(bytes.Length * 2);
+            foreach (byte b in bytes)
+                sb.Append(b.ToString("x2"));
+            return sb.ToString();
+        }
+    }
+}
