@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Game flow:
-/// Gate → Intro (narration) → Calibration (60s) → Simulation 1 briefing → Simulation 1 active
+/// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation 1 briefing → Simulation 1 active
 /// → Results 1 → Simulation 2 briefing → Simulation 2 scene.
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
@@ -18,6 +18,7 @@ public class TrainingFlowController : MonoBehaviour
     public enum Phase
     {
         Gate,
+        Login,
         IntroNarration,
         Simulation1Calibration,
         Simulation1MissionBriefing,
@@ -37,6 +38,8 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("UI roots (enable/disable per phase)")]
     public GameObject hubPanel;
+    [Tooltip("Login / Register UI (opened from Hub). Assign a panel with LoginFlowPanel.")]
+    public GameObject loginPanel;
     public GameObject introPanel;
     public GameObject sim1MissionBriefingPanel;
     public GameObject sim1CalibrationPanel;
@@ -261,8 +264,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (hubTitleText != null)
             hubTitleText.text = hubTitle;
-        if (hubConnectionStatusText != null)
-            hubConnectionStatusText.text = hubConnectionStatusDemo;
+        RefreshHubConnectionStatusText();
         if (introBodyText != null)
             introBodyText.text = introNarrationText;
         if (missionBriefingBodyText != null)
@@ -299,6 +301,38 @@ public class TrainingFlowController : MonoBehaviour
 
         UpdateGatewayDisconnectUi();
         UpdateActivePhaseHud();
+    }
+
+    /// <summary>From Hub — opens Login / Register panel.</summary>
+    public void UI_OpenLogin()
+    {
+        CurrentPhase = Phase.Login;
+        ApplyPhaseUI();
+    }
+
+    /// <summary>Called from <see cref="LoginFlowPanel"/> after successful login.</summary>
+    public void UI_LoginSuccess()
+    {
+        CurrentPhase = Phase.Gate;
+        RefreshHubConnectionStatusText();
+        ApplyPhaseUI();
+    }
+
+    private void RefreshHubConnectionStatusText()
+    {
+        if (hubConnectionStatusText == null) return;
+        string email = LocalAuthStore.GetLastLoggedInEmail();
+        if (!string.IsNullOrEmpty(email))
+            hubConnectionStatusText.text = $"מחובר: {email}\n" + hubConnectionStatusDemo;
+        else
+            hubConnectionStatusText.text = hubConnectionStatusDemo;
+    }
+
+    /// <summary>Close login panel and return to Hub without signing in.</summary>
+    public void UI_CancelLogin()
+    {
+        CurrentPhase = Phase.Gate;
+        ApplyPhaseUI();
     }
 
     /// <summary>Gate start button — opens intro panel and optional narration.</summary>
@@ -614,6 +648,7 @@ public class TrainingFlowController : MonoBehaviour
     private void ApplyPhaseUI()
     {
         SetActiveSafe(hubPanel, CurrentPhase == Phase.Gate);
+        SetActiveSafe(loginPanel, CurrentPhase == Phase.Login);
         SetActiveSafe(introPanel, CurrentPhase == Phase.IntroNarration);
         SetActiveSafe(sim1CalibrationPanel, CurrentPhase == Phase.Simulation1Calibration);
         SetActiveSafe(sim1MissionBriefingPanel, CurrentPhase == Phase.Simulation1MissionBriefing);
@@ -1333,6 +1368,7 @@ public class TrainingFlowController : MonoBehaviour
     private void ApplyUiPolish()
     {
         StylePanel(hubPanel);
+        StylePanel(loginPanel);
         StylePanel(introPanel);
         StylePanel(sim1MissionBriefingPanel);
         StylePanel(sim1CalibrationPanel);
@@ -1352,6 +1388,7 @@ public class TrainingFlowController : MonoBehaviour
         if (sim2ResultsRecommendationsText != null) sim2ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
 
         FixPanelLayoutCollisions(hubPanel, hubConnectionStatusText);
+        FixPanelLayoutCollisions(loginPanel, null);
         FixPanelLayoutCollisions(introPanel, introBodyText);
         FixPanelLayoutCollisions(sim1MissionBriefingPanel, missionBriefingBodyText);
         FixPanelLayoutCollisions(sim1CalibrationPanel, calibrationStatusText);
@@ -1486,6 +1523,8 @@ public class TrainingFlowController : MonoBehaviour
                 return "Start Simulation 2";
             if (method == "UI_BackToHub")
                 return "Back To Hub";
+            if (method == "UI_OpenLogin")
+                return "Login / Register";
         }
 
         return null;
