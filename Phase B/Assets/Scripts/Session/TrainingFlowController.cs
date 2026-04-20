@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Game flow:
 /// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation 1 briefing → Simulation 1 active
-/// → Results 1 → Simulation 2 briefing → Simulation 2 scene.
+/// → Results 1 (SCI + optional HRV graphs) → Simulation 2 briefing → Simulation 2 scene → Results 2 (SCI + HRV graphs).
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
 [DefaultExecutionOrder(50)]
@@ -32,7 +32,6 @@ public class TrainingFlowController : MonoBehaviour
     [Header("Refs")]
     public MockPhysiologySource physiology;
     public SessionStressRecorder recorder;
-    public SimpleStressLineGraph resultsGraph;
     public GameManager gameManager;
     public UDPReceiver udpReceiver;
 
@@ -122,8 +121,21 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI sim2ResultsMetricsText;
     public TextMeshProUGUI sim2ResultsRecommendationsText;
     public TextMeshProUGUI simulationActiveHudText;
+    [Header("Results graphs (SCI + HRV per simulation)")]
+    [Tooltip("Simulation 1 — Stress Change Index over time (existing).")]
+    public SimpleStressLineGraph resultsGraph;
+    [Tooltip("Simulation 1 — Heart-rate variability (ms) over time. Optional second LineRenderer on results panel.")]
+    public SimpleStressLineGraph sim1HrvResultsGraph;
+    [Tooltip("Max HRV (ms) used to scale the Sim 1 HRV graph Y axis.")]
+    public float sim1HrvGraphMaxDisplay = 120f;
+    [Tooltip("Simulation 2 — HRV (ms) over time.")]
     public SimpleStressLineGraph sim2HrvResultsGraph;
-    public float sim2HrvGraphMaxDisplay = 100f;
+    [Tooltip("Max HRV (ms) for Sim 2 graph scaling.")]
+    public float sim2HrvGraphMaxDisplay = 120f;
+    [Tooltip("Simulation 2 — SCI (%) over time. Optional; complements HRV graph.")]
+    public SimpleStressLineGraph sim2SciResultsGraph;
+    [Tooltip("Max SCI (%) for Sim 2 SCI graph Y axis.")]
+    public float sim2SciGraphMaxDisplay = 80f;
 
     [Header("Results two-column layout")]
     [Tooltip("Horizontal gap between the metrics and recommendations columns (world space in canvas units).")]
@@ -145,6 +157,17 @@ public class TrainingFlowController : MonoBehaviour
     public float resultsSim2TopInset = 220f;
     [Tooltip("Padding between card edge and text inside each column.")]
     public float resultsCardInnerPadding = 20f;
+    [Header("Results graphs layout")]
+    [Tooltip("Horizontal margin for graph area inside results panel.")]
+    public float resultsGraphSideInset = 90f;
+    [Tooltip("Distance from panel top to graph row.")]
+    public float resultsGraphTopInset = 56f;
+    [Tooltip("Graph row height (shared by all result graphs).")]
+    public float resultsGraphHeight = 170f;
+    [Tooltip("Horizontal gap when multiple graphs are shown in a row.")]
+    public float resultsGraphGap = 24f;
+    [Tooltip("Extra spacing between graph row and text columns.")]
+    public float resultsGraphToTextGap = 26f;
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
@@ -439,8 +462,7 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(false);
 
         CurrentPhase = Phase.Simulation1Results;
-        if (resultsGraph != null && recorder != null)
-            resultsGraph.SetFromSciPoints(recorder.SciHistory);
+        ApplySimulation1ResultGraphs();
 
         if (physiology != null && recorder != null)
         {
@@ -694,6 +716,8 @@ public class TrainingFlowController : MonoBehaviour
     private void SetupResultsColumnLayouts()
     {
         ApplyResultsPanelsRootDim();
+        LayoutResultsGraphsForPanel(sim1ResultsPanel, true);
+        LayoutResultsGraphsForPanel(sim2ResultsPanel, false);
 
         if (UseSim1SplitColumns() && sim1ResultsPanel != null)
         {
@@ -789,7 +813,8 @@ public class TrainingFlowController : MonoBehaviour
 
         float halfGap = resultsColumnGap * 0.5f;
         float side = panelSidePadding + resultsExtraSideMargin;
-        float top = panelTopPadding + extraTopInset;
+        float graphDrivenTopInset = GetGraphDrivenTopInset(panelRoot);
+        float top = panelTopPadding + Mathf.Max(extraTopInset, graphDrivenTopInset);
 
         DestroyLegacyCardBackdropsUnder(panelRoot);
 
@@ -809,6 +834,7 @@ public class TrainingFlowController : MonoBehaviour
         if (rightColumn.transform.parent != null)
             rightColumn.transform.parent.SetAsLastSibling();
 
+        BringStressLineGraphsBeforeButtons(panelRoot);
         BringPanelButtonsToFront(panelRoot);
     }
 
@@ -903,6 +929,81 @@ public class TrainingFlowController : MonoBehaviour
 
     private static Sprite _uiWhiteSprite;
 
+    private void LayoutResultsGraphsForPanel(GameObject panel, bool simulation1)
+    {
+        if (panel == null)
+            return;
+
+        var g0 = simulation1 ? resultsGraph : sim2SciResultsGraph;
+        var g1 = simulation1 ? sim1HrvResultsGraph : sim2HrvResultsGraph;
+
+        bool hasG0 = g0 != null && g0.transform.IsChildOf(panel.transform);
+        bool hasG1 = g1 != null && g1.transform.IsChildOf(panel.transform) && !ReferenceEquals(g0, g1);
+        int count = (hasG0 ? 1 : 0) + (hasG1 ? 1 : 0);
+        if (count == 0)
+            return;
+
+        if (hasG0)
+            LayoutSingleGraphRect(g0.GetComponent<RectTransform>(), count, 0);
+        if (hasG1)
+            LayoutSingleGraphRect(g1.GetComponent<RectTransform>(), count, hasG0 ? 1 : 0);
+    }
+
+    private void LayoutSingleGraphRect(RectTransform rt, int graphCount, int slotIndex)
+    {
+        if (rt == null)
+            return;
+
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+
+        float sideInset = Mathf.Max(0f, resultsGraphSideInset);
+        float topInset = Mathf.Max(0f, resultsGraphTopInset);
+        float graphHeight = Mathf.Max(40f, resultsGraphHeight);
+        float graphGap = Mathf.Max(0f, resultsGraphGap);
+
+        if (graphCount <= 1)
+        {
+            rt.offsetMin = new Vector2(sideInset, -topInset - graphHeight);
+            rt.offsetMax = new Vector2(-sideInset, -topInset);
+            return;
+        }
+
+        float halfGap = graphGap * 0.5f;
+        if (slotIndex == 0)
+        {
+            rt.offsetMin = new Vector2(sideInset, -topInset - graphHeight);
+            rt.offsetMax = new Vector2(-halfGap, -topInset);
+        }
+        else
+        {
+            rt.offsetMin = new Vector2(halfGap, -topInset - graphHeight);
+            rt.offsetMax = new Vector2(-sideInset, -topInset);
+        }
+    }
+
+    private float GetGraphDrivenTopInset(Transform panelRoot)
+    {
+        if (panelRoot == null)
+            return 0f;
+
+        int graphCount = 0;
+        if (resultsGraph != null && resultsGraph.transform.IsChildOf(panelRoot))
+            graphCount++;
+        if (sim1HrvResultsGraph != null && sim1HrvResultsGraph.transform.IsChildOf(panelRoot) && !ReferenceEquals(sim1HrvResultsGraph, resultsGraph))
+            graphCount++;
+        if (sim2SciResultsGraph != null && sim2SciResultsGraph.transform.IsChildOf(panelRoot))
+            graphCount++;
+        if (sim2HrvResultsGraph != null && sim2HrvResultsGraph.transform.IsChildOf(panelRoot) && !ReferenceEquals(sim2HrvResultsGraph, sim2SciResultsGraph))
+            graphCount++;
+
+        if (graphCount == 0)
+            return 0f;
+
+        return Mathf.Max(0f, resultsGraphTopInset) + Mathf.Max(40f, resultsGraphHeight) + Mathf.Max(0f, resultsGraphToTextGap);
+    }
+
     private static Sprite GetUiWhiteSprite()
     {
         if (_uiWhiteSprite == null)
@@ -919,6 +1020,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (applyResultsReadabilityStyle)
             ApplyResultsPanelsRootDim();
+        LayoutResultsGraphsForPanel(simulation1 ? sim1ResultsPanel : sim2ResultsPanel, simulation1);
         if (simulation1)
         {
             if (UseSim1SplitColumns() && sim1ResultsPanel != null)
@@ -934,8 +1036,21 @@ public class TrainingFlowController : MonoBehaviour
                 ApplyReadabilityToResultsText(sim2ResultsSummaryText);
         }
 
+        BringStressLineGraphsBeforeButtons(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
         BringPanelButtonsToFront(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
         Canvas.ForceUpdateCanvases();
+    }
+
+    /// <summary>Puts stress line graphs above result columns but below buttons (draw order).</summary>
+    private static void BringStressLineGraphsBeforeButtons(Transform panelRoot)
+    {
+        if (panelRoot == null) return;
+        var graphs = panelRoot.GetComponentsInChildren<SimpleStressLineGraph>(true);
+        for (int i = 0; i < graphs.Length; i++)
+        {
+            if (graphs[i] != null)
+                graphs[i].transform.SetAsLastSibling();
+        }
     }
 
     private static void BringPanelButtonsToFront(Transform panelRoot)
@@ -1331,13 +1446,71 @@ public class TrainingFlowController : MonoBehaviour
             SetSimulation2Status("First aid completed. Results ready. Press Back To Hub.");
         }
 
-        if (sim2HrvResultsGraph != null && recorder != null && recorder.HrvHistory.Count > 0)
-            sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
-        else
-            Debug.LogWarning("Sim2 HRV graph was not rendered. Check sim2HrvResultsGraph reference and recorded HRV samples.");
+        ApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
         FinalizeResultsScreenPresentation(false);
+    }
+
+    private void ApplySimulation1ResultGraphs()
+    {
+        if (recorder == null)
+        {
+            resultsGraph?.Clear();
+            sim1HrvResultsGraph?.Clear();
+            return;
+        }
+
+        if (resultsGraph != null)
+        {
+            if (recorder.SciHistory.Count > 0)
+                resultsGraph.SetFromSciPoints(recorder.SciHistory);
+            else
+                resultsGraph.Clear();
+        }
+
+        if (sim1HrvResultsGraph != null)
+        {
+            if (ReferenceEquals(sim1HrvResultsGraph, resultsGraph))
+            {
+                // Guard against accidental inspector wiring to the same graph object.
+                return;
+            }
+
+            if (recorder.HrvHistory.Count > 0)
+                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay);
+            else
+                sim1HrvResultsGraph.Clear();
+        }
+    }
+
+    private void ApplySimulation2ResultGraphs()
+    {
+        if (recorder == null)
+        {
+            sim2SciResultsGraph?.Clear();
+            sim2HrvResultsGraph?.Clear();
+            return;
+        }
+
+        if (sim2SciResultsGraph != null)
+        {
+            if (recorder.SciHistory.Count > 0)
+                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay);
+            else
+                sim2SciResultsGraph.Clear();
+        }
+
+        if (sim2HrvResultsGraph != null)
+        {
+            if (recorder.HrvHistory.Count > 0)
+                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
+            else
+                sim2HrvResultsGraph.Clear();
+        }
+
+        if (recorder.SciHistory.Count == 0 && recorder.HrvHistory.Count == 0)
+            Debug.LogWarning("Simulation 2 results: no SCI/HRV samples recorded. Check recorder and active simulation.");
     }
 
     private static float MinValue(System.Collections.Generic.IReadOnlyList<float> list)
