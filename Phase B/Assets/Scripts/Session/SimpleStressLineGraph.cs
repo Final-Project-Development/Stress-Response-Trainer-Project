@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Polyline for SCI, HRV, or other series over time.
@@ -19,16 +20,24 @@ public class SimpleStressLineGraph : MonoBehaviour
     public float uiLineWidth = 3f;
     public float minUiWidth = 500f;
     public float minUiHeight = 180f;
+    [Tooltip("Clamp UI graph width so stretched RectTransforms do not spread points across full screen.")]
+    public float maxUiWidth = 760f;
+    [Tooltip("Clamp UI graph height for stable in-panel rendering.")]
+    public float maxUiHeight = 220f;
     [Tooltip("Push line slightly toward camera so it is not hidden by panel image.")]
     public float uiZOffset = -1f;
     public Color lineColor = new Color(0.1f, 1f, 0.35f, 1f);
     public int sortingOrder = 200;
+    [Tooltip("Extra fallback: draw small UI dots along the graph so data remains visible even if line mesh is clipped.")]
+    public bool drawUiDotsFallback = false;
+    public float uiDotSize = 5f;
 
     private LineRenderer _lr;
     private StressLineUiGraphic _uiGraphic;
     private bool _useUiOverlayPath;
 
     private readonly List<Vector2> _uiPointBuffer = new List<Vector2>(256);
+    private readonly List<Image> _uiDotPool = new List<Image>(256);
     private const float MinRectVisibilityFactor = 0.5f;
 
     void Awake()
@@ -38,12 +47,12 @@ public class SimpleStressLineGraph : MonoBehaviour
         EnsureVisibleUiRectSize();
 
         var canvas = GetComponentInParent<Canvas>();
-        if (canvas != null && canvas.rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay && !useWorldSpace)
+        if (canvas != null && !useWorldSpace)
         {
             if (_uiGraphic == null)
                 _uiGraphic = gameObject.AddComponent<StressLineUiGraphic>();
             _useUiOverlayPath = true;
-            _lr.enabled = false;
+            _lr.enabled = true;
         }
         else
         {
@@ -64,7 +73,7 @@ public class SimpleStressLineGraph : MonoBehaviour
             _lr.endWidth = uiLineWidth;
         }
 
-        if (_lr.enabled && _lr.material == null)
+        if (_lr.material == null)
         {
             var shader = Shader.Find("Sprites/Default");
             if (shader != null)
@@ -106,6 +115,7 @@ public class SimpleStressLineGraph : MonoBehaviour
         if (_uiGraphic == null)
             _uiGraphic = GetComponent<StressLineUiGraphic>();
         _uiGraphic?.ClearLine();
+        ClearUiDots();
     }
 
     public void SetFromValues(IReadOnlyList<float> values, float maxDisplayValue)
@@ -131,8 +141,10 @@ public class SimpleStressLineGraph : MonoBehaviour
         bool useUiRectSpace = !useWorldSpace && useRectTransformSizeForUi;
         if (useUiRectSpace && TryGetComponent<RectTransform>(out var rt))
         {
-            graphWidth = Mathf.Max(minUiWidth, rt.rect.width);
-            graphHeight = Mathf.Max(minUiHeight, rt.rect.height);
+            float clampedWidth = Mathf.Clamp(rt.rect.width, Mathf.Max(50f, minUiWidth), Mathf.Max(minUiWidth, maxUiWidth));
+            float clampedHeight = Mathf.Clamp(rt.rect.height, Mathf.Max(40f, minUiHeight), Mathf.Max(minUiHeight, maxUiHeight));
+            graphWidth = clampedWidth;
+            graphHeight = clampedHeight;
             if (_lr != null && _lr.enabled)
             {
                 _lr.startWidth = uiLineWidth;
@@ -153,9 +165,20 @@ public class SimpleStressLineGraph : MonoBehaviour
             }
 
             _uiGraphic.SetLinePoints(_uiPointBuffer, lineColor);
-            if (_lr != null)
-                _lr.positionCount = 0;
+            if (drawUiDotsFallback)
+                DrawUiDots(_uiPointBuffer);
+            else
+                ClearUiDots();
+        }
+
+        if (_lr == null)
             return;
+
+        if (_useUiOverlayPath)
+        {
+            _lr.useWorldSpace = false;
+            _lr.startWidth = Mathf.Max(2.5f, uiLineWidth);
+            _lr.endWidth = Mathf.Max(2.5f, uiLineWidth);
         }
 
         _lr.positionCount = n;
@@ -169,7 +192,7 @@ public class SimpleStressLineGraph : MonoBehaviour
                 : yNorm * graphHeight;
             Vector3 p = useWorldSpace
                 ? transform.TransformPoint(new Vector3(x, y, 0f))
-                : new Vector3(x, y, uiZOffset);
+                : new Vector3(x, y, _useUiOverlayPath ? 0f : uiZOffset);
             _lr.SetPosition(i, p);
         }
     }
@@ -196,5 +219,69 @@ public class SimpleStressLineGraph : MonoBehaviour
 
         if (currentHeight < minHeight * MinRectVisibilityFactor)
             rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, minHeight);
+    }
+
+    private void DrawUiDots(IReadOnlyList<Vector2> points)
+    {
+        if (!TryGetComponent<RectTransform>(out _))
+            return;
+
+        int needed = points != null ? points.Count : 0;
+        EnsureDotPoolSize(needed);
+
+        for (int i = 0; i < _uiDotPool.Count; i++)
+        {
+            bool on = i < needed;
+            var dot = _uiDotPool[i];
+            if (dot == null)
+                continue;
+
+            dot.gameObject.SetActive(on);
+            if (!on)
+                continue;
+
+            dot.color = lineColor;
+            var rt = dot.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = points[i];
+            float s = Mathf.Max(2f, uiDotSize);
+            rt.sizeDelta = new Vector2(s, s);
+        }
+    }
+
+    private void EnsureDotPoolSize(int needed)
+    {
+        while (_uiDotPool.Count < needed)
+        {
+            var go = new GameObject($"GraphDot_{_uiDotPool.Count}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(transform, false);
+            var img = go.GetComponent<Image>();
+            img.raycastTarget = false;
+            img.sprite = GetUiWhiteSprite();
+            _uiDotPool.Add(img);
+        }
+    }
+
+    private void ClearUiDots()
+    {
+        for (int i = 0; i < _uiDotPool.Count; i++)
+        {
+            if (_uiDotPool[i] != null)
+                _uiDotPool[i].gameObject.SetActive(false);
+        }
+    }
+
+    private static Sprite _uiWhiteSprite;
+    private static Sprite GetUiWhiteSprite()
+    {
+        if (_uiWhiteSprite == null)
+        {
+            var tex = Texture2D.whiteTexture;
+            _uiWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        return _uiWhiteSprite;
     }
 }

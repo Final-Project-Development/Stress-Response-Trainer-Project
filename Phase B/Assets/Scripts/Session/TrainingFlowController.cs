@@ -168,6 +168,16 @@ public class TrainingFlowController : MonoBehaviour
     public float resultsGraphGap = 24f;
     [Tooltip("Extra spacing between graph row and text columns.")]
     public float resultsGraphToTextGap = 26f;
+    [Tooltip("If true, keep graph hierarchy/position exactly as set in the scene (no runtime auto-layout/reparent).")]
+    public bool useManualResultsGraphLayout = true;
+    [Tooltip("Apply a fixed, screen-like layout for results panels (graph row + two text cards + bottom button).")]
+    public bool enforceFixedResultsPanelsLayout = false;
+    public float fixedResultsSideInset = 64f;
+    public float fixedResultsTopInset = 34f;
+    public float fixedResultsBottomInset = 26f;
+    public float fixedResultsGraphHeight = 150f;
+    public float fixedResultsGraphToCardsGap = 18f;
+    public float fixedResultsButtonY = 52f;
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
@@ -243,6 +253,7 @@ public class TrainingFlowController : MonoBehaviour
     public int simulation2SceneIndex = 1;
 
     public Phase CurrentPhase { get; private set; } = Phase.Gate;
+    public bool IsPaused => _paused;
 
     private float _calibrationTimer;
     private bool _sim2Subscribed;
@@ -259,7 +270,13 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
-        EnsureRuntimeResultsSplitTexts();
+        if (sim1ResultsMetricsText == null || sim1ResultsRecommendationsText == null
+            || sim2ResultsMetricsText == null || sim2ResultsRecommendationsText == null)
+        {
+            EnsureRuntimeResultsSplitTexts();
+        }
+        if (enforceFixedResultsPanelsLayout)
+            ApplyFixedResultsPanelsLayout();
 
         if (autoPolishUi)
             ApplyUiPolish();
@@ -614,6 +631,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_TogglePause() => SetPaused(!_paused);
     public void UI_Resume() => SetPaused(false);
+    public void UI_SetPause(bool paused) => SetPaused(paused);
 
     public void UI_QuitApplication()
     {
@@ -716,8 +734,11 @@ public class TrainingFlowController : MonoBehaviour
     private void SetupResultsColumnLayouts()
     {
         ApplyResultsPanelsRootDim();
-        LayoutResultsGraphsForPanel(sim1ResultsPanel, true);
-        LayoutResultsGraphsForPanel(sim2ResultsPanel, false);
+        if (!useManualResultsGraphLayout)
+        {
+            LayoutResultsGraphsForPanel(sim1ResultsPanel, true);
+            LayoutResultsGraphsForPanel(sim2ResultsPanel, false);
+        }
 
         if (UseSim1SplitColumns() && sim1ResultsPanel != null)
         {
@@ -739,6 +760,105 @@ public class TrainingFlowController : MonoBehaviour
                 ApplyReadabilityToResultsText(resultsSummaryText);
             if (!UseSim2SplitColumns() && sim2ResultsSummaryText != null)
                 ApplyReadabilityToResultsText(sim2ResultsSummaryText);
+        }
+    }
+
+    private void ApplyFixedResultsPanelsLayout()
+    {
+        ApplyFixedLayoutForPanel(sim1ResultsPanel, true);
+        ApplyFixedLayoutForPanel(sim2ResultsPanel, false);
+    }
+
+    private void ApplyFixedLayoutForPanel(GameObject panel, bool simulation1)
+    {
+        if (panel == null)
+            return;
+
+        if (panel.TryGetComponent<RectTransform>(out var panelRt))
+        {
+            panelRt.anchorMin = Vector2.zero;
+            panelRt.anchorMax = Vector2.one;
+            panelRt.offsetMin = Vector2.zero;
+            panelRt.offsetMax = Vector2.zero;
+            panelRt.pivot = new Vector2(0.5f, 0.5f);
+        }
+
+        var graphA = simulation1 ? resultsGraph : sim2SciResultsGraph;
+        var graphB = simulation1 ? sim1HrvResultsGraph : sim2HrvResultsGraph;
+        var root = panel.transform;
+
+        if (graphA != null)
+        {
+            graphA.transform.SetParent(root, false);
+            SetFixedGraphRect(graphA.GetComponent<RectTransform>(), graphB != null && !ReferenceEquals(graphA, graphB), 0);
+        }
+
+        if (graphB != null && !ReferenceEquals(graphA, graphB))
+        {
+            graphB.transform.SetParent(root, false);
+            SetFixedGraphRect(graphB.GetComponent<RectTransform>(), true, 1);
+        }
+
+        float graphReservedTop = fixedResultsTopInset + fixedResultsGraphHeight + fixedResultsGraphToCardsGap;
+        if (simulation1)
+            resultsSim1TopInset = Mathf.Max(resultsSim1TopInset, graphReservedTop);
+        else
+            resultsSim2TopInset = Mathf.Max(resultsSim2TopInset, graphReservedTop);
+
+        PlaceResultsButtonsAtBottom(root);
+    }
+
+    private void SetFixedGraphRect(RectTransform graphRt, bool split, int slot)
+    {
+        if (graphRt == null)
+            return;
+
+        float side = Mathf.Max(0f, fixedResultsSideInset);
+        float top = Mathf.Max(0f, fixedResultsTopInset);
+        float h = Mathf.Max(60f, fixedResultsGraphHeight);
+        float gap = Mathf.Max(0f, resultsGraphGap);
+        float halfGap = gap * 0.5f;
+
+        graphRt.anchorMin = new Vector2(0f, 1f);
+        graphRt.anchorMax = new Vector2(1f, 1f);
+        graphRt.pivot = new Vector2(0.5f, 1f);
+
+        if (!split)
+        {
+            graphRt.offsetMin = new Vector2(side, -(top + h));
+            graphRt.offsetMax = new Vector2(-side, -top);
+            return;
+        }
+
+        if (slot == 0)
+        {
+            graphRt.offsetMin = new Vector2(side, -(top + h));
+            graphRt.offsetMax = new Vector2(-halfGap, -top);
+        }
+        else
+        {
+            graphRt.offsetMin = new Vector2(halfGap, -(top + h));
+            graphRt.offsetMax = new Vector2(-side, -top);
+        }
+    }
+
+    private void PlaceResultsButtonsAtBottom(Transform panelRoot)
+    {
+        if (panelRoot == null)
+            return;
+
+        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
+        float y = Mathf.Max(24f, fixedResultsButtonY);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            var rt = buttons[i].GetComponent<RectTransform>();
+            if (rt == null)
+                continue;
+
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0f, y);
         }
     }
 
@@ -813,7 +933,7 @@ public class TrainingFlowController : MonoBehaviour
 
         float halfGap = resultsColumnGap * 0.5f;
         float side = panelSidePadding + resultsExtraSideMargin;
-        float graphDrivenTopInset = GetGraphDrivenTopInset(panelRoot);
+        float graphDrivenTopInset = useManualResultsGraphLayout ? 0f : GetGraphDrivenTopInset(panelRoot);
         float top = panelTopPadding + Mathf.Max(extraTopInset, graphDrivenTopInset);
 
         DestroyLegacyCardBackdropsUnder(panelRoot);
@@ -937,8 +1057,8 @@ public class TrainingFlowController : MonoBehaviour
         var g0 = simulation1 ? resultsGraph : sim2SciResultsGraph;
         var g1 = simulation1 ? sim1HrvResultsGraph : sim2HrvResultsGraph;
 
-        bool hasG0 = g0 != null && g0.transform.IsChildOf(panel.transform);
-        bool hasG1 = g1 != null && g1.transform.IsChildOf(panel.transform) && !ReferenceEquals(g0, g1);
+        bool hasG0 = EnsureGraphParentedToPanel(g0, panel.transform);
+        bool hasG1 = !ReferenceEquals(g0, g1) && EnsureGraphParentedToPanel(g1, panel.transform);
         int count = (hasG0 ? 1 : 0) + (hasG1 ? 1 : 0);
         if (count == 0)
             return;
@@ -983,6 +1103,21 @@ public class TrainingFlowController : MonoBehaviour
         }
     }
 
+    private static bool EnsureGraphParentedToPanel(SimpleStressLineGraph graph, Transform panelRoot)
+    {
+        if (graph == null || panelRoot == null)
+            return false;
+
+        var gt = graph.transform;
+        if (gt == null)
+            return false;
+
+        if (gt.parent != panelRoot)
+            gt.SetParent(panelRoot, false);
+
+        return gt.IsChildOf(panelRoot);
+    }
+
     private float GetGraphDrivenTopInset(Transform panelRoot)
     {
         if (panelRoot == null)
@@ -1020,7 +1155,8 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (applyResultsReadabilityStyle)
             ApplyResultsPanelsRootDim();
-        LayoutResultsGraphsForPanel(simulation1 ? sim1ResultsPanel : sim2ResultsPanel, simulation1);
+        if (!useManualResultsGraphLayout)
+            LayoutResultsGraphsForPanel(simulation1 ? sim1ResultsPanel : sim2ResultsPanel, simulation1);
         if (simulation1)
         {
             if (UseSim1SplitColumns() && sim1ResultsPanel != null)
@@ -1036,7 +1172,8 @@ public class TrainingFlowController : MonoBehaviour
                 ApplyReadabilityToResultsText(sim2ResultsSummaryText);
         }
 
-        BringStressLineGraphsBeforeButtons(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
+        if (!useManualResultsGraphLayout)
+            BringStressLineGraphsBeforeButtons(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
         BringPanelButtonsToFront(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
         Canvas.ForceUpdateCanvases();
     }

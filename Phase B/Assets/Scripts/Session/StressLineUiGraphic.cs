@@ -18,14 +18,10 @@ public class StressLineUiGraphic : Graphic
         lineThicknessPixels = Mathf.Max(0.5f, px);
     }
 
-    protected StressLineUiGraphic()
-    {
-        raycastTarget = false;
-    }
-
     protected override void Awake()
     {
         base.Awake();
+        raycastTarget = false;
         // Vertex colors are multiplied by Graphic.color in the UI shader — keep tint neutral.
         color = Color.white;
         // Avoid missing-shader pink materials in some SRP / nested-canvas cases.
