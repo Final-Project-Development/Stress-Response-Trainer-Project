@@ -1,7 +1,9 @@
 # VR Stress Response Trainer
 
 **Project Number: 26-1-D-18** 
+
 **Braude College of Engineering**
+
 **Software Engineering Department**
 
 ## Repository layout
