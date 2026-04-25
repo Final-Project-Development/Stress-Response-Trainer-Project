@@ -15,6 +15,29 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(50)]
 public class TrainingFlowController : MonoBehaviour
 {
+    [Serializable]
+    public class ResultsTabsConfig
+    {
+        [Header("Tab content roots")]
+        public GameObject resultTabContent;
+        public GameObject recommendationsTabContent;
+        public GameObject pressureGraphTabContent;
+
+        [Header("Tab buttons (optional visual highlight)")]
+        public Button resultTabButton;
+        public Button recommendationsTabButton;
+        public Button pressureGraphTabButton;
+        public Color activeTabButtonColor = new Color(0.16f, 0.35f, 0.56f, 1f);
+        public Color inactiveTabButtonColor = new Color(0.11f, 0.21f, 0.33f, 1f);
+    }
+
+    public enum ResultsTab
+    {
+        Result,
+        Recommendations,
+        PressureGraph
+    }
+
     public enum Phase
     {
         Gate,
@@ -140,6 +163,13 @@ public class TrainingFlowController : MonoBehaviour
     [Header("Results two-column layout")]
     [Tooltip("Horizontal gap between the metrics and recommendations columns (world space in canvas units).")]
     public float resultsColumnGap = 20f;
+    [Tooltip("If false, do not run any automatic runtime layout/styling on results panels. Use your manual scene layout as-is.")]
+    public bool enableAutomaticResultsLayout = false;
+    [Header("Results tabs (manual inspector wiring)")]
+    [Tooltip("Simulation 1 tabs: assign tab content roots and tab buttons manually.")]
+    public ResultsTabsConfig sim1ResultsTabs;
+    [Tooltip("Simulation 2 tabs: assign tab content roots and tab buttons manually.")]
+    public ResultsTabsConfig sim2ResultsTabs;
 
     [Header("Results screen readability")]
     [Tooltip("Darken full-screen results panels and add card backgrounds behind column text.")]
@@ -260,6 +290,8 @@ public class TrainingFlowController : MonoBehaviour
     private bool _paused;
     private PendingStart _pendingStart = PendingStart.None;
     private GameObject _safetyWarningDimBackdrop;
+    private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
+    private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
 
     private enum PendingStart
     {
@@ -270,18 +302,23 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
-        if (sim1ResultsMetricsText == null || sim1ResultsRecommendationsText == null
-            || sim2ResultsMetricsText == null || sim2ResultsRecommendationsText == null)
+        if (enableAutomaticResultsLayout)
         {
-            EnsureRuntimeResultsSplitTexts();
+            if (sim1ResultsMetricsText == null || sim1ResultsRecommendationsText == null
+                || sim2ResultsMetricsText == null || sim2ResultsRecommendationsText == null)
+            {
+                EnsureRuntimeResultsSplitTexts();
+            }
+            if (enforceFixedResultsPanelsLayout)
+                ApplyFixedResultsPanelsLayout();
         }
-        if (enforceFixedResultsPanelsLayout)
-            ApplyFixedResultsPanelsLayout();
 
         if (autoPolishUi)
             ApplyUiPolish();
 
-        SetupResultsColumnLayouts();
+        if (enableAutomaticResultsLayout)
+            SetupResultsColumnLayouts();
+        ApplyCurrentResultsTabs();
 
         ApplySafetyWarningCardLayout();
 
@@ -542,7 +579,9 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         ApplyPhaseUI();
-        FinalizeResultsScreenPresentation(true);
+        if (enableAutomaticResultsLayout)
+            FinalizeResultsScreenPresentation(true);
+        ApplySim1ResultsTab(ResultsTab.Result);
     }
 
     private static float MaxSci(System.Collections.Generic.IReadOnlyList<float> list)
@@ -1586,8 +1625,20 @@ public class TrainingFlowController : MonoBehaviour
         ApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
-        FinalizeResultsScreenPresentation(false);
+        if (enableAutomaticResultsLayout)
+            FinalizeResultsScreenPresentation(false);
+        ApplySim2ResultsTab(ResultsTab.Result);
     }
+
+    // Wire these to the three tab buttons in the Inspector (Simulation 1 panel).
+    public void UI_ShowSim1ResultTab() => ApplySim1ResultsTab(ResultsTab.Result);
+    public void UI_ShowSim1RecommendationsTab() => ApplySim1ResultsTab(ResultsTab.Recommendations);
+    public void UI_ShowSim1PressureGraphTab() => ApplySim1ResultsTab(ResultsTab.PressureGraph);
+
+    // Wire these to the three tab buttons in the Inspector (Simulation 2 panel).
+    public void UI_ShowSim2ResultTab() => ApplySim2ResultsTab(ResultsTab.Result);
+    public void UI_ShowSim2RecommendationsTab() => ApplySim2ResultsTab(ResultsTab.Recommendations);
+    public void UI_ShowSim2PressureGraphTab() => ApplySim2ResultsTab(ResultsTab.PressureGraph);
 
     private void ApplySimulation1ResultGraphs()
     {
@@ -1859,5 +1910,47 @@ public class TrainingFlowController : MonoBehaviour
         if (n.Contains("continuefromintro")) return "Continue";
         if (n.Contains("back")) return "Back To Hub";
         return null;
+    }
+
+    private void ApplyCurrentResultsTabs()
+    {
+        ApplySim1ResultsTab(_currentSim1ResultsTab);
+        ApplySim2ResultsTab(_currentSim2ResultsTab);
+    }
+
+    private void ApplySim1ResultsTab(ResultsTab tab)
+    {
+        _currentSim1ResultsTab = tab;
+        ApplyResultsTabState(sim1ResultsTabs, tab);
+    }
+
+    private void ApplySim2ResultsTab(ResultsTab tab)
+    {
+        _currentSim2ResultsTab = tab;
+        ApplyResultsTabState(sim2ResultsTabs, tab);
+    }
+
+    private static void ApplyResultsTabState(ResultsTabsConfig config, ResultsTab activeTab)
+    {
+        if (config == null)
+            return;
+
+        SetActiveSafe(config.resultTabContent, activeTab == ResultsTab.Result);
+        SetActiveSafe(config.recommendationsTabContent, activeTab == ResultsTab.Recommendations);
+        SetActiveSafe(config.pressureGraphTabContent, activeTab == ResultsTab.PressureGraph);
+
+        ApplyTabButtonVisual(config.resultTabButton, activeTab == ResultsTab.Result, config);
+        ApplyTabButtonVisual(config.recommendationsTabButton, activeTab == ResultsTab.Recommendations, config);
+        ApplyTabButtonVisual(config.pressureGraphTabButton, activeTab == ResultsTab.PressureGraph, config);
+    }
+
+    private static void ApplyTabButtonVisual(Button button, bool active, ResultsTabsConfig config)
+    {
+        if (button == null)
+            return;
+
+        var image = button.GetComponent<Image>();
+        if (image != null)
+            image.color = active ? config.activeTabButtonColor : config.inactiveTabButtonColor;
     }
 }
