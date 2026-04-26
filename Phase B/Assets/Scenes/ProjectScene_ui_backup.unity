@@ -14449,6 +14449,23 @@ MonoBehaviour:
   sortingOrder: 200
   drawUiDotsFallback: 1
   uiDotSize: 5
+  useProfessionalChartStyle: 1
+  showPlotFrame: 1
+  showHorizontalGrid: 1
+  horizontalGridLines: 5
+  showAreaUnderCurve: 1
+  frameAndGridColor: {r: 0.42, g: 0.5, b: 0.58, a: 0.5}
+  areaTopColor: {r: 0, g: 0, b: 0, a: 0}
+  areaBottomColor: {r: 0.02, g: 0.04, b: 0.08, a: 0.75}
+  chartTitle: 
+  chartTitleText: {fileID: 0}
+  yAxisLabelTop: {fileID: 0}
+  yAxisLabelBottom: {fileID: 0}
+  xAxisLabelStart: {fileID: 0}
+  xAxisLabelEnd: {fileID: 0}
+  xLabelStart: Start
+  xLabelEnd: End
+  yLabelBottomText: 0
 --- !u!120 &519866068
 LineRenderer:
   serializedVersion: 2
@@ -15883,7 +15900,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -174}
+  m_AnchoredPosition: {x: 0, y: -140}
   m_SizeDelta: {x: 240, y: 52}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &588104380
@@ -20862,6 +20879,23 @@ MonoBehaviour:
   sortingOrder: 200
   drawUiDotsFallback: 1
   uiDotSize: 5
+  useProfessionalChartStyle: 1
+  showPlotFrame: 1
+  showHorizontalGrid: 1
+  horizontalGridLines: 5
+  showAreaUnderCurve: 1
+  frameAndGridColor: {r: 0.42, g: 0.5, b: 0.58, a: 0.5}
+  areaTopColor: {r: 0, g: 0, b: 0, a: 0}
+  areaBottomColor: {r: 0.02, g: 0.04, b: 0.08, a: 0.75}
+  chartTitle: 
+  chartTitleText: {fileID: 0}
+  yAxisLabelTop: {fileID: 0}
+  yAxisLabelBottom: {fileID: 0}
+  xAxisLabelStart: {fileID: 0}
+  xAxisLabelEnd: {fileID: 0}
+  xLabelStart: Start
+  xLabelEnd: End
+  yLabelBottomText: 0
 --- !u!1001 &741696559
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23709,7 +23743,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -266}
+  m_AnchoredPosition: {x: 0, y: -141}
   m_SizeDelta: {x: 160, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &825357989
@@ -37220,8 +37254,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -75}
-  m_SizeDelta: {x: 800, y: 300}
+  m_AnchoredPosition: {x: 0, y: 42}
+  m_SizeDelta: {x: 1000, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1340113746
 MonoBehaviour:
@@ -37914,8 +37948,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 458a99bacc6c65340806334f4d449fc7, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -38468,7 +38502,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -112}
+  m_AnchoredPosition: {x: 0, y: -78}
   m_SizeDelta: {x: 240, y: 52}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1390032709
@@ -48906,7 +48940,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 109}
+  m_AnchoredPosition: {x: 0, y: 301}
   m_SizeDelta: {x: 600, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1787183803
