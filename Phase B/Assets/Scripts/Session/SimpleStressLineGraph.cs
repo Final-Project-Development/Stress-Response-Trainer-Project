@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,11 +27,44 @@ public class SimpleStressLineGraph : MonoBehaviour
     public float maxUiHeight = 220f;
     [Tooltip("Push line slightly toward camera so it is not hidden by panel image.")]
     public float uiZOffset = -1f;
-    public Color lineColor = new Color(0.1f, 1f, 0.35f, 1f);
+    [Tooltip("Main trace color (line + key for area tint).")]
+    public Color lineColor = new Color(0.3f, 0.75f, 0.95f, 1f);
     public int sortingOrder = 200;
     [Tooltip("Extra fallback: draw small UI dots along the graph so data remains visible even if line mesh is clipped.")]
     public bool drawUiDotsFallback = false;
     public float uiDotSize = 5f;
+
+    [Header("Chart look (UI canvas)")]
+    [Tooltip("Fills the plot area, grid, and frame. World-space LineRenderer is unchanged.")]
+    public bool useProfessionalChartStyle = true;
+    [Tooltip("Thin border around the data area so the graph reads as a chart, not a random line.")]
+    public bool showPlotFrame = true;
+    [Tooltip("Horizontal reference lines to read magnitude at a glance.")]
+    public bool showHorizontalGrid = true;
+    [Range(2, 12)]
+    public int horizontalGridLines = 5;
+    [Tooltip("Shaded region under the curve to emphasize the stress trace.")]
+    public bool showAreaUnderCurve = true;
+    public Color frameAndGridColor = new Color(0.42f, 0.5f, 0.58f, 0.5f);
+    [Tooltip("If alpha is ~0, the area uses the line color with low opacity.")]
+    public Color areaTopColor = new Color(0f, 0f, 0f, 0f);
+    public Color areaBottomColor = new Color(0.02f, 0.04f, 0.08f, 0.75f);
+    [Tooltip("Optional title, e.g. 'SCI (%)' or 'HRV (ms)'. Fills chartTitleText when set.")]
+    public string chartTitle = "";
+    [Tooltip("Optional: assign a TMP above the graph — title text is set at runtime if chartTitle is non-empty.")]
+    public TextMeshProUGUI chartTitleText;
+    [Tooltip("Optional: Y axis max (top) — e.g. scale maximum.")]
+    public TextMeshProUGUI yAxisLabelTop;
+    [Tooltip("Optional: Y axis min (bottom), usually 0 for normalized plots.")]
+    public TextMeshProUGUI yAxisLabelBottom;
+    public TextMeshProUGUI xAxisLabelStart;
+    public TextMeshProUGUI xAxisLabelEnd;
+    [Tooltip("Shown on the left of the time axis (session start).")]
+    public string xLabelStart = "Start";
+    [Tooltip("Shown on the right of the time axis (session end).")]
+    public string xLabelEnd = "End";
+    [Tooltip("Y axis min label, typically 0 for SCI/HRV in this layout.")]
+    public string yLabelBottomText = "0";
 
     private LineRenderer _lr;
     private StressLineUiGraphic _uiGraphic;
@@ -114,6 +148,7 @@ public class SimpleStressLineGraph : MonoBehaviour
 
         if (_uiGraphic == null)
             _uiGraphic = GetComponent<StressLineUiGraphic>();
+        _uiGraphic?.ClearChartOptions();
         _uiGraphic?.ClearLine();
         ClearUiDots();
     }
@@ -164,11 +199,32 @@ public class SimpleStressLineGraph : MonoBehaviour
                 _uiPointBuffer.Add(new Vector2(x, y));
             }
 
+            if (useProfessionalChartStyle)
+            {
+                Color at = areaTopColor;
+                if (at.a < 0.01f)
+                    at = new Color(lineColor.r, lineColor.g, lineColor.b, 0.38f);
+                _uiGraphic.SetChartOptions(
+                    graphWidth,
+                    graphHeight,
+                    showPlotFrame,
+                    showHorizontalGrid,
+                    horizontalGridLines,
+                    showAreaUnderCurve,
+                    frameAndGridColor,
+                    at,
+                    areaBottomColor);
+            }
+            else
+                _uiGraphic.ClearChartOptions();
+
             _uiGraphic.SetLinePoints(_uiPointBuffer, lineColor);
             if (drawUiDotsFallback)
                 DrawUiDots(_uiPointBuffer);
             else
                 ClearUiDots();
+
+            ApplyRuntimeChartLabels(max);
         }
 
         if (_lr == null)
@@ -181,20 +237,52 @@ public class SimpleStressLineGraph : MonoBehaviour
             _lr.endWidth = Mathf.Max(2.5f, uiLineWidth);
         }
 
-        _lr.positionCount = n;
-        for (int i = 0; i < n; i++)
+        int lrCount = n == 1 ? 2 : n;
+        _lr.positionCount = lrCount;
+        float yOne = 0f;
+        if (n == 1)
         {
-            float u = n == 1 ? 0.5f : i / (float)(n - 1);
+            float yNorm0 = Mathf.Clamp01(values[0] / max);
+            yOne = useUiRectSpace
+                ? (yNorm0 - 0.5f) * graphHeight
+                : yNorm0 * graphHeight;
+        }
+
+        for (int i = 0; i < lrCount; i++)
+        {
+            int valueIndex = n == 1 ? 0 : i;
+            float u;
+            if (n == 1)
+                u = i == 0 ? 0.5f - 0.0005f : 0.5f + 0.0005f; // two distinct samples so the line can render
+            else
+                u = i / (float)(n - 1);
             float x = (u - 0.5f) * graphWidth;
-            float yNorm = Mathf.Clamp01(values[i] / max);
-            float y = useUiRectSpace
+
+            float yNorm = Mathf.Clamp01(values[valueIndex] / max);
+            float y = n == 1
+                ? yOne
+                : (useUiRectSpace
                 ? (yNorm - 0.5f) * graphHeight
-                : yNorm * graphHeight;
+                : yNorm * graphHeight);
             Vector3 p = useWorldSpace
                 ? transform.TransformPoint(new Vector3(x, y, 0f))
                 : new Vector3(x, y, _useUiOverlayPath ? 0f : uiZOffset);
             _lr.SetPosition(i, p);
         }
+    }
+
+    private void ApplyRuntimeChartLabels(float axisMax)
+    {
+        if (!string.IsNullOrEmpty(chartTitle) && chartTitleText != null)
+            chartTitleText.text = chartTitle;
+        if (yAxisLabelTop != null)
+            yAxisLabelTop.text = axisMax < 1f ? axisMax.ToString("F1") : axisMax.ToString("F0");
+        if (yAxisLabelBottom != null)
+            yAxisLabelBottom.text = yLabelBottomText;
+        if (xAxisLabelStart != null)
+            xAxisLabelStart.text = xLabelStart;
+        if (xAxisLabelEnd != null)
+            xAxisLabelEnd.text = xLabelEnd;
     }
 
     /// <summary>
