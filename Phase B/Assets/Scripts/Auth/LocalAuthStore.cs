@@ -42,20 +42,20 @@ public static class LocalAuthStore
         email = NormalizeEmail(email);
         if (string.IsNullOrEmpty(email))
         {
-            error = "נא להזין אימייל.";
+            error = "Please enter an email address.";
             return false;
         }
 
         if (string.IsNullOrEmpty(password) || password.Length < 4)
         {
-            error = "סיסמה חייבת להכיל לפחות 4 תווים.";
+            error = "Password must be at least 4 characters.";
             return false;
         }
 
         var data = Load();
         if (FindIndex(data.accounts, email) >= 0)
         {
-            error = "האימייל כבר רשום.";
+            error = "This email is already registered.";
             return false;
         }
 
