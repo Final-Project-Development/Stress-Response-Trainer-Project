@@ -407,7 +407,7 @@ public class TrainingFlowController : MonoBehaviour
         if (hubConnectionStatusText == null) return;
         string email = LocalAuthStore.GetLastLoggedInEmail();
         if (!string.IsNullOrEmpty(email))
-            hubConnectionStatusText.text = $"מחובר: {email}\n" + hubConnectionStatusDemo;
+            hubConnectionStatusText.text = $"Signed in: {email}\n" + hubConnectionStatusDemo;
         else
             hubConnectionStatusText.text = hubConnectionStatusDemo;
     }

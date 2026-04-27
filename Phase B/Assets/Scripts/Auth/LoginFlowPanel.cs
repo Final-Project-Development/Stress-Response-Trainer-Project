@@ -93,13 +93,13 @@ public class LoginFlowPanel : MonoBehaviour
         string pass2 = registerPasswordConfirm != null ? registerPasswordConfirm.text : "";
         if (pass != pass2)
         {
-            SetStatus("הסיסמאות אינן תואמות.", true);
+            SetStatus("Passwords do not match.", true);
             return;
         }
 
         if (LocalAuthStore.TryRegister(email, pass, out string err))
         {
-            SetStatus("נרשמת בהצלחה. אפשר להתחבר.", false);
+            SetStatus("Registration successful. You can sign in now.", false);
             ShowRegister(false);
             if (loginEmail != null) loginEmail.text = email;
             if (loginPassword != null) loginPassword.text = "";
