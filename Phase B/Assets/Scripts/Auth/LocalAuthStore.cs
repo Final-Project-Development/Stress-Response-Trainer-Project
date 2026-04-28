@@ -11,6 +11,7 @@ using UnityEngine;
 public static class LocalAuthStore
 {
     private const string FileName = "local_auth_accounts.json";
+    private const string CurrentLoggedInEmailKey = "local_auth_current_email";
 
     [Serializable]
     private class AccountDto
@@ -92,6 +93,8 @@ public static class LocalAuthStore
             error = "Wrong password.";
             return false;
         }
+        PlayerPrefs.SetString(CurrentLoggedInEmailKey, email);
+        PlayerPrefs.Save();
         return true;
     }
 
@@ -143,8 +146,14 @@ public static class LocalAuthStore
         return PlayerPrefs.GetString("local_auth_last_email", "");
     }
 
+    public static string GetCurrentLoggedInEmail()
+    {
+        return PlayerPrefs.GetString(CurrentLoggedInEmailKey, "");
+    }
+
     public static void Logout()
     {
+        PlayerPrefs.DeleteKey(CurrentLoggedInEmailKey);
         PlayerPrefs.DeleteKey("local_auth_last_email");
         PlayerPrefs.Save();
     }
