@@ -11983,6 +11983,9 @@ MonoBehaviour:
   introBodyText: {fileID: 1849666158}
   missionBriefingBodyText: {fileID: 192362887}
   calibrationStatusText: {fileID: 1227488502}
+  calibrationRemainingTimeText: {fileID: 0}
+  calibrationHrvDataText: {fileID: 0}
+  calibrationRemainingTimeAsMmSs: 0
   resultsSummaryText: {fileID: 701224684}
   sim1ResultsMetricsText: {fileID: 1331170111}
   sim1ResultsRecommendationsText: {fileID: 180808771}

@@ -134,6 +134,12 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI introBodyText;
     public TextMeshProUGUI missionBriefingBodyText;
     public TextMeshProUGUI calibrationStatusText;
+    [Tooltip("Optional: large remaining-time readout (whole seconds or MM:SS). When set, time is not duplicated in Calibration Status Text.")]
+    public TextMeshProUGUI calibrationRemainingTimeText;
+    [Tooltip("Optional: live HR/HRV (e.g. HRV_DATA). When set, the physiology line is not duplicated in Calibration Status Text.")]
+    public TextMeshProUGUI calibrationHrvDataText;
+    [Tooltip("When using Calibration Remaining Time Text, use MM:SS instead of seconds only.")]
+    public bool calibrationRemainingTimeAsMmSs = false;
     public TextMeshProUGUI resultsSummaryText;
     [Tooltip("Optional: when both Sim 1 metrics + recommendations are set, the summary is split into two columns.")]
     public TextMeshProUGUI sim1ResultsMetricsText;
@@ -369,13 +375,7 @@ public class TrainingFlowController : MonoBehaviour
         {
             _calibrationTimer += Time.deltaTime;
             float remaining = Mathf.Max(0f, calibrationDurationSeconds - _calibrationTimer);
-            if (calibrationStatusText != null)
-            {
-                calibrationStatusText.text =
-                    $"{calibrationInstruction}\n\n" +
-                    $"Time remaining: {remaining:F0} s\n" +
-                    $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
-            }
+            UpdateCalibrationBaselineUi(remaining);
 
             if (_calibrationTimer >= calibrationDurationSeconds)
                 FinishCalibrationAndShowMissionBriefing();
@@ -458,6 +458,58 @@ public class TrainingFlowController : MonoBehaviour
 
     /// <summary>Legacy — starts calibration directly.</summary>
     public void UI_StartBaseline() => UI_ContinueFromIntro();
+
+    private void UpdateCalibrationBaselineUi(float remainingSeconds)
+    {
+        bool splitTimer = calibrationRemainingTimeText != null;
+        bool splitHrv = calibrationHrvDataText != null;
+
+        if (splitTimer)
+            calibrationRemainingTimeText.text = FormatCalibrationRemainingDisplay(remainingSeconds);
+
+        if (splitHrv && physiology != null)
+        {
+            calibrationHrvDataText.text =
+                $"HR: {physiology.CurrentHeartRate:F0} bpm\n" +
+                $"HRV: {physiology.CurrentHrvMs:F1} ms";
+        }
+
+        if (calibrationStatusText == null)
+            return;
+
+        if (splitTimer && splitHrv)
+        {
+            calibrationStatusText.text = calibrationInstruction;
+            return;
+        }
+
+        string timePart = $"Time remaining: {remainingSeconds:F0} s";
+        string livePart =
+            $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
+
+        if (splitTimer)
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{livePart}";
+        else if (splitHrv)
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
+        else
+        {
+            calibrationStatusText.text =
+                $"{calibrationInstruction}\n\n{timePart}\n{livePart}";
+        }
+    }
+
+    private string FormatCalibrationRemainingDisplay(float remainingSeconds)
+    {
+        if (calibrationRemainingTimeAsMmSs)
+        {
+            int sec = Mathf.Max(0, Mathf.CeilToInt(remainingSeconds));
+            int m = sec / 60;
+            int s = sec % 60;
+            return $"{m:00}:{s:00}";
+        }
+
+        return Mathf.CeilToInt(remainingSeconds).ToString();
+    }
 
     private void FinishCalibrationAndShowMissionBriefing()
     {
