@@ -92,9 +92,49 @@ public static class LocalAuthStore
             error = "Wrong password.";
             return false;
         }
+        return true;
+    }
 
+    public static void SetLastLoggedInEmail(string email)
+    {
+        email = NormalizeEmail(email);
         PlayerPrefs.SetString("local_auth_last_email", email);
         PlayerPrefs.Save();
+    }
+
+    public static void ClearLastLoggedInEmail()
+    {
+        PlayerPrefs.DeleteKey("local_auth_last_email");
+        PlayerPrefs.Save();
+    }
+
+    /// <summary>
+    /// Demo-only password recovery: replaces password with a temporary one and returns it to UI.
+    /// In production this should be handled by a backend/email flow.
+    /// </summary>
+    public static bool TryResetPassword(string email, out string temporaryPassword, out string error)
+    {
+        temporaryPassword = null;
+        error = null;
+        email = NormalizeEmail(email);
+
+        if (string.IsNullOrEmpty(email))
+        {
+            error = "Please enter your email first.";
+            return false;
+        }
+
+        var data = Load();
+        int i = FindIndex(data.accounts, email);
+        if (i < 0)
+        {
+            error = "User not registered.";
+            return false;
+        }
+
+        temporaryPassword = GenerateTemporaryPassword();
+        data.accounts[i].passwordHashHex = HashPassword(email, temporaryPassword);
+        Save(data);
         return true;
     }
 
@@ -162,5 +202,21 @@ public static class LocalAuthStore
                 sb.Append(b.ToString("x2"));
             return sb.ToString();
         }
+    }
+
+    private static string GenerateTemporaryPassword()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        const int len = 8;
+        var sb = new StringBuilder(len);
+        byte[] bytes = new byte[len];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(bytes);
+        }
+
+        for (int i = 0; i < len; i++)
+            sb.Append(chars[bytes[i] % chars.Length]);
+        return sb.ToString();
     }
 }
