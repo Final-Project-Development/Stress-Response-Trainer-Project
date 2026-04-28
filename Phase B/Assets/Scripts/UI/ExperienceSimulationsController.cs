@@ -22,6 +22,8 @@ public class ExperienceSimulationsController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private int totalSimulations = 2;
     [SerializeField] private string guestName = "Guest";
+    [SerializeField] private bool showOnlyAfterLogin = true;
+    [SerializeField] private CanvasGroup containerCanvasGroup;
 
     private TrainingFlowController.Phase _lastPhase;
     private bool _sim1Completed;
@@ -34,6 +36,11 @@ public class ExperienceSimulationsController : MonoBehaviour
 
         if (simulationsSlider != null)
             simulationsSlider.interactable = false;
+
+        if (containerCanvasGroup == null)
+            containerCanvasGroup = GetComponent<CanvasGroup>();
+        if (containerCanvasGroup == null)
+            containerCanvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
     private void Start()
@@ -44,8 +51,14 @@ public class ExperienceSimulationsController : MonoBehaviour
 
     private void Update()
     {
+        ApplyVisibility();
+
         if (flow == null)
+        {
+            // Safe default: hide until flow is available and login state can be evaluated.
+            SetContainerVisible(false);
             return;
+        }
 
         var phase = flow.CurrentPhase;
         if (phase != _lastPhase)
@@ -76,6 +89,8 @@ public class ExperienceSimulationsController : MonoBehaviour
 
     public void RefreshUi()
     {
+        ApplyVisibility();
+
         int total = Mathf.Max(1, totalSimulations);
         int completed = (_sim1Completed ? 1 : 0) + (_sim2Completed ? 1 : 0);
         completed = Mathf.Clamp(completed, 0, total);
@@ -107,6 +122,37 @@ public class ExperienceSimulationsController : MonoBehaviour
             user = LocalAuthStore.GetLastLoggedInEmail();
 
         characterNameText.text = string.IsNullOrEmpty(user) ? guestName : user;
+    }
+
+    private void ApplyVisibility()
+    {
+        if (containerCanvasGroup == null)
+            return;
+
+        if (!showOnlyAfterLogin)
+        {
+            SetContainerVisible(true);
+            return;
+        }
+
+        string user = LocalAuthStore.GetCurrentLoggedInEmail();
+        bool loggedIn = !string.IsNullOrEmpty(user);
+        bool inHubOrLogin = flow != null
+            && (flow.CurrentPhase == TrainingFlowController.Phase.Gate
+                || flow.CurrentPhase == TrainingFlowController.Phase.Login);
+        bool visible = loggedIn && !inHubOrLogin;
+
+        SetContainerVisible(visible);
+    }
+
+    private void SetContainerVisible(bool visible)
+    {
+        if (containerCanvasGroup == null)
+            return;
+
+        containerCanvasGroup.alpha = visible ? 1f : 0f;
+        containerCanvasGroup.interactable = visible;
+        containerCanvasGroup.blocksRaycasts = visible;
     }
 
     private int GetCurrentSimulationNumber()
