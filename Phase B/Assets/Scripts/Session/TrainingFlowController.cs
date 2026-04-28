@@ -211,6 +211,8 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
+    [Tooltip("If false, keep button labels exactly as set in the Inspector/scene.")]
+    public bool applyDefaultButtonTextsAtRuntime = false;
     public Color panelTint = new Color(0.07f, 0.11f, 0.16f, 0.84f);
     public Color buttonColor = new Color(0.16f, 0.35f, 0.56f, 1f);
     public Color buttonTextColor = Color.white;
@@ -225,6 +227,8 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string hubTitle = "VR Stress Response Trainer";
+    [Tooltip("If false, keep Hub title text exactly as set on the TMP in the Inspector/scene.")]
+    public bool applyHubTitleFromController = false;
 
     [TextArea]
     public string hubConnectionStatusDemo =
@@ -339,7 +343,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void ApplyDefaultCopyToUi()
     {
-        if (hubTitleText != null)
+        if (applyHubTitleFromController && hubTitleText != null)
             hubTitleText.text = hubTitle;
         RefreshHubConnectionStatusText();
         if (introBodyText != null)
@@ -349,7 +353,8 @@ public class TrainingFlowController : MonoBehaviour
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
 
-        ApplyDefaultButtonTexts();
+        if (applyDefaultButtonTextsAtRuntime)
+            ApplyDefaultButtonTexts();
 
     }
 
