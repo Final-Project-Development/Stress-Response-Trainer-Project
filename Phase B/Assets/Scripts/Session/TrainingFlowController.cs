@@ -1889,8 +1889,6 @@ public class TrainingFlowController : MonoBehaviour
                 return "Continue To Simulation 2";
             if (method == "UI_StartSimulation2Scene")
                 return "Start Simulation 2";
-            if (method == "UI_BackToHub")
-                return "Back To Hub";
             if (method == "UI_OpenLogin")
                 return "Login / Register";
         }
@@ -1908,7 +1906,6 @@ public class TrainingFlowController : MonoBehaviour
         if (n.Contains("movetosimulation2")) return "Continue To Simulation 2";
         if (n.Contains("btnstartsimulation2")) return "Start Simulation 2";
         if (n.Contains("continuefromintro")) return "Continue";
-        if (n.Contains("back")) return "Back To Hub";
         return null;
     }
 

@@ -14,6 +14,8 @@ public class LoginFlowPanel : MonoBehaviour
     [SerializeField] private TMP_InputField loginEmail;
     [SerializeField] private TMP_InputField loginPassword;
     [SerializeField] private Button loginSubmitButton;
+    [SerializeField] private Toggle rememberMeToggle;
+    [SerializeField] private Button forgotPasswordButton;
 
     [Header("Register form")]
     [SerializeField] private TMP_InputField registerEmail;
@@ -38,6 +40,8 @@ public class LoginFlowPanel : MonoBehaviour
 
         if (loginSubmitButton != null)
             loginSubmitButton.onClick.AddListener(OnLoginClicked);
+        if (forgotPasswordButton != null)
+            forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
         if (registerSubmitButton != null)
             registerSubmitButton.onClick.AddListener(OnRegisterClicked);
         if (showRegisterButton != null)
@@ -58,8 +62,11 @@ public class LoginFlowPanel : MonoBehaviour
     private void PrefillEmail()
     {
         string last = LocalAuthStore.GetLastLoggedInEmail();
-        if (loginEmail != null && !string.IsNullOrEmpty(last))
-            loginEmail.text = last;
+        bool hasSaved = !string.IsNullOrEmpty(last);
+        if (loginEmail != null)
+            loginEmail.text = hasSaved ? last : "";
+        if (rememberMeToggle != null)
+            rememberMeToggle.isOn = hasSaved;
     }
 
     public void ShowRegister(bool register)
@@ -82,8 +89,28 @@ public class LoginFlowPanel : MonoBehaviour
             return;
         }
 
+        if (rememberMeToggle != null && rememberMeToggle.isOn)
+            LocalAuthStore.SetLastLoggedInEmail(email);
+        else
+            LocalAuthStore.ClearLastLoggedInEmail();
+
         SetStatus("", false);
         trainingFlow?.UI_CompleteLoginAndStartIntro();
+    }
+
+    private void OnForgotPasswordClicked()
+    {
+        string email = loginEmail != null ? loginEmail.text : "";
+        if (LocalAuthStore.TryResetPassword(email, out string tempPass, out string err))
+        {
+            SetStatus($"Temporary password: {tempPass}", false);
+            if (loginPassword != null)
+                loginPassword.text = "";
+        }
+        else
+        {
+            SetStatus(err, true);
+        }
     }
 
     private void OnRegisterClicked()
