@@ -8,8 +8,16 @@ public class SimpleFPSController : MonoBehaviour
     public float gravity = -9.81f;
     public Transform cameraTransform;
 
-    /// <summary>When true, mouse is free for UI and WASD / look are disabled (hub, calibration, briefing, results).</summary>
+    /// <summary>When true, movement is blocked for UI/menu phases.</summary>
     [SerializeField] bool uiMenuMode = true;
+    [Tooltip("Allow head/camera rotation during UI phases (keeps VR-like spatial feel without enabling movement).")]
+    [SerializeField] bool allowLookWhileInUiMenus = true;
+    [Tooltip("If true, looking in UI mode requires holding the modifier key (default: Mouse1).")]
+    [SerializeField] bool requireLookModifierInUiMenus = false;
+    [Tooltip("Look modifier key when requireLookModifierInUiMenus is enabled.")]
+    [SerializeField] KeyCode uiMenuLookModifier = KeyCode.Mouse1;
+    [Tooltip("Hold Alt during UI mode to temporarily free the cursor for button clicks.")]
+    [SerializeField] bool holdAltToUseCursorInUiMenus = true;
 
     private CharacterController controller;
     private float verticalVelocity;
@@ -52,8 +60,7 @@ public class SimpleFPSController : MonoBehaviour
     {
         if (uiMenuMode)
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            HandleUiMenuLookMode();
             return;
         }
 
@@ -61,6 +68,28 @@ public class SimpleFPSController : MonoBehaviour
         Cursor.visible = false;
         HandleMouseLook();
         HandleMovement();
+    }
+
+    private void HandleUiMenuLookMode()
+    {
+        bool forceCursor =
+            holdAltToUseCursorInUiMenus &&
+            (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt));
+
+        bool lookNow = allowLookWhileInUiMenus &&
+                       !forceCursor &&
+                       (!requireLookModifierInUiMenus || Input.GetKey(uiMenuLookModifier));
+
+        if (lookNow)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            HandleMouseLook();
+            return;
+        }
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     void HandleMouseLook()

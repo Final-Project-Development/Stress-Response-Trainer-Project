@@ -1509,6 +1509,7 @@ public class TrainingFlowController : MonoBehaviour
             physiology.StressorActive = false;
         StopSiren();
         recorder?.EndRecording();
+        gameManager?.ClearMissionMessages();
         SetSimulationGameplayState(false, false);
         SetHudVisible(false);
         SetActiveSafe(highStressWarningRoot, false);
@@ -1589,9 +1590,10 @@ public class TrainingFlowController : MonoBehaviour
             PrepareResultsTextForManualBox(sim2ResultsSummaryText);
             sim2ResultsSummaryText.text = sb.ToString();
         }
-        else
+        else if (sim2BriefingBodyText != null)
         {
-            SetSimulation2Status("First aid completed. Results ready. Press Back To Hub.");
+            // Avoid showing fallback status text over the custom Results panel design.
+            sim2BriefingBodyText.text = string.Empty;
         }
 
         ApplySimulation2ResultGraphs();
