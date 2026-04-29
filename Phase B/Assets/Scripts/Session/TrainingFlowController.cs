@@ -72,15 +72,6 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI safetyWarningText;
     [TextArea] public string stressWarningMessage = "Warning: this simulation contains stress stimuli (alarm audio, time pressure, emergency context). You can pause at any time with Esc and quit safely.";
 
-    [Header("Safety warning presentation")]
-    [Tooltip("If true, the warning is a centered card instead of stretching across the whole canvas.")]
-    public bool safetyWarningUseCenterCard = true;
-    public Vector2 safetyWarningCardSize = new Vector2(680f, 420f);
-    public Color safetyWarningCardColor = new Color(0.32f, 0.11f, 0.13f, 0.98f);
-    [Tooltip("Dark overlay behind the card so the scene stays visible but de-emphasized.")]
-    public bool safetyWarningShowDimBackdrop = true;
-    public Color safetyWarningDimColor = new Color(0f, 0f, 0f, 0.55f);
-
     [Header("Optional: hide gameplay until mission starts")]
     public GameObject simulation1GameplayRoot;
     public GameObject simulation2GameplayRoot;
@@ -299,7 +290,6 @@ public class TrainingFlowController : MonoBehaviour
     private bool _sim2Subscribed;
     private bool _paused;
     private PendingStart _pendingStart = PendingStart.None;
-    private GameObject _safetyWarningDimBackdrop;
     private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
     private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
 
@@ -329,8 +319,6 @@ public class TrainingFlowController : MonoBehaviour
         if (enableAutomaticResultsLayout)
             SetupResultsColumnLayouts();
         ApplyCurrentResultsTabs();
-
-        ApplySafetyWarningCardLayout();
 
         ApplyDefaultCopyToUi();
         ApplyPhaseUI();
@@ -1455,88 +1443,9 @@ public class TrainingFlowController : MonoBehaviour
         ApplyPhaseUI();
     }
 
-    private void ApplySafetyWarningCardLayout()
-    {
-        if (!safetyWarningUseCenterCard || safetyWarningPanel == null)
-            return;
-
-        var cardRt = safetyWarningPanel.GetComponent<RectTransform>();
-        if (cardRt == null)
-            return;
-
-        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRt.pivot = new Vector2(0.5f, 0.5f);
-        cardRt.sizeDelta = safetyWarningCardSize;
-        cardRt.anchoredPosition = Vector2.zero;
-
-        var img = safetyWarningPanel.GetComponent<Image>();
-        if (img != null)
-            img.color = safetyWarningCardColor;
-
-        if (safetyWarningShowDimBackdrop)
-            EnsureSafetyWarningDimBackdrop(cardRt.parent);
-
-        if (safetyWarningText != null)
-        {
-            var tr = safetyWarningText.rectTransform;
-            tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0.5f);
-            tr.pivot = new Vector2(0.5f, 0.5f);
-            tr.anchoredPosition = new Vector2(0f, 48f);
-            tr.sizeDelta = new Vector2(safetyWarningCardSize.x - 48f, 220f);
-            safetyWarningText.enableWordWrapping = true;
-            safetyWarningText.textWrappingMode = TextWrappingModes.Normal;
-            safetyWarningText.alignment = TextAlignmentOptions.Center;
-            safetyWarningText.margin = Vector4.zero;
-        }
-
-        var buttons = safetyWarningPanel.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var brt = buttons[i].GetComponent<RectTransform>();
-            if (brt == null)
-                continue;
-
-            brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
-            brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.sizeDelta = new Vector2(240f, 52f);
-            string n = buttons[i].gameObject.name.ToLowerInvariant();
-            if (n.Contains("continue"))
-                brt.anchoredPosition = new Vector2(0f, -52f);
-            else if (n.Contains("cancel"))
-                brt.anchoredPosition = new Vector2(0f, -126f);
-        }
-    }
-
-    private void EnsureSafetyWarningDimBackdrop(Transform panelParent)
-    {
-        if (panelParent == null || safetyWarningPanel == null)
-            return;
-
-        if (_safetyWarningDimBackdrop == null)
-        {
-            _safetyWarningDimBackdrop = new GameObject("SafetyWarningDimBackdrop");
-            _safetyWarningDimBackdrop.transform.SetParent(panelParent, false);
-            var dimRt = _safetyWarningDimBackdrop.AddComponent<RectTransform>();
-            dimRt.anchorMin = Vector2.zero;
-            dimRt.anchorMax = Vector2.one;
-            dimRt.offsetMin = Vector2.zero;
-            dimRt.offsetMax = Vector2.zero;
-            var dimImg = _safetyWarningDimBackdrop.AddComponent<Image>();
-            dimImg.sprite = GetUiWhiteSprite();
-            dimImg.color = safetyWarningDimColor;
-            dimImg.raycastTarget = true;
-        }
-
-        int panelIdx = safetyWarningPanel.transform.GetSiblingIndex();
-        _safetyWarningDimBackdrop.transform.SetSiblingIndex(panelIdx);
-    }
-
     private void SetSafetyWarningVisible(bool visible)
     {
         SetActiveSafe(safetyWarningPanel, visible);
-        if (_safetyWarningDimBackdrop != null)
-            SetActiveSafe(_safetyWarningDimBackdrop, visible && safetyWarningShowDimBackdrop);
     }
 
     private bool ShowSafetyWarningFor(PendingStart startAction)
