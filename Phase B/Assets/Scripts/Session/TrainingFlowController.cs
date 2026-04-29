@@ -596,6 +596,8 @@ public class TrainingFlowController : MonoBehaviour
                 rec.AppendLine();
                 rec.AppendLine(nextStage);
 
+                PrepareResultsTextForManualBox(sim1ResultsMetricsText);
+                PrepareResultsTextForManualBox(sim1ResultsRecommendationsText);
                 sim1ResultsMetricsText.text = metrics.ToString().TrimEnd();
                 sim1ResultsRecommendationsText.text = rec.ToString().TrimEnd();
             }
@@ -619,6 +621,7 @@ public class TrainingFlowController : MonoBehaviour
                 sb.AppendLine(tips);
                 sb.AppendLine();
                 sb.AppendLine(nextStage);
+                PrepareResultsTextForManualBox(resultsSummaryText);
                 resultsSummaryText.text = sb.ToString();
             }
         }
@@ -1885,6 +1888,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         _currentSim1ResultsTab = tab;
         ApplyResultsTabState(sim1ResultsTabs, tab);
+        EnforceSim1ResultsVisibilityForTab(tab);
     }
 
     private void ApplySim2ResultsTab(ResultsTab tab)
@@ -1915,5 +1919,39 @@ public class TrainingFlowController : MonoBehaviour
         var image = button.GetComponent<Image>();
         if (image != null)
             image.color = active ? config.activeTabButtonColor : config.inactiveTabButtonColor;
+    }
+
+    private static void PrepareResultsTextForManualBox(TextMeshProUGUI tmp)
+    {
+        if (tmp == null)
+            return;
+
+        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+    }
+
+    /// <summary>
+    /// Keeps legacy summary text hidden when Sim 1 uses manual split tabs,
+    /// without overriding the scene's manual visual design.
+    /// </summary>
+    private void EnforceSim1ResultsVisibilityForTab(ResultsTab activeTab)
+    {
+        bool splitColumns = UseSim1SplitColumns();
+
+        // In split mode, never show the legacy combined summary text.
+        if (splitColumns && resultsSummaryText != null)
+            SetActiveSafe(resultsSummaryText.gameObject, false);
+
+        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
+        if (!splitColumns)
+            return;
+
+        bool showResult = activeTab == ResultsTab.Result;
+        bool showRecommendations = activeTab == ResultsTab.Recommendations;
+
+        if (sim1ResultsMetricsText != null)
+            SetActiveSafe(sim1ResultsMetricsText.gameObject, showResult);
+        if (sim1ResultsRecommendationsText != null)
+            SetActiveSafe(sim1ResultsRecommendationsText.gameObject, showRecommendations);
     }
 }
