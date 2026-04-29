@@ -1562,6 +1562,8 @@ public class TrainingFlowController : MonoBehaviour
             rec.AppendLine();
             rec.AppendLine("Press <b>Back To Hub</b> when ready.");
 
+            PrepareResultsTextForManualBox(sim2ResultsMetricsText);
+            PrepareResultsTextForManualBox(sim2ResultsRecommendationsText);
             sim2ResultsMetricsText.text = metrics.ToString().TrimEnd();
             sim2ResultsRecommendationsText.text = rec.ToString().TrimEnd();
         }
@@ -1584,6 +1586,7 @@ public class TrainingFlowController : MonoBehaviour
             sb.AppendLine(tips);
             sb.AppendLine();
             sb.AppendLine("Press Back To Hub when ready.");
+            PrepareResultsTextForManualBox(sim2ResultsSummaryText);
             sim2ResultsSummaryText.text = sb.ToString();
         }
         else
@@ -1895,6 +1898,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         _currentSim2ResultsTab = tab;
         ApplyResultsTabState(sim2ResultsTabs, tab);
+        EnforceSim2ResultsVisibilityForTab(tab);
     }
 
     private static void ApplyResultsTabState(ResultsTabsConfig config, ResultsTab activeTab)
@@ -1953,5 +1957,30 @@ public class TrainingFlowController : MonoBehaviour
             SetActiveSafe(sim1ResultsMetricsText.gameObject, showResult);
         if (sim1ResultsRecommendationsText != null)
             SetActiveSafe(sim1ResultsRecommendationsText.gameObject, showRecommendations);
+    }
+
+    /// <summary>
+    /// Keeps legacy summary text hidden when Sim 2 uses manual split tabs,
+    /// without overriding the scene's manual visual design.
+    /// </summary>
+    private void EnforceSim2ResultsVisibilityForTab(ResultsTab activeTab)
+    {
+        bool splitColumns = UseSim2SplitColumns();
+
+        // In split mode, never show the legacy combined summary text.
+        if (splitColumns && sim2ResultsSummaryText != null)
+            SetActiveSafe(sim2ResultsSummaryText.gameObject, false);
+
+        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
+        if (!splitColumns)
+            return;
+
+        bool showResult = activeTab == ResultsTab.Result;
+        bool showRecommendations = activeTab == ResultsTab.Recommendations;
+
+        if (sim2ResultsMetricsText != null)
+            SetActiveSafe(sim2ResultsMetricsText.gameObject, showResult);
+        if (sim2ResultsRecommendationsText != null)
+            SetActiveSafe(sim2ResultsRecommendationsText.gameObject, showRecommendations);
     }
 }
