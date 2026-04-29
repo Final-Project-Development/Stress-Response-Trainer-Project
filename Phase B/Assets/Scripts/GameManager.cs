@@ -176,6 +176,24 @@ public class GameManager : MonoBehaviour
         ShowFeedbackMessage(message, durationSeconds);
     }
 
+    public void ClearMissionMessages()
+    {
+        if (_pickupFeedbackRoutine != null)
+        {
+            StopCoroutine(_pickupFeedbackRoutine);
+            _pickupFeedbackRoutine = null;
+        }
+
+        if (objectiveText != null)
+            objectiveText.text = string.Empty;
+
+        if (pickupFeedbackText != null)
+        {
+            pickupFeedbackText.text = string.Empty;
+            pickupFeedbackText.gameObject.SetActive(false);
+        }
+    }
+
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
