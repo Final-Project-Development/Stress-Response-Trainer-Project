@@ -408,6 +408,7 @@ public class TrainingFlowController : MonoBehaviour
     /// <summary>Close login panel and return to Hub without signing in.</summary>
     public void UI_CancelLogin()
     {
+        StopAllNarration();
         CurrentPhase = Phase.Gate;
         ApplyPhaseUI();
     }
@@ -420,6 +421,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_StartIntro()
     {
+        StopAllNarration();
         if (introPanel == null)
         {
             UI_ContinueFromIntro();
@@ -433,9 +435,9 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_ContinueFromIntro()
     {
+        StopAllNarration();
         CurrentPhase = Phase.Simulation1Calibration;
         _calibrationTimer = 0f;
-        StopIntroNarration();
         PlayCalibrationNarration();
         physiology?.StartBaselineCapture();
         ApplyPhaseUI();
@@ -528,8 +530,7 @@ public class TrainingFlowController : MonoBehaviour
 
     private void BeginSimulation1Now()
     {
-        StopCalibrationNarration();
-        StopMissionBriefingNarration();
+        StopAllNarration();
         CurrentPhase = Phase.Simulation1Active;
         SetSimulationGameplayState(true, false);
         MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
@@ -650,6 +651,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_GoToSimulation2()
     {
+        StopAllNarration();
         if (sim2BriefingPanel == null)
         {
             UI_StartSimulation2Scene();
@@ -662,6 +664,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_StartSimulation2Scene()
     {
+        StopAllNarration();
         if (ShowSafetyWarningFor(PendingStart.Simulation2))
             return;
 
@@ -682,8 +685,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_BackToHub()
     {
-        StopCalibrationNarration();
-        StopMissionBriefingNarration();
+        StopAllNarration();
         CurrentPhase = Phase.Gate;
         recorder?.Clear();
         physiology?.StartBaselineCapture();
@@ -1355,6 +1357,13 @@ public class TrainingFlowController : MonoBehaviour
         if (narrationAudioSource == null) return;
         if (narrationAudioSource.clip == missionBriefingNarrationClip)
             narrationAudioSource.Stop();
+    }
+
+    private void StopAllNarration()
+    {
+        StopIntroNarration();
+        StopCalibrationNarration();
+        StopMissionBriefingNarration();
     }
 
     private void UpdateIntroSubtitleByNarrationTime()
