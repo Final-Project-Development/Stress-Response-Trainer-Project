@@ -1,13 +1,22 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class SettingsPanelController : MonoBehaviour
 {
     [Header("Audio")]
+    [FormerlySerializedAs("soundSlider")]
     [SerializeField] private Slider soundSlider;
+    [FormerlySerializedAs("musicSlider")]
     [SerializeField] private Slider musicSlider;
-    [SerializeField] private AudioSource musicSource;
+    [FormerlySerializedAs("musicSource")]
+    [Tooltip("Optional direct reference. If empty, narration source is taken from TrainingFlowController.")]
+    [SerializeField] private AudioSource narrationSource;
+    [Tooltip("Optional direct reference. If empty, siren source is taken from TrainingFlowController.")]
+    [SerializeField] private AudioSource sirenSource;
+    [Tooltip("Optional flow controller used to auto-resolve narration/siren sources.")]
+    [SerializeField] private TrainingFlowController trainingFlowController;
 
     [Header("Language")]
     [SerializeField] private TMP_Dropdown languageDropdown;
@@ -27,14 +36,17 @@ public class SettingsPanelController : MonoBehaviour
     [SerializeField] private Button closeButton;
     [SerializeField] private Button aboutButton;
 
-    private const string KeySound = "settings.sound";
-    private const string KeyMusic = "settings.music";
+    private const string KeyNarration = "settings.narration";
+    private const string KeySiren = "settings.siren";
+    private const string KeyLegacySound = "settings.sound";
+    private const string KeyLegacyMusic = "settings.music";
     private const string KeyLanguage = "settings.language";
     private const string KeyNotification = "settings.notification";
     private const string KeyVibration = "settings.vibration";
 
     private void Awake()
     {
+        ResolveAudioSources();
         ForceEnglishOnlyLanguageOption();
         LoadValues();
         WireUi();
@@ -48,17 +60,17 @@ public class SettingsPanelController : MonoBehaviour
 
     private void LoadValues()
     {
-        float sound = PlayerPrefs.GetFloat(KeySound, 1f);
-        float music = PlayerPrefs.GetFloat(KeyMusic, 1f);
+        float narration = GetPersistedFloat(KeyNarration, KeyLegacySound, 1f);
+        float siren = GetPersistedFloat(KeySiren, KeyLegacyMusic, 1f);
         int language = PlayerPrefs.GetInt(KeyLanguage, 0);
 
-        ApplySound(sound);
-        ApplyMusic(music);
+        ApplyNarration(narration);
+        ApplySiren(siren);
 
         if (soundSlider != null)
-            soundSlider.SetValueWithoutNotify(sound);
+            soundSlider.SetValueWithoutNotify(narration);
         if (musicSlider != null)
-            musicSlider.SetValueWithoutNotify(music);
+            musicSlider.SetValueWithoutNotify(siren);
 
         if (languageDropdown != null)
         {
@@ -97,14 +109,14 @@ public class SettingsPanelController : MonoBehaviour
 
     private void OnSoundChanged(float value)
     {
-        ApplySound(value);
-        PlayerPrefs.SetFloat(KeySound, value);
+        ApplyNarration(value);
+        PlayerPrefs.SetFloat(KeyNarration, value);
     }
 
     private void OnMusicChanged(float value)
     {
-        ApplyMusic(value);
-        PlayerPrefs.SetFloat(KeyMusic, value);
+        ApplySiren(value);
+        PlayerPrefs.SetFloat(KeySiren, value);
     }
 
     private void OnLanguageChanged(int index)
@@ -125,15 +137,39 @@ public class SettingsPanelController : MonoBehaviour
         languageDropdown.interactable = false;
     }
 
-    private void ApplySound(float value)
+    private void ApplyNarration(float value)
     {
-        AudioListener.volume = Mathf.Clamp01(value);
+        if (narrationSource != null)
+            narrationSource.volume = Mathf.Clamp01(value);
     }
 
-    private void ApplyMusic(float value)
+    private void ApplySiren(float value)
     {
-        if (musicSource != null)
-            musicSource.volume = Mathf.Clamp01(value);
+        if (sirenSource != null)
+            sirenSource.volume = Mathf.Clamp01(value);
+    }
+
+    private void ResolveAudioSources()
+    {
+        if (trainingFlowController == null)
+            trainingFlowController = FindFirstObjectByType<TrainingFlowController>();
+
+        if (trainingFlowController != null)
+        {
+            if (narrationSource == null)
+                narrationSource = trainingFlowController.narrationAudioSource;
+            if (sirenSource == null)
+                sirenSource = trainingFlowController.sirenLoop;
+        }
+    }
+
+    private static float GetPersistedFloat(string key, string legacyKey, float defaultValue)
+    {
+        if (PlayerPrefs.HasKey(key))
+            return PlayerPrefs.GetFloat(key, defaultValue);
+        if (!string.IsNullOrEmpty(legacyKey) && PlayerPrefs.HasKey(legacyKey))
+            return PlayerPrefs.GetFloat(legacyKey, defaultValue);
+        return defaultValue;
     }
 
     private void SetNotificationEnabled(bool enabled)
