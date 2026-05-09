@@ -162,6 +162,8 @@ public class ExperienceSimulationsController : MonoBehaviour
 
         switch (flow.CurrentPhase)
         {
+            case TrainingFlowController.Phase.SimulationPick:
+                return 1;
             case TrainingFlowController.Phase.Simulation2Briefing:
             case TrainingFlowController.Phase.Simulation2Active:
             case TrainingFlowController.Phase.Simulation2Results:

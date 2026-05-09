@@ -143,6 +143,10 @@ public class UINavigationManager : MonoBehaviour
 
         switch (flow.CurrentPhase)
         {
+            case TrainingFlowController.Phase.SimulationPick:
+                helpBodyText.text = helpDefault;
+                break;
+
             case TrainingFlowController.Phase.Simulation1Calibration:
             case TrainingFlowController.Phase.Simulation1MissionBriefing:
             case TrainingFlowController.Phase.Simulation1Active:

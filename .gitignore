@@ -15,6 +15,12 @@
 *.user
 *.userprefs
 
+# Local IDE workspace (keep repo clean)
+.cursor/
+**/.cursor/
+.cursorrules
+.cursorignore
+
 # OS
 .DS_Store
 Thumbs.db
