@@ -8,8 +8,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Game flow:
-/// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation 1 briefing → Simulation 1 active
-/// → Results 1 (SCI + optional HRV graphs) → Simulation 2 briefing → Simulation 2 scene → Results 2 (SCI + HRV graphs).
+/// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation pick (Level Select UI) → chosen briefing → …
+/// After each simulation’s results screen, flow returns to Simulation pick when <see cref="simulationPickPanel"/> is set (otherwise linear Sim 1 → Sim 2 remains).
+/// Assign <see cref="simulationPickPanel"/> to show after calibration; block buttons call <see cref="UI_PickSimulation1AfterCalibration"/> /
+/// <see cref="UI_PickSimulation2AfterCalibration"/>. If the pick panel is unassigned, calibration goes straight to Simulation 1 mission briefing.
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
 [DefaultExecutionOrder(50)]
@@ -44,6 +46,7 @@ public class TrainingFlowController : MonoBehaviour
         Login,
         IntroNarration,
         Simulation1Calibration,
+        SimulationPick,
         Simulation1MissionBriefing,
         Simulation1Active,
         Simulation1Results,
@@ -65,6 +68,8 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject introPanel;
     public GameObject sim1MissionBriefingPanel;
     public GameObject sim1CalibrationPanel;
+    [Tooltip("Level / simulation selection after baseline calibration. Buttons: UI_PickSimulation1AfterCalibration, UI_PickSimulation2AfterCalibration.")]
+    public GameObject simulationPickPanel;
     public GameObject sim1ResultsPanel;
     public GameObject sim2BriefingPanel;
     public GameObject sim2ResultsPanel;
@@ -157,54 +162,11 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("Max SCI (%) for Sim 2 SCI graph Y axis.")]
     public float sim2SciGraphMaxDisplay = 80f;
 
-    [Header("Results two-column layout")]
-    [Tooltip("Horizontal gap between the metrics and recommendations columns (world space in canvas units).")]
-    public float resultsColumnGap = 20f;
-    [Tooltip("If false, do not run any automatic runtime layout/styling on results panels. Use your manual scene layout as-is.")]
-    public bool enableAutomaticResultsLayout = false;
     [Header("Results tabs (manual inspector wiring)")]
     [Tooltip("Simulation 1 tabs: assign tab content roots and tab buttons manually.")]
     public ResultsTabsConfig sim1ResultsTabs;
     [Tooltip("Simulation 2 tabs: assign tab content roots and tab buttons manually.")]
     public ResultsTabsConfig sim2ResultsTabs;
-
-    [Header("Results screen readability")]
-    [Tooltip("Darken full-screen results panels and add card backgrounds behind column text.")]
-    public bool applyResultsReadabilityStyle = true;
-    [Tooltip("Full-panel tint (simulates a modal overlay over the 3D view).")]
-    public Color resultsScreenDimColor = new Color(0.02f, 0.04f, 0.08f, 0.82f);
-    [Tooltip("Background behind each metrics / recommendations column.")]
-    public Color resultsCardColor = new Color(0.07f, 0.09f, 0.13f, 0.96f);
-    public Color resultsColumnTextColor = new Color(0.93f, 0.95f, 1f, 1f);
-    [Tooltip("Extra horizontal inset so text does not touch screen edges (increase if text clips on world-space canvas).")]
-    public float resultsExtraSideMargin = 72f;
-    [Tooltip("Extra space from the top so columns sit below the SCI graph / header area (Sim 1).")]
-    public float resultsSim1TopInset = 260f;
-    [Tooltip("Extra space from the top for Sim 2 results (HRV graph).")]
-    public float resultsSim2TopInset = 220f;
-    [Tooltip("Padding between card edge and text inside each column.")]
-    public float resultsCardInnerPadding = 20f;
-    [Header("Results graphs layout")]
-    [Tooltip("Horizontal margin for graph area inside results panel.")]
-    public float resultsGraphSideInset = 90f;
-    [Tooltip("Distance from panel top to graph row.")]
-    public float resultsGraphTopInset = 56f;
-    [Tooltip("Graph row height (shared by all result graphs).")]
-    public float resultsGraphHeight = 170f;
-    [Tooltip("Horizontal gap when multiple graphs are shown in a row.")]
-    public float resultsGraphGap = 24f;
-    [Tooltip("Extra spacing between graph row and text columns.")]
-    public float resultsGraphToTextGap = 26f;
-    [Tooltip("If true, keep graph hierarchy/position exactly as set in the scene (no runtime auto-layout/reparent).")]
-    public bool useManualResultsGraphLayout = true;
-    [Tooltip("Apply a fixed, screen-like layout for results panels (graph row + two text cards + bottom button).")]
-    public bool enforceFixedResultsPanelsLayout = false;
-    public float fixedResultsSideInset = 64f;
-    public float fixedResultsTopInset = 34f;
-    public float fixedResultsBottomInset = 26f;
-    public float fixedResultsGraphHeight = 150f;
-    public float fixedResultsGraphToCardsGap = 18f;
-    public float fixedResultsButtonY = 52f;
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
@@ -302,22 +264,9 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
-        if (enableAutomaticResultsLayout)
-        {
-            if (sim1ResultsMetricsText == null || sim1ResultsRecommendationsText == null
-                || sim2ResultsMetricsText == null || sim2ResultsRecommendationsText == null)
-            {
-                EnsureRuntimeResultsSplitTexts();
-            }
-            if (enforceFixedResultsPanelsLayout)
-                ApplyFixedResultsPanelsLayout();
-        }
-
         if (autoPolishUi)
             ApplyUiPolish();
 
-        if (enableAutomaticResultsLayout)
-            SetupResultsColumnLayouts();
         ApplyCurrentResultsTabs();
 
         ApplyDefaultCopyToUi();
@@ -416,7 +365,27 @@ public class TrainingFlowController : MonoBehaviour
     /// <summary>Gate start button — opens intro panel and optional narration.</summary>
     public void UI_StartSimulation1()
     {
-        UI_StartIntro();
+        UI_MenuPickSimulation1Flow();
+    }
+
+    /// <summary>Hub — start intro (simulation choice happens after calibration when <see cref="simulationPickPanel"/> is set).</summary>
+    public void UI_MenuPickSimulation1Flow() => UI_StartIntro();
+
+    /// <summary>Legacy hub binding; same as <see cref="UI_MenuPickSimulation1Flow"/>.</summary>
+    public void UI_MenuPickSimulation2Flow() => UI_StartIntro();
+
+    /// <summary>Level-select block — Simulation 1 (after calibration).</summary>
+    public void UI_PickSimulation1AfterCalibration()
+    {
+        if (CurrentPhase != Phase.SimulationPick) return;
+        ShowSimulation1MissionBriefingAfterCalibration();
+    }
+
+    /// <summary>Level-select block — Simulation 2, skip Simulation 1 briefing (after calibration).</summary>
+    public void UI_PickSimulation2AfterCalibration()
+    {
+        if (CurrentPhase != Phase.SimulationPick) return;
+        ShowSimulation2BriefingAfterCalibration();
     }
 
     public void UI_StartIntro()
@@ -508,6 +477,18 @@ public class TrainingFlowController : MonoBehaviour
         if (physiology != null)
             SessionHistoryStore.BeginSession(physiology.HrvBaselineMs);
 
+        if (simulationPickPanel != null)
+        {
+            CurrentPhase = Phase.SimulationPick;
+            ApplyPhaseUI();
+            return;
+        }
+
+        ShowSimulation1MissionBriefingAfterCalibration();
+    }
+
+    private void ShowSimulation1MissionBriefingAfterCalibration()
+    {
         CurrentPhase = Phase.Simulation1MissionBriefing;
         if (missionBriefingBodyText != null && physiology != null)
         {
@@ -518,6 +499,21 @@ public class TrainingFlowController : MonoBehaviour
 
         ApplyPhaseUI();
         PlayMissionBriefingNarration();
+    }
+
+    private void ShowSimulation2BriefingAfterCalibration()
+    {
+        if (sim2BriefingPanel == null)
+        {
+            UI_StartSimulation2Scene();
+            return;
+        }
+
+        StopAllNarration();
+        CurrentPhase = Phase.Simulation2Briefing;
+        SetSimulationGameplayState(false, false);
+        ApplyPhaseUI();
+        SetSimulation2Status(sim2BriefingBody);
     }
 
     public void UI_BeginSimulation1()
@@ -596,6 +592,7 @@ public class TrainingFlowController : MonoBehaviour
                 rec.AppendLine(StressRecommendations.BuildBehavioralTips(recorder.SciHistory));
                 rec.AppendLine();
                 rec.AppendLine(nextStage);
+                AppendSimulationPickFooter(rec);
 
                 PrepareResultsTextForManualBox(sim1ResultsMetricsText);
                 PrepareResultsTextForManualBox(sim1ResultsRecommendationsText);
@@ -622,14 +619,13 @@ public class TrainingFlowController : MonoBehaviour
                 sb.AppendLine(tips);
                 sb.AppendLine();
                 sb.AppendLine(nextStage);
+                AppendSimulationPickFooter(sb);
                 PrepareResultsTextForManualBox(resultsSummaryText);
                 resultsSummaryText.text = sb.ToString();
             }
         }
 
         ApplyPhaseUI();
-        if (enableAutomaticResultsLayout)
-            FinalizeResultsScreenPresentation(true);
         ApplySim1ResultsTab(ResultsTab.Result);
     }
 
@@ -649,14 +645,44 @@ public class TrainingFlowController : MonoBehaviour
         return list.Count > 0 ? s / list.Count : 0f;
     }
 
-    public void UI_GoToSimulation2()
+    /// <summary>
+    /// Wired from Simulation 1 results — opens level-select when assigned; otherwise legacy jump to Simulation 2 briefing.
+    /// From Simulation 2 results use <see cref="UI_ReturnToSimulationPickFromResults"/> (same behavior).
+    /// </summary>
+    public void UI_GoToSimulation2() => UI_ReturnToSimulationPickFromResults();
+
+    /// <summary>
+    /// Returns to <see cref="simulationPickPanel"/> after viewing results when it is assigned.
+    /// Legacy fallback: Simulation 1 results → Simulation 2 briefing; Simulation 2 results → hub.
+    /// </summary>
+    public void UI_ReturnToSimulationPickFromResults()
     {
         StopAllNarration();
+        if (simulationPickPanel != null)
+        {
+            CurrentPhase = Phase.SimulationPick;
+            SetSimulationGameplayState(false, false);
+            ApplyPhaseUI();
+            return;
+        }
+
+        if (CurrentPhase == Phase.Simulation2Results)
+        {
+            UI_BackToHub();
+            return;
+        }
+
+        GoToSimulation2BriefingDirect();
+    }
+
+    private void GoToSimulation2BriefingDirect()
+    {
         if (sim2BriefingPanel == null)
         {
             UI_StartSimulation2Scene();
             return;
         }
+
         CurrentPhase = Phase.Simulation2Briefing;
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
@@ -787,6 +813,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(loginPanel, CurrentPhase == Phase.Login);
         SetActiveSafe(introPanel, CurrentPhase == Phase.IntroNarration);
         SetActiveSafe(sim1CalibrationPanel, CurrentPhase == Phase.Simulation1Calibration);
+        SetActiveSafe(simulationPickPanel, CurrentPhase == Phase.SimulationPick);
         SetActiveSafe(sim1MissionBriefingPanel, CurrentPhase == Phase.Simulation1MissionBriefing);
         SetActiveSafe(sim1ResultsPanel, CurrentPhase == Phase.Simulation1Results);
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
@@ -819,478 +846,6 @@ public class TrainingFlowController : MonoBehaviour
 
     private bool UseSim2SplitColumns() =>
         sim2ResultsMetricsText != null && sim2ResultsRecommendationsText != null;
-
-    private void SetupResultsColumnLayouts()
-    {
-        ApplyResultsPanelsRootDim();
-        if (!useManualResultsGraphLayout)
-        {
-            LayoutResultsGraphsForPanel(sim1ResultsPanel, true);
-            LayoutResultsGraphsForPanel(sim2ResultsPanel, false);
-        }
-
-        if (UseSim1SplitColumns() && sim1ResultsPanel != null)
-        {
-            ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
-            if (resultsSummaryText != null)
-                resultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (UseSim2SplitColumns() && sim2ResultsPanel != null)
-        {
-            ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
-            if (sim2ResultsSummaryText != null)
-                sim2ResultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (applyResultsReadabilityStyle)
-        {
-            if (!UseSim1SplitColumns() && resultsSummaryText != null)
-                ApplyReadabilityToResultsText(resultsSummaryText);
-            if (!UseSim2SplitColumns() && sim2ResultsSummaryText != null)
-                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
-        }
-    }
-
-    private void ApplyFixedResultsPanelsLayout()
-    {
-        ApplyFixedLayoutForPanel(sim1ResultsPanel, true);
-        ApplyFixedLayoutForPanel(sim2ResultsPanel, false);
-    }
-
-    private void ApplyFixedLayoutForPanel(GameObject panel, bool simulation1)
-    {
-        if (panel == null)
-            return;
-
-        if (panel.TryGetComponent<RectTransform>(out var panelRt))
-        {
-            panelRt.anchorMin = Vector2.zero;
-            panelRt.anchorMax = Vector2.one;
-            panelRt.offsetMin = Vector2.zero;
-            panelRt.offsetMax = Vector2.zero;
-            panelRt.pivot = new Vector2(0.5f, 0.5f);
-        }
-
-        var graphA = simulation1 ? resultsGraph : sim2SciResultsGraph;
-        var graphB = simulation1 ? sim1HrvResultsGraph : sim2HrvResultsGraph;
-        var root = panel.transform;
-
-        if (graphA != null)
-        {
-            graphA.transform.SetParent(root, false);
-            SetFixedGraphRect(graphA.GetComponent<RectTransform>(), graphB != null && !ReferenceEquals(graphA, graphB), 0);
-        }
-
-        if (graphB != null && !ReferenceEquals(graphA, graphB))
-        {
-            graphB.transform.SetParent(root, false);
-            SetFixedGraphRect(graphB.GetComponent<RectTransform>(), true, 1);
-        }
-
-        float graphReservedTop = fixedResultsTopInset + fixedResultsGraphHeight + fixedResultsGraphToCardsGap;
-        if (simulation1)
-            resultsSim1TopInset = Mathf.Max(resultsSim1TopInset, graphReservedTop);
-        else
-            resultsSim2TopInset = Mathf.Max(resultsSim2TopInset, graphReservedTop);
-
-        PlaceResultsButtonsAtBottom(root);
-    }
-
-    private void SetFixedGraphRect(RectTransform graphRt, bool split, int slot)
-    {
-        if (graphRt == null)
-            return;
-
-        float side = Mathf.Max(0f, fixedResultsSideInset);
-        float top = Mathf.Max(0f, fixedResultsTopInset);
-        float h = Mathf.Max(60f, fixedResultsGraphHeight);
-        float gap = Mathf.Max(0f, resultsGraphGap);
-        float halfGap = gap * 0.5f;
-
-        graphRt.anchorMin = new Vector2(0f, 1f);
-        graphRt.anchorMax = new Vector2(1f, 1f);
-        graphRt.pivot = new Vector2(0.5f, 1f);
-
-        if (!split)
-        {
-            graphRt.offsetMin = new Vector2(side, -(top + h));
-            graphRt.offsetMax = new Vector2(-side, -top);
-            return;
-        }
-
-        if (slot == 0)
-        {
-            graphRt.offsetMin = new Vector2(side, -(top + h));
-            graphRt.offsetMax = new Vector2(-halfGap, -top);
-        }
-        else
-        {
-            graphRt.offsetMin = new Vector2(halfGap, -(top + h));
-            graphRt.offsetMax = new Vector2(-side, -top);
-        }
-    }
-
-    private void PlaceResultsButtonsAtBottom(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
-        float y = Mathf.Max(24f, fixedResultsButtonY);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var rt = buttons[i].GetComponent<RectTransform>();
-            if (rt == null)
-                continue;
-
-            rt.anchorMin = new Vector2(0.5f, 0f);
-            rt.anchorMax = new Vector2(0.5f, 0f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0f, y);
-        }
-    }
-
-    /// <summary>
-    /// If split column TMPs are not wired in the Inspector, clone the existing summary text so the two-column layout works without manual scene edits.
-    /// </summary>
-    private void EnsureRuntimeResultsSplitTexts()
-    {
-        if (sim1ResultsMetricsText == null && sim1ResultsRecommendationsText == null
-            && resultsSummaryText != null && sim1ResultsPanel != null)
-        {
-            sim1ResultsMetricsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
-            sim1ResultsMetricsText.gameObject.name = "ResultsMetricsColumn";
-            sim1ResultsRecommendationsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
-            sim1ResultsRecommendationsText.gameObject.name = "ResultsRecommendationsColumn";
-            sim1ResultsMetricsText.transform.SetAsLastSibling();
-            sim1ResultsRecommendationsText.transform.SetAsLastSibling();
-            resultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (sim2ResultsMetricsText == null && sim2ResultsRecommendationsText == null
-            && sim2ResultsSummaryText != null && sim2ResultsPanel != null)
-        {
-            sim2ResultsMetricsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
-            sim2ResultsMetricsText.gameObject.name = "Sim2ResultsMetricsColumn";
-            sim2ResultsRecommendationsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
-            sim2ResultsRecommendationsText.gameObject.name = "Sim2ResultsRecommendationsColumn";
-            sim2ResultsMetricsText.transform.SetAsLastSibling();
-            sim2ResultsRecommendationsText.transform.SetAsLastSibling();
-            sim2ResultsSummaryText.gameObject.SetActive(false);
-        }
-    }
-
-    private void ApplyResultsPanelsRootDim()
-    {
-        if (!applyResultsReadabilityStyle)
-            return;
-
-        DimResultsPanelRoot(sim1ResultsPanel);
-        DimResultsPanelRoot(sim2ResultsPanel);
-    }
-
-    private void DimResultsPanelRoot(GameObject panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        var img = panelRoot.GetComponent<Image>();
-        if (img != null)
-        {
-            img.color = resultsScreenDimColor;
-            img.raycastTarget = true;
-        }
-    }
-
-    private void ApplyReadabilityToResultsText(TextMeshProUGUI tmp)
-    {
-        if (tmp == null || !applyResultsReadabilityStyle)
-            return;
-
-        tmp.color = resultsColumnTextColor;
-    }
-
-    private void ConfigureResultsSplitColumns(
-        TextMeshProUGUI leftColumn,
-        TextMeshProUGUI rightColumn,
-        float extraTopInset,
-        Transform panelRoot)
-    {
-        if (leftColumn == null || rightColumn == null || panelRoot == null)
-            return;
-
-        float halfGap = resultsColumnGap * 0.5f;
-        float side = panelSidePadding + resultsExtraSideMargin;
-        float graphDrivenTopInset = useManualResultsGraphLayout ? 0f : GetGraphDrivenTopInset(panelRoot);
-        float top = panelTopPadding + Mathf.Max(extraTopInset, graphDrivenTopInset);
-
-        DestroyLegacyCardBackdropsUnder(panelRoot);
-
-        var leftOuterMin = new Vector2(side, panelBottomPadding);
-        var leftOuterMax = new Vector2(-halfGap, -top);
-        var rightOuterMin = new Vector2(halfGap, panelBottomPadding);
-        var rightOuterMax = new Vector2(-side, -top);
-
-        PlaceColumnInCard(leftColumn, panelRoot, leftOuterMin, leftOuterMax, true);
-        PlaceColumnInCard(rightColumn, panelRoot, rightOuterMin, rightOuterMax, false);
-
-        ApplyReadabilityToResultsText(leftColumn);
-        ApplyReadabilityToResultsText(rightColumn);
-
-        if (leftColumn.transform.parent != null)
-            leftColumn.transform.parent.SetAsLastSibling();
-        if (rightColumn.transform.parent != null)
-            rightColumn.transform.parent.SetAsLastSibling();
-
-        BringStressLineGraphsBeforeButtons(panelRoot);
-        BringPanelButtonsToFront(panelRoot);
-    }
-
-    private void DestroyLegacyCardBackdropsUnder(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        const string legacyBackdropSuffix = "_CardBackdrop";
-        for (int i = panelRoot.childCount - 1; i >= 0; i--)
-        {
-            var ch = panelRoot.GetChild(i);
-            if (ch.name.EndsWith(legacyBackdropSuffix, StringComparison.Ordinal))
-            {
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(ch.gameObject);
-                else
-                    UnityEngine.Object.DestroyImmediate(ch.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Puts column text inside a card with a fixed rect + RectMask2D so TMP wraps inside the column and cannot bleed into the other column.
-    /// </summary>
-    private void PlaceColumnInCard(
-        TextMeshProUGUI tmp,
-        Transform panelRoot,
-        Vector2 outerOffsetMin,
-        Vector2 outerOffsetMax,
-        bool leftHalfOfScreen)
-    {
-        if (tmp == null || panelRoot == null)
-            return;
-
-        float pad = resultsCardInnerPadding;
-        const string cardSuffix = "_ColumnCard";
-
-        Transform cardT = tmp.transform.parent;
-        GameObject cardGo;
-        RectTransform cardRt;
-
-        if (cardT != null && cardT.name.EndsWith(cardSuffix, StringComparison.Ordinal) && cardT.parent == panelRoot)
-        {
-            cardGo = cardT.gameObject;
-            cardRt = cardGo.GetComponent<RectTransform>();
-            var imgEx = cardGo.GetComponent<Image>();
-            if (imgEx != null)
-                imgEx.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
-            if (cardGo.GetComponent<RectMask2D>() == null)
-                cardGo.AddComponent<RectMask2D>();
-        }
-        else
-        {
-            if (tmp.transform.parent != panelRoot)
-                tmp.transform.SetParent(panelRoot, false);
-
-            cardGo = new GameObject(tmp.name + cardSuffix);
-            cardRt = cardGo.AddComponent<RectTransform>();
-            cardGo.transform.SetParent(panelRoot, false);
-            tmp.transform.SetParent(cardRt, false);
-
-            var img = cardGo.AddComponent<Image>();
-            img.sprite = GetUiWhiteSprite();
-            img.type = Image.Type.Simple;
-            img.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
-            img.raycastTarget = false;
-            cardGo.AddComponent<RectMask2D>();
-        }
-
-        cardRt.anchorMin = leftHalfOfScreen ? new Vector2(0f, 0f) : new Vector2(0.5f, 0f);
-        cardRt.anchorMax = leftHalfOfScreen ? new Vector2(0.5f, 1f) : new Vector2(1f, 1f);
-        cardRt.pivot = new Vector2(0.5f, 0.5f);
-        cardRt.offsetMin = outerOffsetMin;
-        cardRt.offsetMax = outerOffsetMax;
-
-        var textRt = tmp.rectTransform;
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.pivot = new Vector2(0.5f, 0.5f);
-        textRt.offsetMin = new Vector2(pad, pad);
-        textRt.offsetMax = new Vector2(-pad, -pad);
-        textRt.localScale = Vector3.one;
-
-        tmp.enableWordWrapping = true;
-        tmp.textWrappingMode = TextWrappingModes.Normal;
-        tmp.overflowMode = TextOverflowModes.Overflow;
-        tmp.richText = true;
-        tmp.margin = Vector4.zero;
-        tmp.alignment = TextAlignmentOptions.TopLeft;
-    }
-
-    private static Sprite _uiWhiteSprite;
-
-    private void LayoutResultsGraphsForPanel(GameObject panel, bool simulation1)
-    {
-        if (panel == null)
-            return;
-
-        var g0 = simulation1 ? resultsGraph : sim2SciResultsGraph;
-        var g1 = simulation1 ? sim1HrvResultsGraph : sim2HrvResultsGraph;
-
-        bool hasG0 = EnsureGraphParentedToPanel(g0, panel.transform);
-        bool hasG1 = !ReferenceEquals(g0, g1) && EnsureGraphParentedToPanel(g1, panel.transform);
-        int count = (hasG0 ? 1 : 0) + (hasG1 ? 1 : 0);
-        if (count == 0)
-            return;
-
-        if (hasG0)
-            LayoutSingleGraphRect(g0.GetComponent<RectTransform>(), count, 0);
-        if (hasG1)
-            LayoutSingleGraphRect(g1.GetComponent<RectTransform>(), count, hasG0 ? 1 : 0);
-    }
-
-    private void LayoutSingleGraphRect(RectTransform rt, int graphCount, int slotIndex)
-    {
-        if (rt == null)
-            return;
-
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-
-        float sideInset = Mathf.Max(0f, resultsGraphSideInset);
-        float topInset = Mathf.Max(0f, resultsGraphTopInset);
-        float graphHeight = Mathf.Max(40f, resultsGraphHeight);
-        float graphGap = Mathf.Max(0f, resultsGraphGap);
-
-        if (graphCount <= 1)
-        {
-            rt.offsetMin = new Vector2(sideInset, -topInset - graphHeight);
-            rt.offsetMax = new Vector2(-sideInset, -topInset);
-            return;
-        }
-
-        float halfGap = graphGap * 0.5f;
-        if (slotIndex == 0)
-        {
-            rt.offsetMin = new Vector2(sideInset, -topInset - graphHeight);
-            rt.offsetMax = new Vector2(-halfGap, -topInset);
-        }
-        else
-        {
-            rt.offsetMin = new Vector2(halfGap, -topInset - graphHeight);
-            rt.offsetMax = new Vector2(-sideInset, -topInset);
-        }
-    }
-
-    private static bool EnsureGraphParentedToPanel(SimpleStressLineGraph graph, Transform panelRoot)
-    {
-        if (graph == null || panelRoot == null)
-            return false;
-
-        var gt = graph.transform;
-        if (gt == null)
-            return false;
-
-        if (gt.parent != panelRoot)
-            gt.SetParent(panelRoot, false);
-
-        return gt.IsChildOf(panelRoot);
-    }
-
-    private float GetGraphDrivenTopInset(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return 0f;
-
-        int graphCount = 0;
-        if (resultsGraph != null && resultsGraph.transform.IsChildOf(panelRoot))
-            graphCount++;
-        if (sim1HrvResultsGraph != null && sim1HrvResultsGraph.transform.IsChildOf(panelRoot) && !ReferenceEquals(sim1HrvResultsGraph, resultsGraph))
-            graphCount++;
-        if (sim2SciResultsGraph != null && sim2SciResultsGraph.transform.IsChildOf(panelRoot))
-            graphCount++;
-        if (sim2HrvResultsGraph != null && sim2HrvResultsGraph.transform.IsChildOf(panelRoot) && !ReferenceEquals(sim2HrvResultsGraph, sim2SciResultsGraph))
-            graphCount++;
-
-        if (graphCount == 0)
-            return 0f;
-
-        return Mathf.Max(0f, resultsGraphTopInset) + Mathf.Max(40f, resultsGraphHeight) + Mathf.Max(0f, resultsGraphToTextGap);
-    }
-
-    private static Sprite GetUiWhiteSprite()
-    {
-        if (_uiWhiteSprite == null)
-        {
-            var tex = Texture2D.whiteTexture;
-            _uiWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-
-        return _uiWhiteSprite;
-    }
-
-    /// <summary>Re-apply dim/cards after the results panel becomes active (layout was first computed while hidden).</summary>
-    private void FinalizeResultsScreenPresentation(bool simulation1)
-    {
-        if (applyResultsReadabilityStyle)
-            ApplyResultsPanelsRootDim();
-        if (!useManualResultsGraphLayout)
-            LayoutResultsGraphsForPanel(simulation1 ? sim1ResultsPanel : sim2ResultsPanel, simulation1);
-        if (simulation1)
-        {
-            if (UseSim1SplitColumns() && sim1ResultsPanel != null)
-                ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
-            else if (resultsSummaryText != null)
-                ApplyReadabilityToResultsText(resultsSummaryText);
-        }
-        else
-        {
-            if (UseSim2SplitColumns() && sim2ResultsPanel != null)
-                ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
-            else if (sim2ResultsSummaryText != null)
-                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
-        }
-
-        if (!useManualResultsGraphLayout)
-            BringStressLineGraphsBeforeButtons(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
-        BringPanelButtonsToFront(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
-        Canvas.ForceUpdateCanvases();
-    }
-
-    /// <summary>Puts stress line graphs above result columns but below buttons (draw order).</summary>
-    private static void BringStressLineGraphsBeforeButtons(Transform panelRoot)
-    {
-        if (panelRoot == null) return;
-        var graphs = panelRoot.GetComponentsInChildren<SimpleStressLineGraph>(true);
-        for (int i = 0; i < graphs.Length; i++)
-        {
-            if (graphs[i] != null)
-                graphs[i].transform.SetAsLastSibling();
-        }
-    }
-
-    private static void BringPanelButtonsToFront(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            if (buttons[i] != null)
-                buttons[i].transform.SetAsLastSibling();
-        }
-    }
 
     private void SetSimulationGameplayState(bool simulation1On, bool simulation2On)
     {
@@ -1570,7 +1125,7 @@ public class TrainingFlowController : MonoBehaviour
             rec.AppendLine();
             rec.AppendLine(tips);
             rec.AppendLine();
-            rec.AppendLine("Press <b>Back To Hub</b> when ready.");
+            rec.AppendLine(Sim2ResultsFooterLine());
 
             PrepareResultsTextForManualBox(sim2ResultsMetricsText);
             PrepareResultsTextForManualBox(sim2ResultsRecommendationsText);
@@ -1595,7 +1150,7 @@ public class TrainingFlowController : MonoBehaviour
             sb.AppendLine("Recommendations:");
             sb.AppendLine(tips);
             sb.AppendLine();
-            sb.AppendLine("Press Back To Hub when ready.");
+            sb.AppendLine(Sim2ResultsFooterLinePlain());
             PrepareResultsTextForManualBox(sim2ResultsSummaryText);
             sim2ResultsSummaryText.text = sb.ToString();
         }
@@ -1608,8 +1163,6 @@ public class TrainingFlowController : MonoBehaviour
         ApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
-        if (enableAutomaticResultsLayout)
-            FinalizeResultsScreenPresentation(false);
         ApplySim2ResultsTab(ResultsTab.Result);
     }
 
@@ -1852,7 +1405,30 @@ public class TrainingFlowController : MonoBehaviour
         label.text = text;
     }
 
-    private static string GuessButtonTextByMethod(Button button)
+    private void AppendSimulationPickFooter(StringBuilder sb)
+    {
+        if (sb == null || simulationPickPanel == null)
+            return;
+        sb.AppendLine();
+        sb.AppendLine(
+            "When you are ready, use <b>Choose Simulation</b> to open the scenario menu (Simulation 1 — supplies, Simulation 2 — first aid).");
+    }
+
+    private string Sim2ResultsFooterLine()
+    {
+        return simulationPickPanel != null
+            ? "When ready, use <b>Choose Simulation</b> to pick another scenario."
+            : "Press <b>Back To Hub</b> when ready.";
+    }
+
+    private string Sim2ResultsFooterLinePlain()
+    {
+        return simulationPickPanel != null
+            ? "Use Choose Simulation on this screen to pick another scenario."
+            : "Press Back To Hub when ready.";
+    }
+
+    private string GuessButtonTextByMethod(Button button)
     {
         int count = button.onClick.GetPersistentEventCount();
         for (int i = 0; i < count; i++)
@@ -1868,8 +1444,8 @@ public class TrainingFlowController : MonoBehaviour
                 return "Continue";
             if (method == "UI_BeginSimulation1")
                 return "Start Simulation 1";
-            if (method == "UI_GoToSimulation2")
-                return "Continue To Simulation 2";
+            if (method == "UI_GoToSimulation2" || method == "UI_ReturnToSimulationPickFromResults")
+                return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
             if (method == "UI_StartSimulation2Scene")
                 return "Start Simulation 2";
             if (method == "UI_OpenLogin")
@@ -1879,14 +1455,15 @@ public class TrainingFlowController : MonoBehaviour
         return null;
     }
 
-    private static string GuessButtonTextByName(string buttonName)
+    private string GuessButtonTextByName(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName)) return null;
 
         string n = buttonName.ToLowerInvariant();
         if (n.Contains("start experience")) return "Start Training";
         if (n.Contains("start mission")) return "Start Simulation 1";
-        if (n.Contains("movetosimulation2")) return "Continue To Simulation 2";
+        if (n.Contains("movetosimulation2"))
+            return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
         if (n.Contains("btnstartsimulation2")) return "Start Simulation 2";
         if (n.Contains("continuefromintro")) return "Continue";
         return null;
