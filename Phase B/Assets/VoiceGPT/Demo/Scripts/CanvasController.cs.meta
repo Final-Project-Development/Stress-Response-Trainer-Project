@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 41a2e7f2a700466ab9c9133818e55998
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Demo/Scripts/CanvasController.cs
+  uploadId: 810150

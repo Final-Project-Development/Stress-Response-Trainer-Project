@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 706b2dffc3ae4eee8b6f8c6d6fd9a640
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Editor/Scripts/VoiceGPTEditor.cs
+  uploadId: 810150

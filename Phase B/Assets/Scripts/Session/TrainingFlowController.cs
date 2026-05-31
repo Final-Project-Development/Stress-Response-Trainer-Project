@@ -106,11 +106,15 @@ public class TrainingFlowController : MonoBehaviour
     [Header("Optional feedback")]
     public AudioSource sirenLoop;
     public AudioSource narrationAudioSource;
+    [Tooltip("Optional bundle of VoiceGPT clips (Window → VoiceGPT → Panel Narration Setup). Fills empty clip slots at Start.")]
+    public PanelNarrationLibrary narrationLibrary;
     public AudioClip introNarrationClip;
     [Tooltip("Optional voice-over for the baseline calibration screen.")]
     public AudioClip calibrationNarrationClip;
     [Tooltip("Optional voice-over for Simulation 1 mission briefing (instructions before Start mission).")]
     public AudioClip missionBriefingNarrationClip;
+    [Tooltip("Optional voice-over for Simulation 2 briefing panel.")]
+    public AudioClip sim2BriefingNarrationClip;
     public UnityEvent onSimulation1Started;
     public UnityEvent onSimulation1Ended;
 
@@ -310,6 +314,8 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
+        ApplyNarrationFromLibrary();
+
         if (autoPolishUi)
             ApplyUiPolish();
 
@@ -563,6 +569,7 @@ public class TrainingFlowController : MonoBehaviour
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
+        PlaySim2BriefingNarration();
     }
 
     public void UI_BeginSimulation1()
@@ -734,9 +741,12 @@ public class TrainingFlowController : MonoBehaviour
             return;
         }
 
+        StopAllNarration();
         CurrentPhase = Phase.Simulation2Briefing;
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
+        SetSimulation2Status(sim2BriefingBody);
+        PlaySim2BriefingNarration();
     }
 
     public void UI_StartSimulation2Scene()
@@ -931,47 +941,53 @@ public class TrainingFlowController : MonoBehaviour
         sirenLoop.Stop();
     }
 
-    private void PlayIntroNarration()
+    private void ApplyNarrationFromLibrary()
     {
-        if (narrationAudioSource == null || introNarrationClip == null) return;
+        if (narrationLibrary == null)
+            return;
+
+        if (introNarrationClip == null && narrationLibrary.introClip != null)
+            introNarrationClip = narrationLibrary.introClip;
+        if (calibrationNarrationClip == null && narrationLibrary.calibrationClip != null)
+            calibrationNarrationClip = narrationLibrary.calibrationClip;
+        if (missionBriefingNarrationClip == null && narrationLibrary.sim1MissionBriefingClip != null)
+            missionBriefingNarrationClip = narrationLibrary.sim1MissionBriefingClip;
+        if (sim2BriefingNarrationClip == null && narrationLibrary.sim2BriefingClip != null)
+            sim2BriefingNarrationClip = narrationLibrary.sim2BriefingClip;
+    }
+
+    private void PlayIntroNarration() => PlayNarrationClip(introNarrationClip);
+
+    private void StopIntroNarration() => StopNarrationIfPlaying(introNarrationClip, stopAnyClip: true);
+
+    private void PlayCalibrationNarration() => PlayNarrationClip(calibrationNarrationClip);
+
+    private void StopCalibrationNarration() => StopNarrationIfPlaying(calibrationNarrationClip);
+
+    private void PlayMissionBriefingNarration() => PlayNarrationClip(missionBriefingNarrationClip);
+
+    private void StopMissionBriefingNarration() => StopNarrationIfPlaying(missionBriefingNarrationClip);
+
+    private void PlaySim2BriefingNarration() => PlayNarrationClip(sim2BriefingNarrationClip);
+
+    private void StopSim2BriefingNarration() => StopNarrationIfPlaying(sim2BriefingNarrationClip);
+
+    private void PlayNarrationClip(AudioClip clip)
+    {
+        if (narrationAudioSource == null || clip == null)
+            return;
+
         narrationAudioSource.loop = false;
-        narrationAudioSource.clip = introNarrationClip;
+        narrationAudioSource.clip = clip;
         narrationAudioSource.Play();
     }
 
-    private void StopIntroNarration()
+    private void StopNarrationIfPlaying(AudioClip clip, bool stopAnyClip = false)
     {
-        if (narrationAudioSource == null) return;
-        narrationAudioSource.Stop();
-    }
+        if (narrationAudioSource == null)
+            return;
 
-    private void PlayCalibrationNarration()
-    {
-        if (narrationAudioSource == null || calibrationNarrationClip == null) return;
-        narrationAudioSource.loop = false;
-        narrationAudioSource.clip = calibrationNarrationClip;
-        narrationAudioSource.Play();
-    }
-
-    private void StopCalibrationNarration()
-    {
-        if (narrationAudioSource == null) return;
-        if (narrationAudioSource.clip == calibrationNarrationClip)
-            narrationAudioSource.Stop();
-    }
-
-    private void PlayMissionBriefingNarration()
-    {
-        if (narrationAudioSource == null || missionBriefingNarrationClip == null) return;
-        narrationAudioSource.loop = false;
-        narrationAudioSource.clip = missionBriefingNarrationClip;
-        narrationAudioSource.Play();
-    }
-
-    private void StopMissionBriefingNarration()
-    {
-        if (narrationAudioSource == null) return;
-        if (narrationAudioSource.clip == missionBriefingNarrationClip)
+        if (stopAnyClip || narrationAudioSource.clip == clip)
             narrationAudioSource.Stop();
     }
 
@@ -980,6 +996,7 @@ public class TrainingFlowController : MonoBehaviour
         StopIntroNarration();
         StopCalibrationNarration();
         StopMissionBriefingNarration();
+        StopSim2BriefingNarration();
     }
 
     private void UpdateIntroSubtitleByNarrationTime()

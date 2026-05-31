@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a8cb103c675847e5867a7fa6fe0942ba
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Models/BERTConfig.yml
+  uploadId: 810150

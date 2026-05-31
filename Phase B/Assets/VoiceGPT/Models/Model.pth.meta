@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 856fb3bb42424448ad42b0d913dc6903
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Models/Model.pth
+  uploadId: 810150

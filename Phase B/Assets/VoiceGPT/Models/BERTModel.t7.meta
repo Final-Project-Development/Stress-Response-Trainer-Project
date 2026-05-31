@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: aa9f30c9e0374cf780f1b86dbb52fbca
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Models/BERTModel.t7
+  uploadId: 810150

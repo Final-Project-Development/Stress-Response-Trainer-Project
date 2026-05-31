@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e9325620f0bc4382a33d9f12f24d8df6
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Models/main.py
+  uploadId: 810150

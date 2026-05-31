@@ -1,0 +1,17 @@
+Thank you for purchasing VoiceGPT. VoiceGPT is now fully offline. We have updated the FAQs accordingly.
+
+This FAQ file contains general FAQs and frequently faced issues.
+
+- Can I use these voices in my game?
+
+Yes, you can use these voices for commercial purposes. You will have the copyright for all the voices you generate, thereby granting you full ownership of the voices created with VoiceGPT. You can use the voices for all commercial activities.
+
+- I am getting a lot of errors, and the Editor UI looks incorrect. How do I rectify this?
+
+Please do not change the directory of VoiceGPT. Try to keep the directories pointing to the default values: VoiceGPT folder under Assets and Voices folder under Assets/VoiceGPT.
+
+- Where can I find voices that I generated? How do I preview audio clips inside the editor?
+
+The default location for the audio clips is Assets/VoiceGPT/Voices. You can find the voices that you generate in that folder. To preview a voice, simply select the audio clip and hover your cursor over the VoiceGPT window. This will make the audio clip visible and interactable in the window. Press on the play button to hear the audio clip.
+
+* Please refrain from using profanity. Do not use this asset to promote hate or discrimination. We aim to create a welcoming and inclusive environment for all users. Thank you for your understanding and cooperation.

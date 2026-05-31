@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: aa81dbd02be84e37ae140237fff9a9bb
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Models/ASRConfig.yml
+  uploadId: 810150

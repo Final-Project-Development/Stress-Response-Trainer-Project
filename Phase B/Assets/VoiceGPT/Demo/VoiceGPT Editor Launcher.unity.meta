@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e337e128497048e4b8082bddff7a3a00
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Demo/VoiceGPT Editor Launcher.unity
+  uploadId: 810150

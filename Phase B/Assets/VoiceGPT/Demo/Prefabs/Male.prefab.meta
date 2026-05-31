@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3c74a57685394506b912802b34c6a5d2
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Demo/Prefabs/Male.prefab
+  uploadId: 810150

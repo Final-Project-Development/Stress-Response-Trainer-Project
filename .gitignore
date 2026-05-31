@@ -24,3 +24,7 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# VoiceGPT model weights (too large for GitHub — keep locally after Asset Store import)
+**/VoiceGPT/Models/*.pth
+**/VoiceGPT/Models/*.t7

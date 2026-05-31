@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cf42c6a7ce7d49fcb62bfb171406f481
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 272682
+  packageName: VoiceGPT
+  packageVersion: 2.0
+  assetPath: Assets/VoiceGPT/Demo/Prefabs/Female.prefab
+  uploadId: 810150

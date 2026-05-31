@@ -54,22 +54,17 @@ public class WoundedMan : MonoBehaviour
 
             currentStep++;
             if (currentStep >= 3)
-            {
                 CompleteTreatment();
-            }
             else
-            {
                 ShowStepInstruction();
-            }
             return;
         }
 
-        // If user pressed one of the treatment keys but not the expected one, show guidance.
         if (Input.GetKeyDown(step1Key) || Input.GetKeyDown(step2Key) || Input.GetKeyDown(step3Key))
             ShowWrongKeyMessage(expected);
     }
 
-    public void OnFirstAid() 
+    public void OnFirstAid()
     {
         if (helped)
             return;
@@ -91,7 +86,6 @@ public class WoundedMan : MonoBehaviour
             return;
         }
 
-        // If E is pressed again during treatment, remind the player what key is expected.
         PlayAnimationTrigger(startAidTrigger);
         ShowStepInstruction();
     }
@@ -130,7 +124,6 @@ public class WoundedMan : MonoBehaviour
         if (gameManager != null)
             gameManager.OnFirstAidFinished();
 
-        // simple feedback: change color (optional)
         Renderer rend = GetComponent<Renderer>();
         if (rend != null)
             rend.material.color = Color.green;
