@@ -6,6 +6,13 @@ public class PickUpItem : MonoBehaviour
 
     private GameManager gameManager;
 
+    public string ItemDisplayName => itemDisplayName;
+
+    public void Configure(string displayName)
+    {
+        itemDisplayName = displayName;
+    }
+
     void Start()
     {
         gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
@@ -13,6 +20,13 @@ public class PickUpItem : MonoBehaviour
 
     public void OnPickUp()
     {
+        var firstAidKit = GetComponent<FirstAidKitPickup>();
+        if (firstAidKit != null)
+        {
+            firstAidKit.OnPickUp();
+            return;
+        }
+
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
 

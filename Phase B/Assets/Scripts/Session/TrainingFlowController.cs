@@ -219,27 +219,71 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string calibrationInstruction =
-        "Stand still and relax. We are calibrating your heart-rate metrics.\n\n" +
-        "Take a calm view of the space (home / courtyard). No alarm will play during this step.";
+        "Stand still and relax for 15 seconds.\n\n" +
+        "We are calibrating your heart-rate metrics.\n\n" +
+        "No alarm will play during this step.";
 
     [TextArea]
     public string missionBriefingBody =
         "Simulation 1 — Emergency preparedness\n\n" +
         "A loud continuous siren will start when the mission begins.\n\n" +
-        "Collect three essential items inside the home:\n" +
-        "• Water\n" +
-        "• First aid kit\n" +
-        "• Emergency bag\n\n" +
-        "After collecting all 3 items, run to the Mamad (shelter) outside.\n\n" +
+        "1) Enter the home and collect 5 items (press E on each):\n" +
+        "   • Water bottle\n" +
+        "   • Flash light\n" +
+        "   • Radio\n" +
+        "   • Compass\n" +
+        "   • Map\n\n" +
+        "2) Turn off the lights — switch: PFB_Lightswitch (1)\n" +
+        "3) Close the entrance door — PFB_DoorDouble\n" +
+        "4) Run to the Mamad (shelter) outside\n\n" +
         "When you are ready, press Start mission.";
 
     [TextArea]
     public string sim2BriefingBody =
         "Simulation 2 — First aid under pressure\n\n" +
-        "You are now in an outdoor courtyard with ongoing alarm conditions.\n" +
-        "Approach the casualty and complete first aid.\n\n" +
-        "Maintain controlled breathing and focus on one action at a time.\n\n" +
-        "Press Start Simulation 2 when ready.";
+        "1) Search the city for the first aid kit (press E to pick up)\n" +
+        "2) Find the wounded person in the city\n" +
+        "3) Provide treatment:\n" +
+        "   • Press E on the casualty to start\n" +
+        "   • Press keys 1 → 2 → 3 in order\n\n" +
+        "Press Start Mission when you are ready.";
+
+    [Header("Simulation 1 — in-game mission hints")]
+    [TextArea] public string sim1MissionStartHint =
+        "Enter the home and collect 5 items (press E): water bottle, flash light, radio, compass, map.";
+    [TextArea] public string sim1AllItemsCollectedHint =
+        "All items collected. Turn off the lights using PFB_Lightswitch (1) inside the home.";
+    [TextArea] public string sim1LightsOffHint =
+        "Lights off. Close the entrance door (PFB_DoorDouble) — press E.";
+    [TextArea] public string sim1DoorClosedHint =
+        "Door closed. Run to the Mamad (shelter) outside!";
+    [TextArea] public string sim1ObjectiveTurnOffLights =
+        "Turn off the lights using PFB_Lightswitch (1) inside the home.";
+    [TextArea] public string sim1ObjectiveCloseDoor =
+        "Close the entrance door (PFB_DoorDouble) before leaving — press E.";
+    [TextArea] public string sim1ObjectiveRunToShelter =
+        "Run to the Mamad (shelter) outside.";
+    [TextArea] public string sim1ItemsList =
+        "water bottle, flash light, radio, compass, map";
+
+    [Header("Simulation 2 — in-game mission hints")]
+    [TextArea] public string sim2MissionStartHint =
+        "Simulation 2 started. Search the city for the first aid kit.";
+    [TextArea] public string sim2ObjectiveFindKit =
+        "Search the city for the first aid kit.";
+    [TextArea] public string sim2KitCollectedHint =
+        "First aid kit collected. Search the city and find the wounded person.";
+    [TextArea] public string sim2TreatWoundedHint =
+        "Find the wounded person in the city. Press E to start treatment, then keys 1 → 2 → 3.";
+    [TextArea] public string sim2CompletedHint =
+        "First aid complete. Simulation 2 mission finished.";
+    [TextArea] public string sim2NeedKitHint =
+        "Find the first aid kit in the city before treating the wounded.";
+
+    public string BuildSim1CollectObjective(int collected, int total)
+    {
+        return $"Enter the home and collect supplies: {collected}/{total} — {sim1ItemsList}.";
+    }
 
     public float calibrationDurationSeconds = 60f;
     public bool runSimulation2InSameScene = true;
@@ -490,11 +534,14 @@ public class TrainingFlowController : MonoBehaviour
     private void ShowSimulation1MissionBriefingAfterCalibration()
     {
         CurrentPhase = Phase.Simulation1MissionBriefing;
-        if (missionBriefingBodyText != null && physiology != null)
+        if (missionBriefingBodyText != null)
         {
-            missionBriefingBodyText.text =
-                missionBriefingBody.TrimEnd() +
-                $"\n\nBaseline locked — HRV baseline: {physiology.HrvBaselineMs:F1} ms";
+            missionBriefingBodyText.text = missionBriefingBody.TrimEnd();
+            if (physiology != null)
+            {
+                missionBriefingBodyText.text +=
+                    $"\n\nBaseline locked — HRV baseline: {physiology.HrvBaselineMs:F1} ms";
+            }
         }
 
         ApplyPhaseUI();
@@ -537,6 +584,8 @@ public class TrainingFlowController : MonoBehaviour
         onSimulation1Started?.Invoke();
         ApplyPhaseUI();
         SetHudVisible(true);
+
+        gameManager?.PrepareSimulation1Mission();
 
         if (gameManager != null)
             gameManager.OnAllItemsCollected += HandleSim1Complete;
@@ -830,8 +879,18 @@ public class TrainingFlowController : MonoBehaviour
     /// <summary>Unlock cursor for menu phases; lock only during active simulations.</summary>
     private void ApplyPlayerInteractionMode()
     {
-        if (playerFpsController == null) return;
+        if (playerFpsController == null)
+            return;
+
+        var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
+        if (navigation != null)
+        {
+            navigation.ApplyPlayerCursorMode();
+            return;
+        }
+
         bool menuPhase = CurrentPhase != Phase.Simulation1Active && CurrentPhase != Phase.Simulation2Active;
+        playerFpsController.SetOverlayUiOpen(false);
         playerFpsController.SetUiMenuMode(menuPhase);
     }
 
@@ -1005,7 +1064,8 @@ public class TrainingFlowController : MonoBehaviour
             physiology.StressorActive = true;
         PlaySiren();
         SetHudVisible(true);
-        SetSimulation2Status("Simulation 2 started. Approach the wounded man and press E to provide first aid.");
+        SetSimulation2Status(sim2MissionStartHint);
+        gameManager?.PrepareSimulation2Mission();
         SubscribeSimulation2IfNeeded();
         ApplyPhaseUI();
     }
@@ -1043,6 +1103,9 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(pausePanel, paused);
         if (paused)
             SetSafetyWarningVisible(false);
+
+        var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
+        navigation?.ApplyPlayerCursorMode();
     }
 
     private void SubscribeSimulation2IfNeeded()

@@ -21,6 +21,9 @@ public class WoundedMan : MonoBehaviour
     [Tooltip("Optional trigger fired when all steps are complete.")]
     public string completeTrigger = "FirstAidComplete";
 
+    [Header("Simulation 2 prerequisites")]
+    public bool requireFirstAidKit = true;
+
     private GameManager gameManager;
     private bool helped = false;
     private bool treatmentStarted = false;
@@ -70,6 +73,14 @@ public class WoundedMan : MonoBehaviour
     {
         if (helped)
             return;
+
+        if (requireFirstAidKit && gameManager != null && !gameManager.HasFirstAidKit())
+        {
+            var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+            string msg = flow != null ? flow.sim2NeedKitHint : "Find the first aid kit in the city before treating the wounded.";
+            gameManager.ShowMissionMessage(msg, 4f);
+            return;
+        }
 
         if (!treatmentStarted)
         {
@@ -125,6 +136,13 @@ public class WoundedMan : MonoBehaviour
             rend.material.color = Color.green;
 
         Debug.Log("First aid sequence completed.");
+    }
+
+    public void ResetTreatment()
+    {
+        helped = false;
+        treatmentStarted = false;
+        currentStep = 0;
     }
 
     private void PlayAnimationTrigger(string triggerName)

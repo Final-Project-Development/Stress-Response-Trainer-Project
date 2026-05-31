@@ -9,6 +9,7 @@ public class UINavigationManager : MonoBehaviour
 {
     [Header("Flow")]
     public TrainingFlowController flow;
+    public GameManager gameManager;
     public SimpleFPSController playerController;
 
     [Header("Panels")]
@@ -21,27 +22,45 @@ public class UINavigationManager : MonoBehaviour
     [TextArea] public string helpDefault =
         "Use Pause to stop safely.\nUse Back to return to hub.\nUse Help anytime for current task instructions.";
     [TextArea] public string helpSimulation1 =
-        "Simulation 1:\n1) Collect all required items.\n2) After collecting, run to the Mamad outside.\n3) Complete the objective to view results.";
+        "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, compass, map.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
-        "Simulation 2:\n1) Approach the wounded person.\n2) Start treatment and follow step order.\n3) Complete treatment to view results.";
+        "Simulation 2:\n1) Find the first aid kit in the city (E).\n2) Find the wounded person.\n3) Press E and complete keys 1 → 2 → 3.";
 
     [Header("Keys")]
     public KeyCode pauseKey = KeyCode.Escape;
+    public KeyCode helpKey = KeyCode.H;
 
     private bool _helpOpen;
 
+    public bool IsHelpOpen => _helpOpen;
+
+    public bool IsOverlayUiOpen =>
+        _helpOpen
+        || (confirmBackPanel != null && confirmBackPanel.activeSelf)
+        || (flow != null && flow.IsPaused);
+
     void Start()
     {
+        if (flow == null)
+            flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+
         SetActiveSafe(topBar, true);
         SetActiveSafe(helpPanel, false);
         SetActiveSafe(confirmBackPanel, false);
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(pauseKey))
-            TogglePause();
+        if (Input.GetKeyDown(helpKey))
+            ToggleHelp();
+    }
+
+    void LateUpdate()
+    {
+        ApplyPlayerCursorMode();
     }
 
     public void TogglePause()
@@ -50,7 +69,7 @@ public class UINavigationManager : MonoBehaviour
             return;
 
         flow.UI_SetPause(!flow.IsPaused);
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     public void ResumeFromPause()
@@ -59,7 +78,7 @@ public class UINavigationManager : MonoBehaviour
             return;
 
         flow.UI_Resume();
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     public void ToggleHelp()
@@ -68,14 +87,14 @@ public class UINavigationManager : MonoBehaviour
         SetActiveSafe(helpPanel, _helpOpen);
         if (_helpOpen)
             RefreshHelpText();
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     public void CloseHelp()
     {
         _helpOpen = false;
         SetActiveSafe(helpPanel, false);
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     public void GoBack()
@@ -88,7 +107,7 @@ public class UINavigationManager : MonoBehaviour
             SetActiveSafe(confirmBackPanel, true);
             if (flow.IsPaused)
                 flow.UI_SetPause(false);
-            ApplyInteractionMode();
+            ApplyPlayerCursorMode();
             return;
         }
 
@@ -104,7 +123,7 @@ public class UINavigationManager : MonoBehaviour
     public void ConfirmBackNo()
     {
         SetActiveSafe(confirmBackPanel, false);
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     public void ExitApplication()
@@ -123,7 +142,7 @@ public class UINavigationManager : MonoBehaviour
         SetActiveSafe(confirmBackPanel, false);
         flow.UI_SetPause(false);
         flow.UI_BackToHub();
-        ApplyInteractionMode();
+        ApplyPlayerCursorMode();
     }
 
     private bool RequiresBackConfirmation()
@@ -138,49 +157,76 @@ public class UINavigationManager : MonoBehaviour
 
     private void RefreshHelpText()
     {
-        if (helpBodyText == null || flow == null)
+        if (helpBodyText == null)
             return;
+
+        string baseHelp = GetBaseHelpForPhase();
+        string currentTask = GetCurrentTaskLine();
+        if (!string.IsNullOrWhiteSpace(currentTask))
+            helpBodyText.text = baseHelp + "\n\n— Current task —\n" + currentTask;
+        else
+            helpBodyText.text = baseHelp;
+    }
+
+    private string GetBaseHelpForPhase()
+    {
+        if (flow == null)
+            return helpDefault;
 
         switch (flow.CurrentPhase)
         {
             case TrainingFlowController.Phase.SimulationPick:
-                helpBodyText.text = helpDefault;
-                break;
+                return helpDefault;
 
             case TrainingFlowController.Phase.Simulation1Calibration:
             case TrainingFlowController.Phase.Simulation1MissionBriefing:
             case TrainingFlowController.Phase.Simulation1Active:
             case TrainingFlowController.Phase.Simulation1Results:
-                helpBodyText.text = helpSimulation1;
-                break;
+                return helpSimulation1;
 
             case TrainingFlowController.Phase.Simulation2Briefing:
             case TrainingFlowController.Phase.Simulation2Active:
             case TrainingFlowController.Phase.Simulation2Results:
-                helpBodyText.text = helpSimulation2;
-                break;
+                return helpSimulation2;
 
             default:
-                helpBodyText.text = helpDefault;
-                break;
+                return helpDefault;
         }
     }
 
-    private void ApplyInteractionMode()
+    private string GetCurrentTaskLine()
+    {
+        if (flow == null)
+            return null;
+
+        var phase = flow.CurrentPhase;
+        if (phase != TrainingFlowController.Phase.Simulation1Active
+            && phase != TrainingFlowController.Phase.Simulation2Active)
+            return null;
+
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+
+        return gameManager != null ? gameManager.GetCurrentObjectiveText() : null;
+    }
+
+    public void ApplyPlayerCursorMode()
     {
         if (playerController == null)
             return;
 
-        bool menuOpen = _helpOpen || (confirmBackPanel != null && confirmBackPanel.activeSelf) || (flow != null && flow.IsPaused);
-        if (menuOpen)
-        {
-            playerController.SetUiMenuMode(true);
-            return;
-        }
-
         bool activeSimulation = flow != null
             && (flow.CurrentPhase == TrainingFlowController.Phase.Simulation1Active
                 || flow.CurrentPhase == TrainingFlowController.Phase.Simulation2Active);
+
+        if (IsOverlayUiOpen)
+        {
+            playerController.SetOverlayUiOpen(true);
+            playerController.SetUiMenuMode(false);
+            return;
+        }
+
+        playerController.SetOverlayUiOpen(false);
         playerController.SetUiMenuMode(!activeSimulation);
     }
 

@@ -21,21 +21,38 @@ public class PlayerInteract : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
-            // try hit
+            FirstAidKitPickup firstAidKit = hit.collider.GetComponent<FirstAidKitPickup>();
+            if (firstAidKit == null)
+                firstAidKit = hit.collider.GetComponentInParent<FirstAidKitPickup>();
+            if (firstAidKit != null)
+            {
+                firstAidKit.OnPickUp();
+                return;
+            }
+
             PickUpItem item = hit.collider.GetComponent<PickUpItem>();
+            if (item == null)
+                item = hit.collider.GetComponentInParent<PickUpItem>();
             if (item != null)
             {
                 item.OnPickUp();
                 return;
             }
 
-            Door door = hit.collider.GetComponent<Door>();
-            if (door != null)
+            Door door = hit.collider.GetComponentInParent<Door>();
+            if (door != null && door.enabled)
             {
                 door.ToggleDoor();
                 return;
             }
-            
+
+            LightSwitch lightSwitch = hit.collider.GetComponent<LightSwitch>();
+            if (lightSwitch != null)
+            {
+                lightSwitch.OnInteract();
+                return;
+            }
+
             // try wounded man
             WoundedMan wonded = hit.collider.GetComponent<WoundedMan>();
             if (wonded != null)

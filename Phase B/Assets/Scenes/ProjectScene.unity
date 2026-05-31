@@ -5138,9 +5138,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "Simulation 1 \u2014 Emergency preparedness\n\nA loud continuous siren
-    will start when the mission begins.\n\nCollect three essential items inside the
-    home:\n\u2022 Water\n\u2022 First aid kit\n\u2022 Emergency bag\n\nWhen you are
-    ready, press Start mission."
+    will start when the mission begins.\n\nEnter the home and collect five essential
+    items:\n\u2022 Water bottle\n\u2022 Flash light\n\u2022 Radio\n\u2022 Compass\n\u2022
+    Map\n\nThen turn off the lights, close the door, and run to the Mamad (shelter)
+    outside.\n\nWhen you are ready, press Start mission."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -12059,16 +12060,16 @@ MonoBehaviour:
   calibrationInstruction: "Stand still and relax. \nWe are calibrating your heart-rate
     metrics.\nNo alarm will play during this step."
   missionBriefingBody: "Simulation 1 - Emergency preparedness\n\nA loud continuous
-    siren will start when the mission begins.\n\nCollect three essential items inside
-    the home:\n\u2022 Watet Bottle\n\u2022 Flash Light\n\u2022 Radio\nAfter collecting
-    all 3 items, run to the Mamad (shelter) outside.\n\nWhen you are ready, press
-    Start mission."
-  sim2BriefingBody: "Simulation 2 \u2013 First Aid Under Pressure\n\nYou are in an
-    outdoor courtyard while the alarm is active.\nYour mission is to treat the casualty.\n\nHow
-    to complete treatment:\n1) Approach the casualty and press E to start.\n2) Follow
-    the on-screen steps.\n3) Press the required keys in order (1 \u2192 2 \u2192
-    3) until treatment is complete.\n\nStay calm, breathe slowly, and focus on one
-    step at a time.\n\nPress Start Simulation 2 when you are ready."
+    siren will start when the mission begins.\n\nEnter the home and collect five
+    essential items:\n\u2022 Water bottle\n\u2022 Flash light\n\u2022 Radio\n\u2022
+    Compass\n\u2022 Map\nThen turn off the lights (light switch inside the home),
+    close the door, and run to the Mamad (shelter) outside.\n\nWhen you are ready,
+    press Start mission."
+  sim2BriefingBody: "Simulation 2 \u2013 First Aid Under Pressure\n\nSearch the
+    city for the first aid kit first.\nThen find the wounded person and provide
+    treatment.\n\nHow to complete treatment:\n1) Press E on the casualty to start.\n2)
+    Press keys 1 \u2192 2 \u2192 3 in order.\n\nPress Start Mission when you are
+    ready."
   calibrationDurationSeconds: 5
   runSimulation2InSameScene: 1
   simulation2SceneIndex: 1
@@ -29847,7 +29848,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a93ec0b9ec3715d45aa6b2fa4912a3a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  itemToCollect: 3
+  itemToCollect: 5
   objectiveText: {fileID: 0}
   pickupFeedbackText: {fileID: 1087024514}
   pickupFeedbackDuration: 1.4
@@ -35721,10 +35722,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Simulation 2 \u2014 First aid under pressure\n\nYou are now in an outdoor
-    courtyard with ongoing alarm conditions.\nApproach the casualty and complete
-    first aid.\n\nMaintain controlled breathing and focus on one action at a time.\n\nPress
-    Start Simulation 2 when ready."
+  m_text: "Simulation 2 \u2014 First aid under pressure\n\nSearch the city for the
+    first aid kit first.\nThen find the wounded person and provide treatment.\n\nHow
+    to complete treatment:\n1) Press E on the casualty to start.\n2) Press keys 1
+    \u2192 2 \u2192 3 in order.\n\nPress Start Mission when you are ready."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

@@ -18,10 +18,14 @@ public class SimpleFPSController : MonoBehaviour
     [SerializeField] KeyCode uiMenuLookModifier = KeyCode.Mouse1;
     [Tooltip("Hold Alt during UI mode to temporarily free the cursor for button clicks.")]
     [SerializeField] bool holdAltToUseCursorInUiMenus = true;
+    [Tooltip("During active simulation, free the cursor near the top toolbar so Pause/Back/Help can be clicked.")]
+    [SerializeField] bool unlockCursorNearTopToolbar = true;
+    [SerializeField] float toolbarScreenHeight = 56f;
 
     private CharacterController controller;
     private float verticalVelocity;
     private float xRotation;
+    private bool overlayUiOpen;
 
     void Awake()
     {
@@ -56,11 +60,31 @@ public class SimpleFPSController : MonoBehaviour
         uiMenuMode = menusOpen;
     }
 
+    /// <summary>Help / pause / confirm panels during an active simulation.</summary>
+    public void SetOverlayUiOpen(bool open)
+    {
+        overlayUiOpen = open;
+    }
+
     void Update()
     {
+        if (overlayUiOpen)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            return;
+        }
+
         if (uiMenuMode)
         {
             HandleUiMenuLookMode();
+            return;
+        }
+
+        if (unlockCursorNearTopToolbar && IsPointerOverToolbar())
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
             return;
         }
 
@@ -68,6 +92,11 @@ public class SimpleFPSController : MonoBehaviour
         Cursor.visible = false;
         HandleMouseLook();
         HandleMovement();
+    }
+
+    private bool IsPointerOverToolbar()
+    {
+        return Input.mousePosition.y >= Screen.height - toolbarScreenHeight;
     }
 
     private void HandleUiMenuLookMode()
