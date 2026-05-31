@@ -102,6 +102,22 @@ public class GameManager : MonoBehaviour
 
     public bool CanTurnOffLights() => _sim1Phase == Sim1MissionPhase.TurnOffLights;
 
+    public bool CanCloseExitDoor() => _sim1Phase == Sim1MissionPhase.CloseDoor;
+
+    public Sim1MissionPhase GetSim1Phase() => _sim1Phase;
+
+    public bool IsExitDoorClosed() => _exitDoorClosed;
+
+    public string GetSim1RunToShelterHint()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        return _flow != null
+            ? _flow.sim1ObjectiveRunToShelter
+            : "Door closed. Run to the Mamad (shelter) outside!";
+    }
+
     public bool HasFirstAidKit() => _firstAidKitCollected;
 
     /// <summary>Current in-mission objective line for Help overlay and HUD.</summary>
@@ -151,7 +167,9 @@ public class GameManager : MonoBehaviour
 
         _lightsTurnedOff = true;
         _sim1Phase = Sim1MissionPhase.CloseDoor;
-        ShowMissionMessage(_flow != null ? _flow.sim1LightsOffHint : "Lights off. Close the home door (press E on the door).", 5f);
+        ShowMissionMessage(
+            _flow != null ? _flow.sim1LightsOffHint : "Lights off. Close the entrance door (press E).",
+            5f);
         UpdateObjectiveText();
     }
 

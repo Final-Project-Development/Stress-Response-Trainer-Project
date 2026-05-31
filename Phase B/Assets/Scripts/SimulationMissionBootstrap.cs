@@ -12,8 +12,8 @@ public class SimulationMissionBootstrap : MonoBehaviour
     [Tooltip("Light switch mesh inside the home, e.g. PFB_Lightswitch (1).")]
     public GameObject lightSwitchObject;
 
-    [Tooltip("Exit door root with Animator — usually PFB_DoorDouble (NOT leftDoor).")]
-    public Door exitDoor;
+    [Tooltip("Exit door root — drag PFB_DoorDouble from Hierarchy (NOT leftDoor).")]
+    public GameObject exitDoorObject;
 
     [Header("Simulation 2 — drag your scene objects here")]
     [Tooltip("Optional: drag the firstaid object from the Hierarchy.")]
@@ -33,6 +33,7 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private GameManager _gameManager;
     private LightSwitch _lightSwitch;
+    private Door _exitDoor;
 
     void Awake()
     {
@@ -94,26 +95,145 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private void EnsureExitDoor()
     {
-        if (exitDoor == null)
-            exitDoor = FindDoorRoot();
+        _exitDoor = ResolveExitDoorRoot();
 
-        if (exitDoor == null)
+        if (_exitDoor == null)
         {
-            Debug.LogWarning("SimulationMissionBootstrap: Assign exitDoor (PFB_DoorDouble) in the Inspector.");
+            Debug.LogWarning("SimulationMissionBootstrap: Assign exitDoorObject (PFB_DoorDouble) in the Inspector.");
             return;
         }
 
-        DisableMisplacedDoorComponents(exitDoor.transform);
+        DisableMisplacedDoorComponents(_exitDoor.transform);
+        DisableMisplacedDoorAnimators(_exitDoor.transform);
+        DisableLegacyDoorControllers(_exitDoor.transform);
+        AssignDoorLeaves(_exitDoor);
 
-        exitDoor.enabled = true;
-        exitDoor.missionExitDoor = true;
-        exitDoor.startOpen = true;
-        exitDoor.CacheAnimator();
+        _exitDoor.enabled = true;
+        _exitDoor.missionExitDoor = true;
+        _exitDoor.startOpen = true;
+        _exitDoor.openAngleY = 128f;
+        _exitDoor.closeAngleY = 0f;
+        _exitDoor.rotateSpeed = 360f;
+        _exitDoor.CacheAnimator();
+        _exitDoor.SnapLeavesToClosed();
+        _exitDoor.CacheDoorLeafPoses();
+        _exitDoor.ResetToOpen();
 
-        var leafCollider = FindDeepChild(exitDoor.transform, "leftDoor");
+        var rootAnimator = _exitDoor.GetComponent<Animator>();
+        if (rootAnimator != null)
+            rootAnimator.enabled = true;
+
+        var leafCollider = FindDeepChild(_exitDoor.transform, "leftDoor");
         if (leafCollider != null)
-            EnsureCollider(leafCollider.gameObject, new Vector3(0.6f, 2f, 0.15f));
-        EnsureCollider(exitDoor.gameObject, new Vector3(1.2f, 2f, 0.3f));
+            EnsureSolidCollider(leafCollider.gameObject, new Vector3(0.6f, 2f, 0.15f));
+        EnsureTriggerCollider(_exitDoor.gameObject, new Vector3(1.2f, 2f, 0.3f));
+    }
+
+    private Door ResolveExitDoorRoot()
+    {
+        GameObject doorRootObject = exitDoorObject;
+        if (doorRootObject != null
+            && (doorRootObject.name.Equals("leftDoor", System.StringComparison.OrdinalIgnoreCase)
+                || doorRootObject.name.Equals("rightDoor", System.StringComparison.OrdinalIgnoreCase)))
+        {
+            doorRootObject = FindDoorRootObject(doorRootObject.transform);
+        }
+
+        if (doorRootObject == null)
+            doorRootObject = FindDoorRootObject(null);
+
+        if (doorRootObject == null)
+            return null;
+
+        exitDoorObject = doorRootObject;
+        var door = doorRootObject.GetComponent<Door>();
+        if (door == null)
+            door = doorRootObject.AddComponent<Door>();
+
+        return door;
+    }
+
+    private GameObject FindDoorRootObject(Transform start)
+    {
+        if (start != null)
+        {
+            Transform current = start;
+            while (current != null)
+            {
+                if (current.name.Equals("PFB_DoorDouble", System.StringComparison.OrdinalIgnoreCase)
+                    || FindDeepChild(current, "DoorDouble") != null)
+                    return current.gameObject;
+
+                current = current.parent;
+            }
+        }
+
+        return FindSceneObjectByName(exitDoorRootName)
+            ?? FindSceneObjectByName("PFB_DoorDouble")
+            ?? FindSceneObjectByName("DoorDouble");
+    }
+
+    private static void DisableLegacyDoorControllers(Transform doorRoot)
+    {
+        var legacyControllers = doorRoot.GetComponentsInChildren<MoveObjectController>(true);
+        for (int i = 0; i < legacyControllers.Length; i++)
+        {
+            if (legacyControllers[i] != null)
+                legacyControllers[i].enabled = false;
+        }
+    }
+
+    private static void AssignDoorLeaves(Door door)
+    {
+        if (door == null)
+            return;
+
+        Transform root = door.transform;
+        Transform doorDouble = FindDirectChild(root, "DoorDouble") ?? root;
+
+        var left = FindDirectChild(doorDouble, "leftDoor");
+        var right = FindDirectChild(doorDouble, "rightDoor");
+
+        if (left == null)
+            left = FindDeepChild(root, "leftDoor");
+        if (right == null)
+            right = FindDeepChild(root, "rightDoor");
+
+        if (left != null && right != null)
+            door.doorLeaves = new[] { left, right };
+        else if (left != null)
+            door.doorLeaves = new[] { left };
+        else if (right != null)
+            door.doorLeaves = new[] { right };
+    }
+
+    private static Transform FindDirectChild(Transform parent, string childName)
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var child = parent.GetChild(i);
+            if (child != null && child.name == childName)
+                return child;
+        }
+
+        return null;
+    }
+
+    private static void DisableMisplacedDoorAnimators(Transform doorRoot)
+    {
+        var animators = doorRoot.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            var anim = animators[i];
+            if (anim == null || anim.transform == doorRoot)
+                continue;
+
+            anim.enabled = false;
+            Destroy(anim);
+        }
     }
 
     private static void DisableMisplacedDoorComponents(Transform doorRoot)
@@ -131,27 +251,11 @@ public class SimulationMissionBootstrap : MonoBehaviour
         }
     }
 
-    private Door FindDoorRoot()
-    {
-        var doorRootObject = FindSceneObjectByName(exitDoorRootName)
-            ?? FindSceneObjectByName("PFB_DoorDouble")
-            ?? FindSceneObjectByName("DoorDouble");
-
-        if (doorRootObject == null)
-            return null;
-
-        var door = doorRootObject.GetComponent<Door>();
-        if (door == null)
-            door = doorRootObject.AddComponent<Door>();
-
-        return door;
-    }
-
     private void ResetSimulation1WorldState()
     {
         ReactivateSimulation1Pickups();
         _lightSwitch?.ResetSwitch();
-        exitDoor?.ResetToOpen();
+        _exitDoor?.ResetToOpen();
     }
 
     private void ReactivateSimulation1Pickups()
@@ -257,13 +361,34 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private static void EnsureCollider(GameObject target, Vector3 size)
     {
+        EnsureSolidCollider(target, size);
+    }
+
+    private static void EnsureSolidCollider(GameObject target, Vector3 size)
+    {
         var collider = target.GetComponent<Collider>();
         if (collider == null)
         {
             var box = target.AddComponent<BoxCollider>();
             box.size = size;
             box.center = Vector3.zero;
+            box.isTrigger = false;
         }
+    }
+
+    private static void EnsureTriggerCollider(GameObject target, Vector3 size)
+    {
+        var colliders = target.GetComponents<Collider>();
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            if (colliders[i] != null && colliders[i].isTrigger)
+                return;
+        }
+
+        var box = target.AddComponent<BoxCollider>();
+        box.size = size;
+        box.center = Vector3.zero;
+        box.isTrigger = true;
     }
 
     private static Transform FindDeepChild(Transform parent, string childName)

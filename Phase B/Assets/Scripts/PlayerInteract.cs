@@ -39,8 +39,8 @@ public class PlayerInteract : MonoBehaviour
                 return;
             }
 
-            Door door = hit.collider.GetComponentInParent<Door>();
-            if (door != null && door.enabled)
+            Door door = FindEnabledDoor(hit.collider);
+            if (door != null)
             {
                 door.ToggleDoor();
                 return;
@@ -61,5 +61,17 @@ public class PlayerInteract : MonoBehaviour
                 return;
             }
         }
+    }
+
+    private static Door FindEnabledDoor(Collider hitCollider)
+    {
+        var doors = hitCollider.GetComponentsInParent<Door>(true);
+        for (int i = 0; i < doors.Length; i++)
+        {
+            if (doors[i] != null && doors[i].enabled)
+                return doors[i];
+        }
+
+        return null;
     }
 }

@@ -22,12 +22,21 @@ public class Door : MonoBehaviour
     private GameManager _gameManager;
     private float _currentAngleY;
     private float _targetAngleY;
+    private DoorLeafPose[] _leafPoses;
+
+    private struct DoorLeafPose
+    {
+        public Transform transform;
+        public Quaternion closedLocalRotation;
+        public float openSign;
+    }
 
     void Awake()
     {
         CacheAnimator();
+        CacheDoorLeafPoses();
         _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
-        _useManualRotation = animator == null && doorLeaves != null && doorLeaves.Length > 0;
+        _useManualRotation = !HasWorkingAnimator() && HasDoorLeaves();
     }
 
     void Start()
@@ -48,30 +57,104 @@ public class Door : MonoBehaviour
         ApplyManualAngle(_currentAngleY);
     }
 
+    void LateUpdate()
+    {
+        if (!missionExitDoor || !_useManualRotation || doorLeaves == null)
+            return;
+
+        ApplyManualAngle(_currentAngleY);
+    }
+
     public void CacheAnimator()
     {
-        if (animator == null)
-            animator = GetComponent<Animator>();
-        if (animator == null)
-            animator = GetComponentInParent<Animator>();
+        if (TryResolveDoorAnimator(out Animator resolved))
+            animator = resolved;
 
+        EnsureDoorLeavesCached();
+    }
+
+    public void CacheDoorLeafPoses()
+    {
+        EnsureDoorLeavesCached();
         if (doorLeaves == null || doorLeaves.Length == 0)
-            AutoFindDoorLeaves();
+        {
+            _leafPoses = null;
+            return;
+        }
+
+        _leafPoses = new DoorLeafPose[doorLeaves.Length];
+        for (int i = 0; i < doorLeaves.Length; i++)
+        {
+            var leaf = doorLeaves[i];
+            if (leaf == null)
+                continue;
+
+            _leafPoses[i] = new DoorLeafPose
+            {
+                transform = leaf,
+                closedLocalRotation = leaf.localRotation,
+                openSign = GetLeafOpenSign(leaf.name, doorLeaves.Length)
+            };
+        }
+    }
+
+    private bool TryResolveDoorAnimator(out Animator resolved)
+    {
+        resolved = null;
+
+        Transform root = GetDoorAnimationRoot();
+        if (root != null)
+            resolved = root.GetComponent<Animator>();
+
+        if (resolved == null)
+            resolved = GetComponentInParent<Animator>();
+
+        if (resolved == null)
+            resolved = GetComponent<Animator>();
+
+        return resolved != null && resolved.runtimeAnimatorController != null;
+    }
+
+    private bool HasWorkingAnimator()
+    {
+        return TryResolveDoorAnimator(out Animator resolved)
+            && resolved != null
+            && resolved.runtimeAnimatorController != null;
+    }
+
+    private Transform GetDoorAnimationRoot()
+    {
+        Transform current = transform;
+        for (int i = 0; i < 8 && current != null; i++)
+        {
+            if (current.name.Equals("PFB_DoorDouble", System.StringComparison.OrdinalIgnoreCase))
+                return current;
+
+            current = current.parent;
+        }
+
+        return null;
     }
 
     private void AutoFindDoorLeaves()
     {
-        var left = transform.Find("DoorDouble/leftDoor");
-        var right = transform.Find("DoorDouble/rightDoor");
+        Transform root = GetDoorAnimationRoot() ?? transform;
+        Transform doorDouble = FindDirectChild(root, "DoorDouble") ?? root;
+
+        var left = FindDirectChild(doorDouble, "leftDoor");
+        var right = FindDirectChild(doorDouble, "rightDoor");
+
         if (left == null)
-            left = FindDeepChild(transform, "leftDoor");
+            left = FindDeepChild(root, "leftDoor");
         if (right == null)
-            right = FindDeepChild(transform, "rightDoor");
+            right = FindDeepChild(root, "rightDoor");
 
         if (left != null && right != null)
             doorLeaves = new[] { left, right };
         else if (left != null)
             doorLeaves = new[] { left };
+        else if (right != null)
+            doorLeaves = new[] { right };
     }
 
     public void ResetToOpen()
@@ -80,49 +163,197 @@ public class Door : MonoBehaviour
         ApplyDoorState(true, immediate: true);
     }
 
+    public void Close()
+    {
+        if (!isOpen)
+            return;
+
+        isOpen = false;
+        ApplyDoorState(false, immediate: false);
+
+        if (missionExitDoor)
+            _gameManager?.OnExitDoorClosed();
+    }
+
     public void ToggleDoor()
     {
-        isOpen = !isOpen;
-        ApplyDoorState(isOpen, immediate: false);
+        if (missionExitDoor && _gameManager != null)
+        {
+            var phase = _gameManager.GetSim1Phase();
 
-        if (missionExitDoor && !isOpen)
-            _gameManager?.OnExitDoorClosed();
+            if (!isOpen && _gameManager.IsExitDoorClosed())
+            {
+                _gameManager.ShowMissionMessage(
+                    _gameManager.GetSim1RunToShelterHint(),
+                    4f);
+                return;
+            }
+
+            if (isOpen)
+            {
+                if (phase == GameManager.Sim1MissionPhase.CloseDoor
+                    || (phase == GameManager.Sim1MissionPhase.RunToShelter && !_gameManager.IsExitDoorClosed()))
+                {
+                    Close();
+                    return;
+                }
+
+                _gameManager.ShowMissionMessage(GetMissionCloseBlockedMessage(phase), 4f);
+                return;
+            }
+        }
+
+        if (isOpen)
+        {
+            Close();
+            return;
+        }
+
+        isOpen = true;
+        ApplyDoorState(true, immediate: false);
+    }
+
+    private string GetMissionCloseBlockedMessage(GameManager.Sim1MissionPhase phase)
+    {
+        if (_gameManager == null)
+            return "You can close this door after collecting supplies and turning off the lights.";
+
+        switch (phase)
+        {
+            case GameManager.Sim1MissionPhase.CollectItems:
+                return "Collect all emergency supplies inside the home first.";
+            case GameManager.Sim1MissionPhase.TurnOffLights:
+                return "Turn off the lights before closing the entrance door.";
+            case GameManager.Sim1MissionPhase.RunToShelter:
+                return _gameManager.GetSim1RunToShelterHint();
+            default:
+                return "You can close this door after collecting supplies and turning off the lights.";
+        }
     }
 
     private void ApplyDoorState(bool open, bool immediate)
     {
-        if (animator != null && animator.runtimeAnimatorController != null)
-        {
-            if (!string.IsNullOrWhiteSpace(openBoolParameter))
-                animator.SetBool(openBoolParameter, open);
+        EnsureDoorLeavesCached();
+        DisableMisplacedDoorAnimators();
 
-            if (immediate)
-            {
-                string stateName = open ? "DoorDouble_Open" : "DoorDouble_Close";
-                if (HasState(stateName))
-                    animator.Play(stateName, 0, open ? 1f : 0f);
-            }
-
+        if (missionExitDoor && TryApplyAnimatorDoorState(open, immediate))
             return;
-        }
 
-        _useManualRotation = doorLeaves != null && doorLeaves.Length > 0;
-        if (!_useManualRotation)
+        if (TryApplyAnimatorDoorState(open, immediate))
+            return;
+
+        if (!HasDoorLeaves())
         {
             Debug.LogWarning($"Door on '{name}': no Animator controller found. Assign PFB_DoorDouble or doorLeaves.");
             return;
         }
 
+        ApplyManualDoorState(open, immediate);
+    }
+
+    private bool TryApplyAnimatorDoorState(bool open, bool immediate)
+    {
+        if (!TryResolveDoorAnimator(out Animator resolvedAnimator)
+            || resolvedAnimator.runtimeAnimatorController == null)
+            return false;
+
+        animator = resolvedAnimator;
+        animator.enabled = true;
+        _useManualRotation = false;
+
+        if (!string.IsNullOrWhiteSpace(openBoolParameter))
+            animator.SetBool(openBoolParameter, open);
+
+        string stateName = open ? "DoorDouble_Open" : "DoorDouble_Close";
+        if (!HasState(stateName))
+            return false;
+
+        float startTime = immediate ? (open ? 1f : 0f) : 0f;
+        animator.CrossFade(stateName, 0.08f, 0, startTime);
+        animator.Update(0f);
+        return true;
+    }
+
+    private void EnsureDoorLeavesCached()
+    {
+        if (doorLeaves == null || doorLeaves.Length == 0)
+            AutoFindDoorLeaves();
+    }
+
+    private bool HasDoorLeaves()
+    {
+        EnsureDoorLeavesCached();
+        return doorLeaves != null && doorLeaves.Length > 0;
+    }
+
+    public void SnapLeavesToClosed()
+    {
+        EnsureDoorLeavesCached();
+        if (doorLeaves != null)
+        {
+            for (int i = 0; i < doorLeaves.Length; i++)
+            {
+                if (doorLeaves[i] != null)
+                    doorLeaves[i].localRotation = Quaternion.identity;
+            }
+        }
+
+        CacheDoorLeafPoses();
+        _currentAngleY = closeAngleY;
+        _targetAngleY = closeAngleY;
+        _useManualRotation = false;
+    }
+
+    private void ApplyManualDoorState(bool open, bool immediate)
+    {
         _targetAngleY = open ? openAngleY : closeAngleY;
         if (immediate)
         {
             _currentAngleY = _targetAngleY;
             ApplyManualAngle(_currentAngleY);
+            _useManualRotation = false;
+            return;
+        }
+
+        _useManualRotation = true;
+    }
+
+    private void DisableMisplacedDoorAnimators()
+    {
+        Transform root = GetDoorAnimationRoot() ?? transform;
+        var animators = root.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            var anim = animators[i];
+            if (anim == null || anim.transform == root)
+                continue;
+
+            anim.enabled = false;
         }
     }
 
     private void ApplyManualAngle(float angleY)
     {
+        if (_leafPoses != null && _leafPoses.Length > 0)
+        {
+            float openT = Mathf.InverseLerp(closeAngleY, openAngleY, angleY);
+            for (int i = 0; i < _leafPoses.Length; i++)
+            {
+                var pose = _leafPoses[i];
+                if (pose.transform == null)
+                    continue;
+
+                var openRotation = pose.closedLocalRotation * Quaternion.Euler(0f, pose.openSign * openAngleY, 0f);
+                pose.transform.localRotation = openT <= 0.001f
+                    ? pose.closedLocalRotation
+                    : openT >= 0.999f
+                        ? openRotation
+                        : Quaternion.Slerp(pose.closedLocalRotation, openRotation, openT);
+            }
+
+            return;
+        }
+
         if (doorLeaves == null)
             return;
 
@@ -132,12 +363,17 @@ public class Door : MonoBehaviour
             if (leaf == null)
                 continue;
 
-            float sign = leaf.name.ToLowerInvariant().Contains("left") ? 1f : -1f;
-            if (doorLeaves.Length == 1)
-                sign = 1f;
-
+            float sign = GetLeafOpenSign(leaf.name, doorLeaves.Length);
             leaf.localRotation = Quaternion.Euler(0f, sign * angleY, 0f);
         }
+    }
+
+    private static float GetLeafOpenSign(string leafName, int leafCount)
+    {
+        if (leafCount == 1)
+            return 1f;
+
+        return leafName.ToLowerInvariant().Contains("left") ? 1f : -1f;
     }
 
     private bool HasState(string stateName)
@@ -147,6 +383,21 @@ public class Door : MonoBehaviour
 
         int hash = Animator.StringToHash(stateName);
         return animator.HasState(0, hash);
+    }
+
+    private static Transform FindDirectChild(Transform parent, string childName)
+    {
+        if (parent == null)
+            return null;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            var child = parent.GetChild(i);
+            if (child != null && child.name == childName)
+                return child;
+        }
+
+        return null;
     }
 
     private static Transform FindDeepChild(Transform parent, string childName)
