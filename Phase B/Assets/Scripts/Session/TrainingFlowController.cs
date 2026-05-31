@@ -172,22 +172,6 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("Simulation 2 tabs: assign tab content roots and tab buttons manually.")]
     public ResultsTabsConfig sim2ResultsTabs;
 
-    [Header("UI polish")]
-    public bool autoPolishUi = false;
-    [Tooltip("If false, keep button labels exactly as set in the Inspector/scene.")]
-    public bool applyDefaultButtonTextsAtRuntime = false;
-    public Color panelTint = new Color(0.07f, 0.11f, 0.16f, 0.84f);
-    public Color buttonColor = new Color(0.16f, 0.35f, 0.56f, 1f);
-    public Color buttonTextColor = Color.white;
-    public Vector2 buttonPreferredSize = new Vector2(340f, 72f);
-    public float bodyTextSize = 32f;
-    public float buttonTextSize = 30f;
-    public float panelSidePadding = 80f;
-    public float panelTopPadding = 120f;
-    public float panelBottomPadding = 180f;
-    public float buttonBottomY = 70f;
-    public float buttonSpacingY = 86f;
-
     [TextArea]
     public string hubTitle = "VR Stress Response Trainer";
     [Tooltip("If false, keep Hub title text exactly as set on the TMP in the Inspector/scene.")]
@@ -316,9 +300,6 @@ public class TrainingFlowController : MonoBehaviour
     {
         ApplyNarrationFromLibrary();
 
-        if (autoPolishUi)
-            ApplyUiPolish();
-
         ApplyCurrentResultsTabs();
 
         ApplyDefaultCopyToUi();
@@ -347,10 +328,6 @@ public class TrainingFlowController : MonoBehaviour
             missionBriefingBodyText.text = missionBriefingBody;
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
-
-        if (applyDefaultButtonTextsAtRuntime)
-            ApplyDefaultButtonTexts();
-
     }
 
     void Update()
@@ -1351,142 +1328,6 @@ public class TrainingFlowController : MonoBehaviour
             sim2BriefingBodyText.text = text;
     }
 
-    private void ApplyUiPolish()
-    {
-        StylePanel(hubPanel);
-        StylePanel(loginPanel);
-        StylePanel(introPanel);
-        StylePanel(sim1MissionBriefingPanel);
-        StylePanel(sim1CalibrationPanel);
-        StylePanel(sim1ResultsPanel);
-        StylePanel(sim2BriefingPanel);
-        StylePanel(sim2ResultsPanel);
-
-        if (introBodyText != null) introBodyText.fontSize = bodyTextSize;
-        if (missionBriefingBodyText != null) missionBriefingBodyText.fontSize = bodyTextSize;
-        if (calibrationStatusText != null) calibrationStatusText.fontSize = bodyTextSize;
-        if (resultsSummaryText != null) resultsSummaryText.fontSize = bodyTextSize - 2f;
-        if (sim1ResultsMetricsText != null) sim1ResultsMetricsText.fontSize = bodyTextSize - 2f;
-        if (sim1ResultsRecommendationsText != null) sim1ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
-        if (sim2BriefingBodyText != null) sim2BriefingBodyText.fontSize = bodyTextSize;
-        if (sim2ResultsSummaryText != null) sim2ResultsSummaryText.fontSize = bodyTextSize - 2f;
-        if (sim2ResultsMetricsText != null) sim2ResultsMetricsText.fontSize = bodyTextSize - 2f;
-        if (sim2ResultsRecommendationsText != null) sim2ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
-
-        FixPanelLayoutCollisions(hubPanel, hubConnectionStatusText);
-        FixPanelLayoutCollisions(loginPanel, null);
-        FixPanelLayoutCollisions(introPanel, introBodyText);
-        FixPanelLayoutCollisions(sim1MissionBriefingPanel, missionBriefingBodyText);
-        FixPanelLayoutCollisions(sim1CalibrationPanel, calibrationStatusText);
-        FixPanelLayoutCollisions(sim1ResultsPanel, UseSim1SplitColumns() ? null : resultsSummaryText);
-        FixPanelLayoutCollisions(sim2BriefingPanel, sim2BriefingBodyText);
-        if (!UseSim2SplitColumns())
-            FixPanelLayoutCollisions(sim2ResultsPanel, sim2ResultsSummaryText);
-    }
-
-    private void StylePanel(GameObject panelRoot)
-    {
-        if (panelRoot == null) return;
-
-        var panelImage = panelRoot.GetComponent<Image>();
-        if (panelImage != null)
-            panelImage.color = panelTint;
-
-        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-            StyleButton(buttons[i]);
-    }
-
-    private void StyleButton(Button button)
-    {
-        if (button == null) return;
-
-        var image = button.GetComponent<Image>();
-        if (image != null)
-            image.color = buttonColor;
-
-        var rect = button.GetComponent<RectTransform>();
-        if (rect != null && rect.sizeDelta.y < buttonPreferredSize.y)
-            rect.sizeDelta = new Vector2(Mathf.Max(rect.sizeDelta.x, buttonPreferredSize.x), buttonPreferredSize.y);
-
-        var label = button.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (label != null)
-        {
-            label.color = buttonTextColor;
-            label.fontSize = buttonTextSize;
-            label.alignment = TextAlignmentOptions.Center;
-        }
-    }
-
-    private void ApplyDefaultButtonTexts()
-    {
-        var buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var button = buttons[i];
-            var label = button.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (label == null) continue;
-
-            string byMethod = GuessButtonTextByMethod(button);
-            if (!string.IsNullOrEmpty(byMethod))
-            {
-                label.text = byMethod;
-                continue;
-            }
-
-            string byName = GuessButtonTextByName(button.gameObject.name);
-            if (!string.IsNullOrEmpty(byName))
-                label.text = byName;
-        }
-    }
-
-    private void FixPanelLayoutCollisions(GameObject panelRoot, TextMeshProUGUI bodyText)
-    {
-        if (panelRoot == null)
-            return;
-
-        // 1) Keep main text in a safe area (top/middle), leaving room for buttons at the bottom.
-        if (bodyText != null)
-        {
-            var textRt = bodyText.GetComponent<RectTransform>();
-            if (textRt != null)
-            {
-                textRt.anchorMin = new Vector2(0f, 0f);
-                textRt.anchorMax = new Vector2(1f, 1f);
-                textRt.pivot = new Vector2(0.5f, 0.5f);
-                textRt.offsetMin = new Vector2(panelSidePadding, panelBottomPadding);
-                textRt.offsetMax = new Vector2(-panelSidePadding, -panelTopPadding);
-            }
-        }
-
-        // 2) Stack all panel buttons from bottom center upward.
-        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
-        float currentY = buttonBottomY;
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var rt = buttons[i].GetComponent<RectTransform>();
-            if (rt == null) continue;
-
-            rt.anchorMin = new Vector2(0.5f, 0f);
-            rt.anchorMax = new Vector2(0.5f, 0f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(0f, currentY);
-            rt.sizeDelta = buttonPreferredSize;
-
-            currentY += buttonSpacingY;
-        }
-    }
-
-    private void SetButtonText(string buttonObjectName, string text)
-    {
-        var buttonGo = GameObject.Find(buttonObjectName);
-        if (buttonGo == null) return;
-
-        var label = buttonGo.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (label == null) return;
-        label.text = text;
-    }
-
     private void AppendSimulationPickFooter(StringBuilder sb)
     {
         if (sb == null || simulationPickPanel == null)
@@ -1508,47 +1349,6 @@ public class TrainingFlowController : MonoBehaviour
         return simulationPickPanel != null
             ? "Use Choose Simulation on this screen to pick another scenario."
             : "Press Back To Hub when ready.";
-    }
-
-    private string GuessButtonTextByMethod(Button button)
-    {
-        int count = button.onClick.GetPersistentEventCount();
-        for (int i = 0; i < count; i++)
-        {
-            string method = button.onClick.GetPersistentMethodName(i);
-            if (string.IsNullOrEmpty(method)) continue;
-
-            if (method == "UI_StartSimulation1" || method == "UI_OpenSimulation1")
-                return "Start Training";
-            if (method == "UI_StartIntro")
-                return "Start Intro";
-            if (method == "UI_ContinueFromIntro" || method == "UI_StartBaseline")
-                return "Continue";
-            if (method == "UI_BeginSimulation1")
-                return "Start Simulation 1";
-            if (method == "UI_GoToSimulation2" || method == "UI_ReturnToSimulationPickFromResults")
-                return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
-            if (method == "UI_StartSimulation2Scene")
-                return "Start Simulation 2";
-            if (method == "UI_OpenLogin")
-                return "Login / Register";
-        }
-
-        return null;
-    }
-
-    private string GuessButtonTextByName(string buttonName)
-    {
-        if (string.IsNullOrEmpty(buttonName)) return null;
-
-        string n = buttonName.ToLowerInvariant();
-        if (n.Contains("start experience")) return "Start Training";
-        if (n.Contains("start mission")) return "Start Simulation 1";
-        if (n.Contains("movetosimulation2"))
-            return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
-        if (n.Contains("btnstartsimulation2")) return "Start Simulation 2";
-        if (n.Contains("continuefromintro")) return "Continue";
-        return null;
     }
 
     private void ApplyCurrentResultsTabs()
