@@ -254,15 +254,17 @@ public class TrainingFlowController : MonoBehaviour
     [TextArea] public string sim1AllItemsCollectedHint =
         "All items collected. Turn off the lights using PFB_Lightswitch (1) inside the home.";
     [TextArea] public string sim1LightsOffHint =
-        "Lights off. Close the entrance door (PFB_DoorDouble) — press E.";
+        "Lights off. Run to the Mamad — you can open and close the entrance door anytime, but it must be closed when you enter the Mamad.";
     [TextArea] public string sim1DoorClosedHint =
         "Door closed. Run to the Mamad (shelter) outside!";
+    [TextArea] public string sim1ShelterDoorOpenHint =
+        "The entrance door is still open. Close PFB_DoorDouble before entering the Mamad.";
     [TextArea] public string sim1ObjectiveTurnOffLights =
         "Turn off the lights using PFB_Lightswitch (1) inside the home.";
     [TextArea] public string sim1ObjectiveCloseDoor =
-        "Close the entrance door (PFB_DoorDouble) before leaving — press E.";
+        "You can use the entrance door anytime. Close it before entering the Mamad.";
     [TextArea] public string sim1ObjectiveRunToShelter =
-        "Run to the Mamad (shelter) outside.";
+        "Run to the Mamad — make sure the entrance door is closed when you arrive.";
     [TextArea] public string sim1ItemsList =
         "water bottle, flash light, radio, compass, map";
 

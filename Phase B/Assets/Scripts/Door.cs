@@ -17,6 +17,8 @@ public class Door : MonoBehaviour
     public float closeAngleY = 0f;
     public float rotateSpeed = 360f;
 
+    public bool IsOpen => isOpen;
+
     private bool isOpen;
     private bool _useManualRotation;
     private GameManager _gameManager;
@@ -161,6 +163,17 @@ public class Door : MonoBehaviour
     {
         isOpen = true;
         ApplyDoorState(true, immediate: true);
+        NotifyMissionDoorState();
+    }
+
+    public void Open()
+    {
+        if (isOpen)
+            return;
+
+        isOpen = true;
+        ApplyDoorState(true, immediate: false);
+        NotifyMissionDoorState();
     }
 
     public void Close()
@@ -170,65 +183,23 @@ public class Door : MonoBehaviour
 
         isOpen = false;
         ApplyDoorState(false, immediate: false);
-
-        if (missionExitDoor)
-            _gameManager?.OnExitDoorClosed();
+        NotifyMissionDoorState();
     }
 
     public void ToggleDoor()
     {
-        if (missionExitDoor && _gameManager != null)
-        {
-            var phase = _gameManager.GetSim1Phase();
-
-            if (!isOpen && _gameManager.IsExitDoorClosed())
-            {
-                _gameManager.ShowMissionMessage(
-                    _gameManager.GetSim1RunToShelterHint(),
-                    4f);
-                return;
-            }
-
-            if (isOpen)
-            {
-                if (phase == GameManager.Sim1MissionPhase.CloseDoor
-                    || (phase == GameManager.Sim1MissionPhase.RunToShelter && !_gameManager.IsExitDoorClosed()))
-                {
-                    Close();
-                    return;
-                }
-
-                _gameManager.ShowMissionMessage(GetMissionCloseBlockedMessage(phase), 4f);
-                return;
-            }
-        }
-
         if (isOpen)
-        {
             Close();
-            return;
-        }
-
-        isOpen = true;
-        ApplyDoorState(true, immediate: false);
+        else
+            Open();
     }
 
-    private string GetMissionCloseBlockedMessage(GameManager.Sim1MissionPhase phase)
+    private void NotifyMissionDoorState()
     {
-        if (_gameManager == null)
-            return "You can close this door after collecting supplies and turning off the lights.";
+        if (!missionExitDoor || _gameManager == null)
+            return;
 
-        switch (phase)
-        {
-            case GameManager.Sim1MissionPhase.CollectItems:
-                return "Collect all emergency supplies inside the home first.";
-            case GameManager.Sim1MissionPhase.TurnOffLights:
-                return "Turn off the lights before closing the entrance door.";
-            case GameManager.Sim1MissionPhase.RunToShelter:
-                return _gameManager.GetSim1RunToShelterHint();
-            default:
-                return "You can close this door after collecting supplies and turning off the lights.";
-        }
+        _gameManager.SyncExitDoorState(!isOpen);
     }
 
     private void ApplyDoorState(bool open, bool immediate)

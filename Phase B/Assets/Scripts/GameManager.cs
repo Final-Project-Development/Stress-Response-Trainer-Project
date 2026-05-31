@@ -51,6 +51,7 @@ public class GameManager : MonoBehaviour
     private Coroutine _pickupFeedbackRoutine;
     private SimulationMissionBootstrap _missionBootstrap;
     private TrainingFlowController _flow;
+    private Door _missionExitDoor;
 
     void Awake()
     {
@@ -102,11 +103,28 @@ public class GameManager : MonoBehaviour
 
     public bool CanTurnOffLights() => _sim1Phase == Sim1MissionPhase.TurnOffLights;
 
-    public bool CanCloseExitDoor() => _sim1Phase == Sim1MissionPhase.CloseDoor;
-
     public Sim1MissionPhase GetSim1Phase() => _sim1Phase;
 
-    public bool IsExitDoorClosed() => _exitDoorClosed;
+    public bool IsExitDoorClosed() => IsMissionExitDoorClosed();
+
+    public void RegisterMissionExitDoor(Door door)
+    {
+        _missionExitDoor = door;
+        SyncExitDoorState(door != null && !door.IsOpen);
+    }
+
+    public void SyncExitDoorState(bool isClosed)
+    {
+        _exitDoorClosed = isClosed;
+    }
+
+    public bool IsMissionExitDoorClosed()
+    {
+        if (_missionExitDoor != null)
+            return !_missionExitDoor.IsOpen;
+
+        return _exitDoorClosed;
+    }
 
     public string GetSim1RunToShelterHint()
     {
@@ -115,7 +133,17 @@ public class GameManager : MonoBehaviour
 
         return _flow != null
             ? _flow.sim1ObjectiveRunToShelter
-            : "Door closed. Run to the Mamad (shelter) outside!";
+            : "Run to the Mamad (shelter) outside — the entrance door must be closed when you arrive.";
+    }
+
+    public string GetShelterDoorOpenHint()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        return _flow != null
+            ? _flow.sim1ShelterDoorOpenHint
+            : "Close the entrance door before entering the Mamad.";
     }
 
     public bool HasFirstAidKit() => _firstAidKitCollected;
@@ -166,22 +194,11 @@ public class GameManager : MonoBehaviour
             return;
 
         _lightsTurnedOff = true;
-        _sim1Phase = Sim1MissionPhase.CloseDoor;
-        ShowMissionMessage(
-            _flow != null ? _flow.sim1LightsOffHint : "Lights off. Close the entrance door (press E).",
-            5f);
-        UpdateObjectiveText();
-    }
-
-    public void OnExitDoorClosed()
-    {
-        if (_sim1Phase != Sim1MissionPhase.CloseDoor)
-            return;
-
-        _exitDoorClosed = true;
         _sim1Phase = Sim1MissionPhase.RunToShelter;
         PlayAllItemsCollectedVoice();
-        ShowMissionMessage(_flow != null ? _flow.sim1DoorClosedHint : "Door closed. Run to the Mamad (shelter) outside!", 6f);
+        ShowMissionMessage(
+            _flow != null ? _flow.sim1LightsOffHint : "Lights off. Run to the Mamad — close the entrance door before you enter.",
+            6f);
         UpdateObjectiveText();
     }
 
@@ -206,6 +223,7 @@ public class GameManager : MonoBehaviour
         _shelterReached = false;
         _allItemsCollectedRaised = false;
         _sim1Phase = Sim1MissionPhase.CollectItems;
+        _missionExitDoor = null;
     }
 
     private void ConfigureShelterTargets()
@@ -374,12 +392,12 @@ public class GameManager : MonoBehaviour
             case Sim1MissionPhase.CloseDoor:
                 objectiveText.text = _flow != null
                     ? _flow.sim1ObjectiveCloseDoor
-                    : "Close the entrance door before leaving (press E on the door).";
+                    : "Close the entrance door before going to the Mamad (press E anytime).";
                 break;
             case Sim1MissionPhase.RunToShelter:
                 objectiveText.text = _flow != null
                     ? _flow.sim1ObjectiveRunToShelter
-                    : "Run to the Mamad (shelter) outside.";
+                    : "Run to the Mamad — the entrance door must be closed when you arrive.";
                 break;
         }
     }
@@ -414,8 +432,14 @@ public class GameManager : MonoBehaviour
         if (_shelterReached) return false;
         if (!_itemsCollectionComplete) return false;
         if (!_lightsTurnedOff) return false;
-        if (!_exitDoorClosed) return false;
 
+        if (!IsMissionExitDoorClosed())
+        {
+            ShowMissionMessage(GetShelterDoorOpenHint(), 4f);
+            return false;
+        }
+
+        _exitDoorClosed = true;
         _shelterReached = true;
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();

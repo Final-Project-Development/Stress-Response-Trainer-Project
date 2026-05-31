@@ -127,6 +127,28 @@ public class SimulationMissionBootstrap : MonoBehaviour
         if (leafCollider != null)
             EnsureSolidCollider(leafCollider.gameObject, new Vector3(0.6f, 2f, 0.15f));
         EnsureTriggerCollider(_exitDoor.gameObject, new Vector3(1.2f, 2f, 0.3f));
+        EnableHomeDoorInteractivity(_exitDoor.transform);
+        _gameManager?.RegisterMissionExitDoor(_exitDoor);
+    }
+
+    private void EnableHomeDoorInteractivity(Transform exitDoorRoot)
+    {
+        var home = FindSceneObjectByName("Home");
+        if (home == null)
+            return;
+
+        var controllers = home.GetComponentsInChildren<MoveObjectController>(true);
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            var controller = controllers[i];
+            if (controller == null)
+                continue;
+
+            if (exitDoorRoot != null && controller.transform.IsChildOf(exitDoorRoot))
+                continue;
+
+            controller.enabled = true;
+        }
     }
 
     private Door ResolveExitDoorRoot()
