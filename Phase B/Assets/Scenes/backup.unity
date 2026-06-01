@@ -3400,6 +3400,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
   itemDisplayName: Map
+  pickUpMode: 0
 --- !u!1001 &100683196
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15913,15 +15914,33 @@ MonoBehaviour:
   sim2ObjectiveFindKit: Search the city for the first aid kit.
   sim2KitCollectedHint: "First aid kit collected. \nSearch the city and find the
     wounded person."
-  sim2ObjectiveReportDispatch: Press E on the emergency report station. Use the buttons,
-    then tap Send report to dispatch.
+  sim2ObjectiveFindWounded: Find the wounded person in the city. Press E when you
+    reach them.
+  sim2CasualtyApproachedHint: Go to the public telephone and call for first aid help
+    (dial 1, then 0, then 1).
+  sim2ObjectiveCallDispatch: "Public telephone: E open door (once) \u2192 E coin
+    \u2192 E receiver \u2192 dial 1, 0, 1."
   sim2ReportCompletedHint: Report sent to dispatch. Find the wounded person and start
     treatment.
   sim2ApproachDispatchHint: Press E here to open the dispatch report screen (101).
-  sim2NeedKitBeforeReportHint: Collect the first aid kit before reporting to dispatch.
+  sim2PhoneOpenDoorHint: Press E on the booth door to open it (one time only).
+  sim2PhoneDoorOpenedHint: Door open (one time only). Press E on the coin slot, then
+    E on the receiver.
+  sim2PhoneDoorAlreadyOpenHint: The door is already open. Press E on the coin slot.
+  sim2PhoneInsertCoinHint: Press E on the coin slot to insert a coin.
+  sim2PhoneCoinInsertedHint: Coin inserted. Press E on the receiver.
+  sim2PhoneTakeHandsetHint: Press E on the receiver to lift it, then dial 1, 0, 1.
+  sim2PhoneDialStartHint: "Dial 1, then 0, then 1 to call for help (number keys only
+    \u2014 not E)."
+  sim2PhoneCallConnectedHint: "Call connected. Return to the wounded person \u2014
+    press E, then 1, 2, 3."
+  sim2PhoneNeedDoorHint: Press E on the booth door first.
+  sim2PhoneNeedCoinHint: Insert a coin first (press E on the coin slot).
+  sim2PhoneWrongDigitHint: Wrong digit. Dial 1, then 0, then 1.
+  sim2PhoneDialProgressHint: "Correct. Keep dialing 101\u2026"
+  sim2NeedContactCasualtyBeforePhoneHint: Find the wounded person first and press
+    E on the casualty.
   sim2AlreadyReportedHint: You already reported to dispatch. Find the wounded person.
-  sim2NeedReportBeforeTreatHint: "Report to dispatch (101) before treating the wounded
-    \u2014 press E on the emergency report station."
   sim2TreatWoundedHint: "Find the wounded person in the city. \nPress E to start
     treatment, then keys 1 \u2192 2 \u2192 3."
   sim2CompletedHint: First aid complete. Simulation 2 mission finished.
@@ -33222,6 +33241,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
   itemDisplayName: Radio
+  pickUpMode: 0
 --- !u!65 &994839986
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -34529,6 +34549,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
   itemDisplayName: Flash Light
+  pickUpMode: 0
 --- !u!65 &1039600641
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -36059,6 +36080,90 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
+--- !u!1001 &1084139447
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1923807695599562, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_Name
+      value: UK Phone Box Clean
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -27.39
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.13
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 34.44
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 270
+      objectReference: {fileID: 0}
+    - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1923807695599562, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1085725016}
+  m_SourcePrefab: {fileID: 100100000, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+--- !u!1 &1085725015 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1923807695599562, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+  m_PrefabInstance: {fileID: 1084139447}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1085725016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1085725015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe27a4c2a62b8f848b4b78b647ac12b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PublicPhoneBoothMission
+  phoneBox: {fileID: 0}
+  handsetTransform: {fileID: 0}
+  handsetLiftOffset: {x: 0, y: 0.04, z: 0.12}
+  showApproachHintOnce: 1
+  allowFrontShellInteract: 1
+  doorOpenColliderDelay: 0.35
+  facingInteractDistance: 5
 --- !u!1 &1087024512
 GameObject:
   m_ObjectHideFlags: 0
@@ -36737,6 +36842,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
   itemDisplayName: water bottle
+  pickUpMode: 0
 --- !u!4 &1115426891 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
@@ -39656,12 +39762,17 @@ MonoBehaviour:
   simulation2FirstAidKitObject: {fileID: 438912567}
   simulation2FirstAidKit: {fileID: 0}
   woundedRoot: {fileID: 816215553}
-  simulation2EmergencyDispatchObject: {fileID: 0}
+  simulation2EmergencyDispatchObject: {fileID: 1085725015}
   lightSwitchObjectName: PFB_Lightswitch (1)
   exitDoorRootName: PFB_DoorDouble
   woundedObjectName: WoundedCharacter_TPose
   firstAidKitObjectName: firstaid
   emergencyDispatchObjectName: EmergencyPhone
+  emergencyDispatchNameFallbacks:
+  - UK Phone Box Clean
+  - UK Phone Box Distressed
+  - UK Phone Clean
+  - PublicTelephone
 --- !u!1001 &1201672423
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -51559,6 +51670,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
   itemDisplayName: Compass
+  pickUpMode: 0
 --- !u!1 &1604590070
 GameObject:
   m_ObjectHideFlags: 0
@@ -66981,6 +67093,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteract
   interactDistance: 3
+  phoneBoothInteractDistance: 5
 --- !u!114 &2111572962
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -72170,3 +72283,4 @@ SceneRoots:
   - {fileID: 1547464657}
   - {fileID: 1951179520}
   - {fileID: 575828025}
+  - {fileID: 1084139447}
