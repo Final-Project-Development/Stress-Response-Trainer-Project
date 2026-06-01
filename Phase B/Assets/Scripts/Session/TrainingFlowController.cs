@@ -229,11 +229,10 @@ public class TrainingFlowController : MonoBehaviour
     [TextArea]
     public string sim2BriefingBody =
         "Simulation 2 — First aid under pressure\n\n" +
-        "1) Search the city for the first aid kit (press E to pick up)\n" +
-        "2) Find the wounded person in the city\n" +
-        "3) Provide treatment:\n" +
-        "   • Press E on the casualty to start\n" +
-        "   • Press keys 1 → 2 → 3 in order\n\n" +
+        "1) Collect the first aid kit (press E)\n" +
+        "2) Find the wounded person and press E — go to the public telephone and call for first aid help\n" +
+        "3) Public telephone: E open door (once) → E insert coin → E pick up receiver → dial 1, then 0, then 1\n" +
+        "4) Return to the wounded person: press E on the casualty, then press 1, then 2, then 3 for treatment\n\n" +
         "Press Start Mission when you are ready.";
 
     [Header("Simulation 1 — in-game mission hints")]
@@ -263,8 +262,38 @@ public class TrainingFlowController : MonoBehaviour
         "Search the city for the first aid kit.";
     [TextArea] public string sim2KitCollectedHint =
         "First aid kit collected. Search the city and find the wounded person.";
+    [TextArea] public string sim2ObjectiveFindWounded =
+        "Find the wounded person in the city. Press E when you reach them.";
+    [TextArea] public string sim2CasualtyApproachedHint =
+        "Go to the public telephone and call for first aid help (dial 1, then 0, then 1).";
+    [TextArea] public string sim2ObjectiveCallDispatch =
+        "Public telephone: E open door (once) → E coin → E receiver → dial 1, 0, 1.";
+    [TextArea] public string sim2ReportCompletedHint =
+        "First aid help is on the way. Return to the wounded person for treatment.";
+    [TextArea] public string sim2ApproachDispatchHint =
+        "Public telephone: E open door (once), E coin, E receiver, then dial 1, 0, 1.";
+    [TextArea] public string sim2PhoneOpenDoorHint = "Press E on the booth door to open it (one time only).";
+    [TextArea] public string sim2PhoneDoorOpenedHint =
+        "Door open (one time only). Press E on the coin slot, then E on the receiver.";
+    [TextArea] public string sim2PhoneDoorAlreadyOpenHint =
+        "The door is already open. Press E on the coin slot.";
+    [TextArea] public string sim2PhoneInsertCoinHint = "Press E on the coin slot to insert a coin.";
+    [TextArea] public string sim2PhoneCoinInsertedHint = "Coin inserted. Press E on the receiver.";
+    [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the receiver to lift it, then dial 1, 0, 1.";
+    [TextArea] public string sim2PhoneDialStartHint =
+        "Dial 1, then 0, then 1 to call for help (number keys only — not E).";
+    [TextArea] public string sim2PhoneCallConnectedHint =
+        "Call connected. Return to the wounded person — press E, then 1, 2, 3.";
+    [TextArea] public string sim2PhoneNeedDoorHint = "Press E on the booth door first.";
+    [TextArea] public string sim2PhoneNeedCoinHint = "Insert a coin first (press E on the coin slot).";
+    [TextArea] public string sim2PhoneWrongDigitHint = "Wrong digit. Dial 1, then 0, then 1.";
+    [TextArea] public string sim2PhoneDialProgressHint = "Correct. Keep dialing 101…";
+    [TextArea] public string sim2NeedContactCasualtyBeforePhoneHint =
+        "Find the wounded person first and press E on the casualty.";
+    [TextArea] public string sim2AlreadyReportedHint =
+        "Call complete. Return to the wounded person — press E, then 1, 2, 3.";
     [TextArea] public string sim2TreatWoundedHint =
-        "Find the wounded person in the city. Press E to start treatment, then keys 1 → 2 → 3.";
+        "Return to the wounded person. Press E on the casualty, then press 1, then 2, then 3.";
     [TextArea] public string sim2CompletedHint =
         "First aid complete. Simulation 2 mission finished.";
     [TextArea] public string sim2NeedKitHint =

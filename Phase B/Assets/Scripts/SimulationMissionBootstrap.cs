@@ -25,11 +25,23 @@ public class SimulationMissionBootstrap : MonoBehaviour
     [Tooltip("Wounded character root, e.g. WoundedCharacter_TPose.")]
     public GameObject woundedRoot;
 
+    [Tooltip("UK public telephone (or child with EmergencyDispatchStation). Drag UK Phone Box prefab instance here.")]
+    public GameObject simulation2EmergencyDispatchObject;
+
     [Header("Optional name fallback (only if refs above are empty)")]
     public string lightSwitchObjectName = "PFB_Lightswitch (1)";
     public string exitDoorRootName = "PFB_DoorDouble";
     public string woundedObjectName = "WoundedCharacter_TPose";
     public string firstAidKitObjectName = "firstaid";
+    public string emergencyDispatchObjectName = "EmergencyPhone";
+    [Tooltip("Also searched if EmergencyPhone is not found (UK asset prefab instance names).")]
+    public string[] emergencyDispatchNameFallbacks =
+    {
+        "UK Phone Box Clean",
+        "UK Phone Box Distressed",
+        "UK Phone Clean",
+        "PublicTelephone"
+    };
 
     private GameManager _gameManager;
     private LightSwitch _lightSwitch;
@@ -50,6 +62,7 @@ public class SimulationMissionBootstrap : MonoBehaviour
     public void PrepareSimulation1()
     {
         HideFirstAidKit();
+        HidePublicPhoneBooth();
         SyncItemCount();
         EnsureLightSwitch();
         EnsureExitDoor();
@@ -63,6 +76,7 @@ public class SimulationMissionBootstrap : MonoBehaviour
         ResolveSimulation2FirstAidKit();
         ResetFirstAidKitForMission();
         ShowFirstAidKit();
+        EnsurePublicPhoneBooth();
     }
 
     private void SyncItemCount()
@@ -379,6 +393,89 @@ public class SimulationMissionBootstrap : MonoBehaviour
         ResolveSimulation2FirstAidKit();
         if (simulation2FirstAidKit != null)
             simulation2FirstAidKit.gameObject.SetActive(false);
+    }
+
+    private void HidePublicPhoneBooth()
+    {
+        var found = simulation2EmergencyDispatchObject != null
+            ? simulation2EmergencyDispatchObject
+            : ResolveEmergencyDispatchObject();
+        if (found != null)
+            found.SetActive(false);
+    }
+
+    private void EnsurePublicPhoneBooth()
+    {
+        GameObject boothObject = ResolveEmergencyDispatchObject();
+        if (boothObject == null)
+        {
+            Debug.LogWarning(
+                "SimulationMissionBootstrap: No public telephone found. " +
+                "Drag 'UK Phone Box Clean' into the scene and assign it on Simulation Mission Bootstrap, " +
+                "or name the root object EmergencyPhone.");
+            return;
+        }
+
+        simulation2EmergencyDispatchObject = boothObject;
+
+        var mission = boothObject.GetComponent<PublicPhoneBoothMission>();
+        if (mission == null)
+            mission = boothObject.AddComponent<PublicPhoneBoothMission>();
+
+        mission.EnsureSetupFromHierarchy();
+        mission.ResetForMission();
+        boothObject.SetActive(true);
+    }
+
+    private GameObject ResolveEmergencyDispatchObject()
+    {
+        if (simulation2EmergencyDispatchObject != null)
+            return simulation2EmergencyDispatchObject;
+
+        var withBooth = FindFirstObjectByType<PublicPhoneBoothMission>(FindObjectsInactive.Include);
+        if (withBooth != null)
+            return withBooth.gameObject;
+
+        var withStation = FindFirstObjectByType<EmergencyDispatchStation>(FindObjectsInactive.Include);
+        if (withStation != null)
+            return withStation.gameObject;
+
+        var byPrimaryName = FindCollectibleObjectByName(emergencyDispatchObjectName);
+        if (byPrimaryName != null)
+            return byPrimaryName;
+
+        if (emergencyDispatchNameFallbacks != null)
+        {
+            for (int i = 0; i < emergencyDispatchNameFallbacks.Length; i++)
+            {
+                var found = FindCollectibleObjectByName(emergencyDispatchNameFallbacks[i]);
+                if (found != null)
+                    return found;
+            }
+        }
+
+        return FindCollectibleObjectByNameContains("Phone Box")
+            ?? FindCollectibleObjectByNameContains("PhoneBox")
+            ?? FindCollectibleObjectByNameContains("Telephone");
+    }
+
+    private static GameObject FindCollectibleObjectByNameContains(string namePart)
+    {
+        if (string.IsNullOrWhiteSpace(namePart))
+            return null;
+
+        var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            var t = transforms[i];
+            if (t == null || t.GetComponent<RectTransform>() != null)
+                continue;
+
+            if (t.name.IndexOf(namePart, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return t.gameObject;
+        }
+
+        return null;
     }
 
     private static void EnsureCollider(GameObject target, Vector3 size)

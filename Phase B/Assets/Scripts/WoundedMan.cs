@@ -23,6 +23,7 @@ public class WoundedMan : MonoBehaviour
 
     [Header("Simulation 2 prerequisites")]
     public bool requireFirstAidKit = true;
+    public bool requireEmergencyReport = true;
 
     private GameManager gameManager;
     private bool helped = false;
@@ -77,11 +78,32 @@ public class WoundedMan : MonoBehaviour
             return;
         }
 
+        if (requireEmergencyReport && gameManager != null && !gameManager.HasReportedEmergency())
+        {
+            var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+            if (!gameManager.HasContactedCasualty())
+                gameManager.OnCasualtyApproached();
+            else
+            {
+                string msg = flow != null
+                    ? flow.sim2CasualtyApproachedHint
+                    : "Go to the public telephone and call for first aid help (dial 1, 0, 1).";
+                gameManager.ShowMissionMessage(msg, 5f);
+            }
+
+            return;
+        }
+
         if (!treatmentStarted)
         {
             treatmentStarted = true;
             currentStep = 0;
             PlayAnimationTrigger(startAidTrigger);
+            var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+            string startMsg = flow != null
+                ? flow.sim2TreatWoundedHint
+                : "Press 1, then 2, then 3 to treat the wounded person.";
+            gameManager?.ShowMissionMessage(startMsg, 5f);
             ShowStepInstruction();
             return;
         }
@@ -101,7 +123,7 @@ public class WoundedMan : MonoBehaviour
     {
         KeyCode expected = GetExpectedKey();
         string stepName = currentStep == 0 ? "Step 1/3" : currentStep == 1 ? "Step 2/3" : "Step 3/3";
-        string msg = $"Treat wounded: {stepName}. Press [{FormatKey(expected)}].";
+        string msg = $"Treatment {stepName}: press [{FormatKey(expected)}].";
         if (gameManager != null)
             gameManager.ShowMissionMessage(msg, 4.5f);
         Debug.Log(msg);

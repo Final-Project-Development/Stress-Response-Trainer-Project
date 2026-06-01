@@ -47,6 +47,8 @@ public class GameManager : MonoBehaviour
     private bool _shelterReached;
     private bool _allItemsCollectedRaised;
     private bool _firstAidKitCollected;
+    private bool _casualtyContacted;
+    private bool _emergencyReported;
     private Sim1MissionPhase _sim1Phase = Sim1MissionPhase.CollectItems;
     private Coroutine _pickupFeedbackRoutine;
     private SimulationMissionBootstrap _missionBootstrap;
@@ -88,6 +90,8 @@ public class GameManager : MonoBehaviour
 
         firstAidDone = false;
         _firstAidKitCollected = false;
+        _casualtyContacted = false;
+        _emergencyReported = false;
         _missionBootstrap?.PrepareSimulation2();
         ResetWoundedTreatment();
         UpdateSimulation2ObjectiveText();
@@ -148,6 +152,10 @@ public class GameManager : MonoBehaviour
 
     public bool HasFirstAidKit() => _firstAidKitCollected;
 
+    public bool HasContactedCasualty() => _casualtyContacted;
+
+    public bool HasReportedEmergency() => _emergencyReported;
+
     /// <summary>Current in-mission objective line for Help overlay and HUD.</summary>
     public string GetCurrentObjectiveText()
     {
@@ -180,6 +188,10 @@ public class GameManager : MonoBehaviour
         {
             if (!_firstAidKitCollected)
                 return _flow.sim2ObjectiveFindKit;
+            if (!_casualtyContacted)
+                return _flow.sim2ObjectiveFindWounded;
+            if (!_emergencyReported)
+                return _flow.sim2ObjectiveCallDispatch;
             if (!firstAidDone)
                 return _flow.sim2TreatWoundedHint;
             return "First aid complete.";
@@ -211,6 +223,31 @@ public class GameManager : MonoBehaviour
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
         ShowMissionMessage(_flow != null ? _flow.sim2KitCollectedHint : "First aid kit collected. Search the city and find the wounded person.", 6f);
+        UpdateSimulation2ObjectiveText();
+    }
+
+    /// <summary>Player pressed E on the casualty before calling dispatch.</summary>
+    public void OnCasualtyApproached()
+    {
+        if (_casualtyContacted)
+            return;
+
+        _casualtyContacted = true;
+        ShowMissionMessage(
+            _flow != null ? _flow.sim2CasualtyApproachedHint : "Go to the public telephone and call for first aid help (dial 1, 0, 1).",
+            6f);
+        UpdateSimulation2ObjectiveText();
+    }
+
+    public void OnEmergencyReported()
+    {
+        if (_emergencyReported)
+            return;
+
+        _emergencyReported = true;
+        ShowMissionMessage(
+            _flow != null ? _flow.sim2ReportCompletedHint : "First aid help is on the way. Return to the wounded person for treatment.",
+            6f);
         UpdateSimulation2ObjectiveText();
     }
 
@@ -415,11 +452,27 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (!_casualtyContacted)
+        {
+            objectiveText.text = _flow != null
+                ? _flow.sim2ObjectiveFindWounded
+                : "Find the wounded person in the city. Press E when you reach them.";
+            return;
+        }
+
+        if (!_emergencyReported)
+        {
+            objectiveText.text = _flow != null
+                ? _flow.sim2ObjectiveCallDispatch
+                : "Public telephone: E door (once), E coin, E receiver, dial 1, 0, 1.";
+            return;
+        }
+
         if (!firstAidDone)
         {
             objectiveText.text = _flow != null
                 ? _flow.sim2TreatWoundedHint
-                : "Find the wounded person in the city. Press E to start treatment, then keys 1 → 2 → 3.";
+                : "Return to the wounded. Press E, then 1, then 2, then 3.";
             return;
         }
 

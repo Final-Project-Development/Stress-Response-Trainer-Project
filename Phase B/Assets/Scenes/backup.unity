@@ -7328,15 +7328,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalPosition.x
@@ -8789,6 +8789,18 @@ PrefabInstance:
       value: Food_corn
       objectReference: {fileID: 0}
     - target: {fileID: 4473515519242374, guid: 10506fa9e2a850e4cbd99310b1057c33, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4473515519242374, guid: 10506fa9e2a850e4cbd99310b1057c33, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4473515519242374, guid: 10506fa9e2a850e4cbd99310b1057c33, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4473515519242374, guid: 10506fa9e2a850e4cbd99310b1057c33, type: 3}
       propertyPath: m_LocalPosition.x
       value: -2.1779149
       objectReference: {fileID: 0}
@@ -8849,6 +8861,18 @@ PrefabInstance:
     - target: {fileID: 1962989419818810, guid: cd6cd1d2b5ec21045a4108c1c595639e, type: 3}
       propertyPath: m_Name
       value: Food_bread_2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4172929635818236, guid: cd6cd1d2b5ec21045a4108c1c595639e, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4172929635818236, guid: cd6cd1d2b5ec21045a4108c1c595639e, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4172929635818236, guid: cd6cd1d2b5ec21045a4108c1c595639e, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 4172929635818236, guid: cd6cd1d2b5ec21045a4108c1c595639e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -15771,10 +15795,10 @@ MonoBehaviour:
   sirenLoop: {fileID: 862452212}
   narrationAudioSource: {fileID: 883422681}
   narrationLibrary: {fileID: 0}
-  introNarrationClip: {fileID: 8300000, guid: edf22c3a6d2b1a34da88b483603b6f2d, type: 3}
-  calibrationNarrationClip: {fileID: 8300000, guid: 266b6059e3b30b84a86fcb1885f1ad76, type: 3}
-  missionBriefingNarrationClip: {fileID: 8300000, guid: dd5498945820aae47b5ce3df3a2b5972, type: 3}
-  sim2BriefingNarrationClip: {fileID: 8300000, guid: 5a5215d9ef4f26a4cba9938cdccd85d6, type: 3}
+  introNarrationClip: {fileID: 8300000, guid: 6913008ce4b230c4680d6dc8d15c05e6, type: 3}
+  calibrationNarrationClip: {fileID: 8300000, guid: 7853abb41d3f7da4f931bbafe01870f4, type: 3}
+  missionBriefingNarrationClip: {fileID: 8300000, guid: 2c5f74b068fdda248b1e27d63530cae5, type: 3}
+  sim2BriefingNarrationClip: {fileID: 8300000, guid: 559684ab51be11d49a97bc62ade27546, type: 3}
   onSimulation1Started:
     m_PersistentCalls:
       m_Calls: []
@@ -15828,19 +15852,6 @@ MonoBehaviour:
     pressureGraphTabButton: {fileID: 0}
     activeTabButtonColor: {r: 0.20392159, g: 0.20392159, b: 0.20392159, a: 1}
     inactiveTabButtonColor: {r: 0.3137255, g: 0.3137255, b: 0.3137255, a: 1}
-  autoPolishUi: 0
-  applyDefaultButtonTextsAtRuntime: 0
-  panelTint: {r: 0.07, g: 0.11, b: 0.16, a: 0.84}
-  buttonColor: {r: 0.16, g: 0.35, b: 0.56, a: 1}
-  buttonTextColor: {r: 1, g: 1, b: 1, a: 1}
-  buttonPreferredSize: {x: 340, y: 72}
-  bodyTextSize: 32
-  buttonTextSize: 30
-  panelSidePadding: 80
-  panelTopPadding: 120
-  panelBottomPadding: 180
-  buttonBottomY: 70
-  buttonSpacingY: 86
   hubTitle: VR Stress Response Trainer
   applyHubTitleFromController: 0
   hubConnectionStatusDemo: 'Smartwatch: Not connected (simulated HR/HRV)
@@ -15885,14 +15896,14 @@ MonoBehaviour:
     the city\n3) Provide treatment:\n   \u2022 Press E on the casualty to start\n  
     \u2022 Press keys 1 \u2192 2 \u2192 3 in order\n\nPress Start Mission when you
     are ready."
-  sim1MissionStartHint: 'Enter the home and collect 5 items (press E): water bottle,
-    flash light, radio, compass, map.'
-  sim1AllItemsCollectedHint: All items collected. Turn off the lights inside the
-    home (press E).
+  sim1MissionStartHint: "Enter the home and collect 5 items (press E): \nwater bottle,
+    flash light, radio, compass, map."
+  sim1AllItemsCollectedHint: "All items collected. \nTurn off the lights inside the
+    home (press E)."
   sim1LightsOffHint: "Lights off. \nClose the entrance door and press E."
-  sim1DoorClosedHint: Door closed. Run to the Mamad (shelter) outside!
-  sim1ShelterDoorOpenHint: The entrance door is still open. Close PFB_DoorDouble
-    before entering the Mamad.
+  sim1DoorClosedHint: "Door closed. \nRun to the Mamad (shelter) outside!"
+  sim1ShelterDoorOpenHint: "The entrance door is still open. \nClose the door before
+    entering the Mamad."
   sim1ObjectiveTurnOffLights: Turn off the lights using inside the home.
   sim1ObjectiveCloseDoor: Close the entrance door before leaving - press E.
   sim1ObjectiveRunToShelter: Run to the Mamad (shelter) outside.
@@ -15902,6 +15913,15 @@ MonoBehaviour:
   sim2ObjectiveFindKit: Search the city for the first aid kit.
   sim2KitCollectedHint: "First aid kit collected. \nSearch the city and find the
     wounded person."
+  sim2ObjectiveReportDispatch: Press E on the emergency report station. Use the buttons,
+    then tap Send report to dispatch.
+  sim2ReportCompletedHint: Report sent to dispatch. Find the wounded person and start
+    treatment.
+  sim2ApproachDispatchHint: Press E here to open the dispatch report screen (101).
+  sim2NeedKitBeforeReportHint: Collect the first aid kit before reporting to dispatch.
+  sim2AlreadyReportedHint: You already reported to dispatch. Find the wounded person.
+  sim2NeedReportBeforeTreatHint: "Report to dispatch (101) before treating the wounded
+    \u2014 press E on the emergency report station."
   sim2TreatWoundedHint: "Find the wounded person in the city. \nPress E to start
     treatment, then keys 1 \u2192 2 \u2192 3."
   sim2CompletedHint: First aid complete. Simulation 2 mission finished.
@@ -18329,8 +18349,20 @@ PrefabInstance:
       value: Food_bowler1
       objectReference: {fileID: 0}
     - target: {fileID: 4601197626737176, guid: 670d3848d1d5d804b89f6cb7e02d3856, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4601197626737176, guid: 670d3848d1d5d804b89f6cb7e02d3856, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4601197626737176, guid: 670d3848d1d5d804b89f6cb7e02d3856, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4601197626737176, guid: 670d3848d1d5d804b89f6cb7e02d3856, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -4.569
+      value: -4.622
       objectReference: {fileID: 0}
     - target: {fileID: 4601197626737176, guid: 670d3848d1d5d804b89f6cb7e02d3856, type: 3}
       propertyPath: m_LocalPosition.y
@@ -18724,6 +18756,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: Crossroads_2
       objectReference: {fileID: 0}
+    - target: {fileID: 6665164085338615733, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6665164085338615733, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6665164085338615733, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 8599375735492571419, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
       propertyPath: m_RootOrder
       value: 11
@@ -18769,7 +18813,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 1202163450696342935, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 3571684139244622278, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 2096821221364903871, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 4027863937455062291, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8439423552979820475, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8346254858850384388, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 5260901888970677584, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
@@ -19674,7 +19725,8 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 7793199731871063134, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
@@ -27605,15 +27657,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 395724061595525604, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 395724061595525604, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 395724061595525604, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 395724061595525604, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
       propertyPath: m_LocalPosition.x
@@ -29260,6 +29312,18 @@ PrefabInstance:
       value: Food_cup3
       objectReference: {fileID: 0}
     - target: {fileID: 4949278191324654, guid: 72ee67964857e29498b6717984dd43cd, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4949278191324654, guid: 72ee67964857e29498b6717984dd43cd, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4949278191324654, guid: 72ee67964857e29498b6717984dd43cd, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4949278191324654, guid: 72ee67964857e29498b6717984dd43cd, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.3621323
       objectReference: {fileID: 0}
@@ -30074,7 +30138,13 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 1202163450696342935, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8439423552979820475, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 5260901888970677584, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8346254858850384388, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 2096821221364903871, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 4027863937455062291, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
@@ -39586,10 +39656,12 @@ MonoBehaviour:
   simulation2FirstAidKitObject: {fileID: 438912567}
   simulation2FirstAidKit: {fileID: 0}
   woundedRoot: {fileID: 816215553}
+  simulation2EmergencyDispatchObject: {fileID: 0}
   lightSwitchObjectName: PFB_Lightswitch (1)
   exitDoorRootName: PFB_DoorDouble
   woundedObjectName: WoundedCharacter_TPose
   firstAidKitObjectName: firstaid
+  emergencyDispatchObjectName: EmergencyPhone
 --- !u!1001 &1201672423
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -40022,6 +40094,18 @@ PrefabInstance:
     - target: {fileID: 1535795859161334, guid: 12c2885c9d0abc6419d8f0e715bf925a, type: 3}
       propertyPath: m_Name
       value: Food_chicken
+      objectReference: {fileID: 0}
+    - target: {fileID: 4602377005507932, guid: 12c2885c9d0abc6419d8f0e715bf925a, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4602377005507932, guid: 12c2885c9d0abc6419d8f0e715bf925a, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4602377005507932, guid: 12c2885c9d0abc6419d8f0e715bf925a, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 4602377005507932, guid: 12c2885c9d0abc6419d8f0e715bf925a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -41203,7 +41287,14 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 5105884601536073458, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 7678802130961795054, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 297445480835705946, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 4052145041406946993, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 211032040387840485, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 7030285444711067254, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
+    - {fileID: 4661029739001946663, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 33ae3a99eddf3ea469439cebc3eb3d44, type: 3}
@@ -43805,7 +43896,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 36, y: 212.69003}
+  m_AnchoredPosition: {x: 36, y: 638.0691}
   m_SizeDelta: {x: 1439.9, y: 1706.9048}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1342022354
@@ -47386,6 +47477,18 @@ PrefabInstance:
       value: Food_pie
       objectReference: {fileID: 0}
     - target: {fileID: 4124416897580572, guid: 5e37f2527168a124bb04323a0011992d, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4124416897580572, guid: 5e37f2527168a124bb04323a0011992d, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4124416897580572, guid: 5e37f2527168a124bb04323a0011992d, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4124416897580572, guid: 5e37f2527168a124bb04323a0011992d, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.8105578
       objectReference: {fileID: 0}
@@ -50422,6 +50525,18 @@ PrefabInstance:
       value: Food_spoon
       objectReference: {fileID: 0}
     - target: {fileID: 4337532461819490, guid: e3d6d39d39579f347a50ef63dae12627, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4337532461819490, guid: e3d6d39d39579f347a50ef63dae12627, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4337532461819490, guid: e3d6d39d39579f347a50ef63dae12627, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4337532461819490, guid: e3d6d39d39579f347a50ef63dae12627, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.6789589
       objectReference: {fileID: 0}
@@ -52734,6 +52849,7 @@ MonoBehaviour:
   step3Trigger: FirstAidStep3
   completeTrigger: FirstAidComplete
   requireFirstAidKit: 1
+  requireEmergencyReport: 1
 --- !u!136 &1637539124
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -62539,7 +62655,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 763364930}
   m_HandleRect: {fileID: 763364929}
   m_Direction: 2
-  m_Value: 0.7305342
+  m_Value: 0.191604
   m_Size: 0.48620278
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -66670,7 +66786,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 5260901888970677584, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8439423552979820475, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 4027863937455062291, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 1202163450696342935, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 3571684139244622278, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 2096821221364903871, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+    - {fileID: 8346254858850384388, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
@@ -66893,11 +67016,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2068541145896866084, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2068541145896866084, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2068541145896866084, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
       propertyPath: m_LocalScale.z
