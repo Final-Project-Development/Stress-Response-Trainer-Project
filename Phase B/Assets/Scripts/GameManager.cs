@@ -54,6 +54,7 @@ public class GameManager : MonoBehaviour
     private SimulationMissionBootstrap _missionBootstrap;
     private TrainingFlowController _flow;
     private Door _missionExitDoor;
+    private const float Sim2HintDuration = 8f;
 
     void Awake()
     {
@@ -95,7 +96,7 @@ public class GameManager : MonoBehaviour
         _missionBootstrap?.PrepareSimulation2();
         ResetWoundedTreatment();
         UpdateSimulation2ObjectiveText();
-        ShowMissionMessage(_flow != null ? _flow.sim2MissionStartHint : "Search the city for the first aid kit.", 4f);
+        ShowMissionMessage(_flow != null ? _flow.sim2MissionStartHint : "Search the city for the first aid kit.", Sim2HintDuration);
     }
 
     private void ResetWoundedTreatment()
@@ -222,7 +223,7 @@ public class GameManager : MonoBehaviour
         _firstAidKitCollected = true;
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
-        ShowMissionMessage(_flow != null ? _flow.sim2KitCollectedHint : "First aid kit collected. Search the city and find the wounded person.", 6f);
+        ShowMissionMessage(_flow != null ? _flow.sim2KitCollectedHint : "First aid kit collected. Search the city and find the wounded person.", Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 
@@ -235,7 +236,7 @@ public class GameManager : MonoBehaviour
         _casualtyContacted = true;
         ShowMissionMessage(
             _flow != null ? _flow.sim2CasualtyApproachedHint : "Go to the public telephone and call for first aid help (dial 1, 0, 1).",
-            6f);
+            Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 
@@ -247,7 +248,7 @@ public class GameManager : MonoBehaviour
         _emergencyReported = true;
         ShowMissionMessage(
             _flow != null ? _flow.sim2ReportCompletedHint : "First aid help is on the way. Return to the wounded person for treatment.",
-            6f);
+            Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 

@@ -24,7 +24,7 @@ public class UINavigationManager : MonoBehaviour
     [TextArea] public string helpSimulation1 =
         "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, compass, map.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
-        "Simulation 2:\n1) First aid kit (E).\n2) Wounded (E) — go to public telephone.\n3) Phone: E door (once) → E coin → E receiver → dial 1, 0, 1.\n4) Return to wounded: E, then 1, 2, 3.";
+        "Simulation 2:\n1) First aid kit — E\n2) Wounded — E (go call for help)\n3) Phone — E door once, E coin, E Receiver, dial 1, 0, 1\n4) Wounded — E, then 1, 2, 3 treatment";
 
     [Header("Keys")]
     public KeyCode pauseKey = KeyCode.Escape;

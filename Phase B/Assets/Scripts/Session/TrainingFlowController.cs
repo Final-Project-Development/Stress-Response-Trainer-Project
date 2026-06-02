@@ -257,43 +257,42 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("Simulation 2 — in-game mission hints")]
     [TextArea] public string sim2MissionStartHint =
-        "Simulation 2 started. Search the city for the first aid kit.";
+        "Simulation 2: (1) First aid kit E → (2) Wounded E → (3) Phone E,E,E + dial 1,0,1 → (4) Treat 1,2,3.";
     [TextArea] public string sim2ObjectiveFindKit =
-        "Search the city for the first aid kit.";
+        "Step 1: Find the first aid kit and press E to collect it.";
     [TextArea] public string sim2KitCollectedHint =
-        "First aid kit collected. Search the city and find the wounded person.";
+        "First aid kit collected. Find the wounded person and press E.";
     [TextArea] public string sim2ObjectiveFindWounded =
-        "Find the wounded person in the city. Press E when you reach them.";
+        "Step 2: Find the wounded person and press E.";
     [TextArea] public string sim2CasualtyApproachedHint =
-        "Go to the public telephone and call for first aid help (dial 1, then 0, then 1).";
+        "Go to the public telephone and call for first aid help. At the phone: E door (once), E coin, E receiver, then dial 1, 0, 1.";
     [TextArea] public string sim2ObjectiveCallDispatch =
         "Public telephone: E open door (once) → E coin → E receiver → dial 1, 0, 1.";
     [TextArea] public string sim2ReportCompletedHint =
-        "First aid help is on the way. Return to the wounded person for treatment.";
-    [TextArea] public string sim2ApproachDispatchHint =
-        "Public telephone: E open door (once), E coin, E receiver, then dial 1, 0, 1.";
+        "Call complete. Return to the wounded person for treatment.";
+    [TextArea] public string sim2TreatmentStartHint =
+        "Treatment: press 1, then 2, then 3.";
     [TextArea] public string sim2PhoneOpenDoorHint = "Press E on the booth door to open it (one time only).";
     [TextArea] public string sim2PhoneDoorOpenedHint =
-        "Door open (one time only). Press E on the coin slot, then E on the receiver.";
+        "Door open (one time only). Press E on the coin slot, then E on the Receiver.";
     [TextArea] public string sim2PhoneDoorAlreadyOpenHint =
         "The door is already open. Press E on the coin slot.";
     [TextArea] public string sim2PhoneInsertCoinHint = "Press E on the coin slot to insert a coin.";
-    [TextArea] public string sim2PhoneCoinInsertedHint = "Coin inserted. Press E on the receiver.";
-    [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the receiver to lift it, then dial 1, 0, 1.";
+    [TextArea] public string sim2PhoneCoinInsertedHint = "Coin inserted. Press E on the Receiver.";
+    [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the Receiver to lift it.";
     [TextArea] public string sim2PhoneDialStartHint =
-        "Dial 1, then 0, then 1 to call for help (number keys only — not E).";
+        "Dial 1, then 0, then 1 to call for first aid help (number keys only — not E).";
     [TextArea] public string sim2PhoneCallConnectedHint =
-        "Call connected. Return to the wounded person — press E, then 1, 2, 3.";
+        "You called for first aid help. Return to the wounded person for treatment.";
     [TextArea] public string sim2PhoneNeedDoorHint = "Press E on the booth door first.";
     [TextArea] public string sim2PhoneNeedCoinHint = "Insert a coin first (press E on the coin slot).";
-    [TextArea] public string sim2PhoneWrongDigitHint = "Wrong digit. Dial 1, then 0, then 1.";
     [TextArea] public string sim2PhoneDialProgressHint = "Correct. Keep dialing 101…";
     [TextArea] public string sim2NeedContactCasualtyBeforePhoneHint =
         "Find the wounded person first and press E on the casualty.";
     [TextArea] public string sim2AlreadyReportedHint =
         "Call complete. Return to the wounded person — press E, then 1, 2, 3.";
     [TextArea] public string sim2TreatWoundedHint =
-        "Return to the wounded person. Press E on the casualty, then press 1, then 2, then 3.";
+        "Step 4: Return to the wounded. Press E to start treatment, then press 1, then 2, then 3.";
     [TextArea] public string sim2CompletedHint =
         "First aid complete. Simulation 2 mission finished.";
     [TextArea] public string sim2NeedKitHint =

@@ -40,7 +40,8 @@ public class PickUpItem : MonoBehaviour
         if (GetComponentInParent<PublicPhoneBoothMission>(true) == null)
             return;
 
-        if (transform.name.IndexOf("Receiver", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        if (transform.name.IndexOf("Receiver", System.StringComparison.OrdinalIgnoreCase) >= 0
+            || transform.name.IndexOf("ReceiverInteract", System.StringComparison.OrdinalIgnoreCase) >= 0)
             ConfigureForPhoneReceiver("Receiver");
     }
 
@@ -51,9 +52,6 @@ public class PickUpItem : MonoBehaviour
 
     public void OnPickUp()
     {
-        if (_pickedUp && pickUpMode == PickUpMode.LiftPhoneReceiver)
-            return;
-
         if (pickUpMode == PickUpMode.LiftPhoneReceiver)
         {
             var booth = GetComponentInParent<PublicPhoneBoothMission>(true);
@@ -61,6 +59,9 @@ public class PickUpItem : MonoBehaviour
                 _pickedUp = true;
             return;
         }
+
+        if (_pickedUp)
+            return;
 
         if (GetComponentInParent<PublicPhoneBoothMission>(true) != null)
             return;

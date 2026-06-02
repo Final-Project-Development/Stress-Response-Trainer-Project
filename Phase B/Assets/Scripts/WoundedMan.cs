@@ -29,6 +29,7 @@ public class WoundedMan : MonoBehaviour
     private bool helped = false;
     private bool treatmentStarted = false;
     private int currentStep = 0;
+    private const float Sim2WoundedHintDuration = 7f;
 
     void Start()
     {
@@ -74,7 +75,7 @@ public class WoundedMan : MonoBehaviour
         {
             var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
             string msg = flow != null ? flow.sim2NeedKitHint : "Find the first aid kit in the city before treating the wounded.";
-            gameManager.ShowMissionMessage(msg, 4f);
+            gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
             return;
         }
 
@@ -88,7 +89,7 @@ public class WoundedMan : MonoBehaviour
                 string msg = flow != null
                     ? flow.sim2CasualtyApproachedHint
                     : "Go to the public telephone and call for first aid help (dial 1, 0, 1).";
-                gameManager.ShowMissionMessage(msg, 5f);
+                gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
             }
 
             return;
@@ -101,9 +102,9 @@ public class WoundedMan : MonoBehaviour
             PlayAnimationTrigger(startAidTrigger);
             var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
             string startMsg = flow != null
-                ? flow.sim2TreatWoundedHint
-                : "Press 1, then 2, then 3 to treat the wounded person.";
-            gameManager?.ShowMissionMessage(startMsg, 5f);
+                ? flow.sim2TreatmentStartHint
+                : "Treatment: press 1, then 2, then 3.";
+            gameManager?.ShowMissionMessage(startMsg, Sim2WoundedHintDuration);
             ShowStepInstruction();
             return;
         }
@@ -125,7 +126,7 @@ public class WoundedMan : MonoBehaviour
         string stepName = currentStep == 0 ? "Step 1/3" : currentStep == 1 ? "Step 2/3" : "Step 3/3";
         string msg = $"Treatment {stepName}: press [{FormatKey(expected)}].";
         if (gameManager != null)
-            gameManager.ShowMissionMessage(msg, 4.5f);
+            gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
         Debug.Log(msg);
     }
 

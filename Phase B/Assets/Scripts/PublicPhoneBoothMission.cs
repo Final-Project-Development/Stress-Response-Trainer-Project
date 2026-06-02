@@ -31,8 +31,11 @@ public class PublicPhoneBoothMission : MonoBehaviour
     [Header("Receiver (optional — auto-found as child named Receiver)")]
     [SerializeField] Transform handsetTransform;
 
-    [Header("Handset lift offset when taken")]
-    [SerializeField] Vector3 handsetLiftOffset = new Vector3(0f, 0.04f, 0.12f);
+    [Header("Handset lift offset when taken (local space)")]
+    [SerializeField] Vector3 handsetLiftOffset = new Vector3(0f, 0.12f, 0.22f);
+
+    [Header("Receiver interaction")]
+    [SerializeField] Vector3 receiverInteractTriggerSize = new Vector3(0.38f, 0.48f, 0.38f);
 
     [Header("Approach hint")]
     [SerializeField] bool showApproachHintOnce = true;
@@ -58,6 +61,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
     private string _dialedDigits = "";
     private GameManager _gameManager;
     private TrainingFlowController _flow;
+    private const float Sim2BoothHintDuration = 7f;
 
     public BoothStep CurrentStep => _step;
 
@@ -90,16 +94,22 @@ public class PublicPhoneBoothMission : MonoBehaviour
     void Update()
     {
         SyncPassageWithDoorState();
+    }
 
-        if (_step != BoothStep.Dial101)
-            return;
-
-        if (!CanUseBooth())
+    /// <summary>Call from <see cref="PlayerInteract"/> as well so 1/0/1 is always captured during sim.</summary>
+    public void PollDialInput()
+    {
+        if (_step != BoothStep.Dial101 || !CanUseBooth())
             return;
 
         if (!TryReadDialDigit(out char digit))
             return;
 
+        RegisterDialDigit(digit);
+    }
+
+    private void RegisterDialDigit(char digit)
+    {
         _dialedDigits += digit;
         if (_dialedDigits.Length > 6)
             _dialedDigits = _dialedDigits.Substring(_dialedDigits.Length - 6);
@@ -179,7 +189,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, 4f);
+                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
             return false;
         }
 
@@ -220,26 +230,25 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
     public void EnsureSetupFromHierarchy()
     {
-        if (_hierarchySetupApplied && Application.isPlaying)
-            return;
+        if (!_hierarchySetupApplied)
+        {
+            RemoveMisplacedHomeDoorScripts();
 
-        RemoveMisplacedHomeDoorScripts();
+            if (phoneBox == null)
+                phoneBox = GetComponent<DSUKPhoneBox>() ?? GetComponentInChildren<DSUKPhoneBox>(true);
 
-        if (phoneBox == null)
-            phoneBox = GetComponent<DSUKPhoneBox>() ?? GetComponentInChildren<DSUKPhoneBox>(true);
+            if (phoneBox == null)
+                Debug.LogWarning("PublicPhoneBoothMission: Add DSUKPhoneBox to the UK Phone Box root (same object as Animator).");
 
-        if (phoneBox == null)
-            Debug.LogWarning("PublicPhoneBoothMission: Add DSUKPhoneBox to the UK Phone Box root (same object as Animator).");
+            TagInteractPoint(FindChildTransform("Door"), BoothAction.OpenDoor, new Vector3(0.7f, 1.9f, 0.2f));
+            TagInteractPoint(FindChildTransform("Coin Insert"), BoothAction.InsertCoin, new Vector3(0.2f, 0.2f, 0.15f));
+            TagInteractPoint(FindChildTransform("Coin Collect Box"), BoothAction.InsertCoin, new Vector3(0.25f, 0.25f, 0.15f));
+            _hierarchySetupApplied = true;
+        }
 
         handsetTransform = ResolveReceiverTransform();
-
-        TagInteractPoint(FindChildTransform("Door"), BoothAction.OpenDoor, new Vector3(0.7f, 1.9f, 0.2f));
-        TagInteractPoint(FindChildTransform("Coin Insert"), BoothAction.InsertCoin, new Vector3(0.2f, 0.2f, 0.15f));
-        TagInteractPoint(FindChildTransform("Coin Collect Box"), BoothAction.InsertCoin, new Vector3(0.25f, 0.25f, 0.15f));
-
         EnsureReceiverPickup();
         SanitizePickupScripts();
-        _hierarchySetupApplied = true;
     }
 
     /// <summary>Removes Sim1-style pickups on the booth (never on Receiver).</summary>
@@ -250,7 +259,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         for (int i = 0; i < pickups.Length; i++)
         {
             var pickup = pickups[i];
-            if (pickup == null || IsReceiverTransform(pickup.transform))
+            if (pickup == null || IsReceiverPickupTransform(pickup.transform))
                 continue;
 
             toRemove.Add(pickup);
@@ -276,6 +285,20 @@ public class PublicPhoneBoothMission : MonoBehaviour
         return t.name.IndexOf("Receiver", System.StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
+    private bool IsReceiverPickupTransform(Transform t)
+    {
+        if (t == null)
+            return false;
+
+        if (IsReceiverTransform(t))
+            return true;
+
+        if (handsetTransform != null && (t == handsetTransform || t.IsChildOf(handsetTransform)))
+            return true;
+
+        return t.name.IndexOf("ReceiverInteract", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
     private void EnsureReceiverPickup()
     {
         handsetTransform = ResolveReceiverTransform();
@@ -285,17 +308,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
             return;
         }
 
-        var col = handsetTransform.GetComponent<Collider>();
-        if (col == null)
-        {
-            var box = handsetTransform.gameObject.AddComponent<BoxCollider>();
-            box.isTrigger = true;
-            box.size = new Vector3(0.2f, 0.3f, 0.2f);
-        }
-        else if (!col.isTrigger && col is BoxCollider boxCol)
-        {
-            boxCol.isTrigger = true;
-        }
+        EnsureReceiverInteractTrigger(handsetTransform);
 
         var pickup = handsetTransform.GetComponent<PickUpItem>();
         if (pickup == null)
@@ -303,6 +316,35 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
         pickup.ConfigureForPhoneReceiver("Receiver");
         RemoveTakeHandsetInteractPointsFromReceiver();
+    }
+
+    private void EnsureReceiverInteractTrigger(Transform receiver)
+    {
+        const string interactChildName = "ReceiverInteract";
+        Transform interactRoot = receiver.Find(interactChildName);
+        if (interactRoot == null)
+        {
+            var interactObject = new GameObject(interactChildName);
+            interactRoot = interactObject.transform;
+            interactRoot.SetParent(receiver, false);
+            interactRoot.localPosition = Vector3.zero;
+            interactRoot.localRotation = Quaternion.identity;
+            interactRoot.localScale = Vector3.one;
+        }
+
+        var trigger = interactRoot.GetComponent<BoxCollider>();
+        if (trigger == null)
+            trigger = interactRoot.gameObject.AddComponent<BoxCollider>();
+
+        trigger.isTrigger = true;
+        trigger.size = receiverInteractTriggerSize;
+        trigger.center = Vector3.zero;
+
+        var pickup = interactRoot.GetComponent<PickUpItem>();
+        if (pickup == null)
+            pickup = interactRoot.gameObject.AddComponent<PickUpItem>();
+
+        pickup.ConfigureForPhoneReceiver("Receiver");
     }
 
     private void ResetReceiverPickupState()
@@ -316,6 +358,14 @@ public class PublicPhoneBoothMission : MonoBehaviour
         var pickup = handsetTransform.GetComponent<PickUpItem>();
         if (pickup != null)
             pickup.ConfigureForPhoneReceiver("Receiver");
+
+        var interact = handsetTransform.Find("ReceiverInteract");
+        if (interact != null)
+        {
+            var interactPickup = interact.GetComponent<PickUpItem>();
+            if (interactPickup != null)
+                interactPickup.ConfigureForPhoneReceiver("Receiver");
+        }
 
         RestoreHandsetPose();
     }
@@ -372,7 +422,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, 4f);
+                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
             return false;
         }
 
@@ -388,6 +438,9 @@ public class PublicPhoneBoothMission : MonoBehaviour
             return true;
         }
 
+        if (_step == BoothStep.TakeHandset)
+            return TryPickupReceiver();
+
         return TryHandleBoothShellInteract();
     }
 
@@ -400,7 +453,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, 4f);
+                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
             return true;
         }
 
@@ -420,6 +473,12 @@ public class PublicPhoneBoothMission : MonoBehaviour
             ?? hitCollider.GetComponentInParent<PhoneBoothInteractPoint>();
         if (point == null || point.booth != this)
             point = ResolvePointFromTransform(hitCollider.transform);
+
+        if (_step == BoothStep.TakeHandset && IsUnderBooth(hitCollider.transform))
+        {
+            if (TryPickupReceiver())
+                return true;
+        }
 
         if (point == null && allowFrontShellInteract && IsUnderBooth(hitCollider.transform))
         {
@@ -448,8 +507,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
                 HandleAction(BoothAction.InsertCoin);
                 return true;
             case BoothStep.TakeHandset:
-                ShowFlowMessage(_flow != null ? _flow.sim2PhoneTakeHandsetHint : "Press E on the receiver to pick it up.");
-                return true;
+                return TryPickupReceiver();
             case BoothStep.Dial101:
                 ShowDialHint();
                 return true;
@@ -546,6 +604,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
         StoreHandsetPose();
         handsetTransform.localPosition = _handsetRestLocalPosition + handsetLiftOffset;
+        handsetTransform.localRotation = _handsetRestLocalRotation;
     }
 
     private void StoreHandsetPose()
@@ -634,7 +693,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
     private void ShowFlowMessage(string msg)
     {
-        _gameManager?.ShowMissionMessage(msg, 4.5f);
+        _gameManager?.ShowMissionMessage(msg, Sim2BoothHintDuration);
     }
 
     private PhoneBoothInteractPoint ResolvePointFromTransform(Transform t)
@@ -817,6 +876,6 @@ public class PublicPhoneBoothMission : MonoBehaviour
             return;
 
         _hintShown = true;
-        ShowFlowMessage(_flow != null ? _flow.sim2ApproachDispatchHint : "Use the public telephone to call for first aid help.");
+        ShowFlowMessage(_flow != null ? _flow.sim2ObjectiveCallDispatch : "Use the public telephone to call for first aid help.");
     }
 }

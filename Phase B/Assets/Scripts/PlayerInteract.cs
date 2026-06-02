@@ -8,10 +8,31 @@ public class PlayerInteract : MonoBehaviour
 
     private GameManager _gameManager;
 
+    private PublicPhoneBoothMission[] _phoneBoothCache;
+
     void Update()
     {
+        PollPhoneBoothDialInput();
+
         if (Input.GetKeyDown(KeyCode.E))
             TryInteract();
+    }
+
+    private void PollPhoneBoothDialInput()
+    {
+        _phoneBoothCache = FindObjectsByType<PublicPhoneBoothMission>(FindObjectsSortMode.None);
+        if (_phoneBoothCache == null || _phoneBoothCache.Length == 0)
+            return;
+
+        for (int i = 0; i < _phoneBoothCache.Length; i++)
+        {
+            var booth = _phoneBoothCache[i];
+            if (booth == null || !booth.isActiveAndEnabled || !booth.IsDialing)
+                continue;
+
+            booth.PollDialInput();
+            return;
+        }
     }
 
     void TryInteract()
