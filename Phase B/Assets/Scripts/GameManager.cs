@@ -55,6 +55,8 @@ public class GameManager : MonoBehaviour
     private TrainingFlowController _flow;
     private Door _missionExitDoor;
     private const float Sim2HintDuration = 8f;
+    private const string Sim2CallDispatchInstruction =
+        "Go to the public telephone and call first aid help. Dial 1, then 0, then 1 (101).";
 
     void Awake()
     {
@@ -234,9 +236,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _casualtyContacted = true;
-        ShowMissionMessage(
-            _flow != null ? _flow.sim2ObjectiveCallDispatch : "Go to the public telephone and call for first aid help (dial 1, 0, 1).",
-            Sim2HintDuration);
+        ShowMissionMessage(Sim2CallDispatchInstruction, Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 

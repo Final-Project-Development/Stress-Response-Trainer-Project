@@ -86,9 +86,7 @@ public class WoundedMan : MonoBehaviour
                 gameManager.OnCasualtyApproached();
             else
             {
-                string msg = flow != null
-                    ? flow.sim2ObjectiveCallDispatch
-                    : "Go to the public telephone and call for first aid help (dial 1, 0, 1).";
+                string msg = "Go to the public telephone and call first aid help. Dial 1, then 0, then 1 (101).";
                 gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
             }
 
