@@ -264,8 +264,6 @@ public class TrainingFlowController : MonoBehaviour
         "First aid kit collected. Find the wounded person and press E.";
     [TextArea] public string sim2ObjectiveFindWounded =
         "Step 2: Find the wounded person and press E.";
-    [TextArea] public string sim2CasualtyApproachedHint =
-        "Go to the public telephone and call for first aid help. At the phone: E door (once), E coin, E receiver, then dial 1, 0, 1.";
     [TextArea] public string sim2ObjectiveCallDispatch =
         "Public telephone: E open door (once) → E coin → E receiver → dial 1, 0, 1.";
     [TextArea] public string sim2ReportCompletedHint =
@@ -282,10 +280,6 @@ public class TrainingFlowController : MonoBehaviour
     [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the Receiver to lift it.";
     [TextArea] public string sim2PhoneDialStartHint =
         "Dial 1, then 0, then 1 to call for first aid help (number keys only — not E).";
-    [TextArea] public string sim2PhoneCallConnectedHint =
-        "You called for first aid help. Return to the wounded person for treatment.";
-    [TextArea] public string sim2PhoneNeedDoorHint = "Press E on the booth door first.";
-    [TextArea] public string sim2PhoneNeedCoinHint = "Insert a coin first (press E on the coin slot).";
     [TextArea] public string sim2PhoneDialProgressHint = "Correct. Keep dialing 101…";
     [TextArea] public string sim2NeedContactCasualtyBeforePhoneHint =
         "Find the wounded person first and press E on the casualty.";

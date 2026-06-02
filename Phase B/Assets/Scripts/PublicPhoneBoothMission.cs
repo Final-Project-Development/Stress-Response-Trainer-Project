@@ -201,13 +201,13 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
         if (_step == BoothStep.OpenDoor)
         {
-            ShowFlowMessage(_flow != null ? _flow.sim2PhoneNeedDoorHint : "Open the booth door first (press E on the door).");
+            ShowFlowMessage(_flow != null ? _flow.sim2PhoneOpenDoorHint : "Open the booth door first (press E on the door).");
             return false;
         }
 
         if (_step == BoothStep.InsertCoin)
         {
-            ShowFlowMessage(_flow != null ? _flow.sim2PhoneNeedCoinHint : "Insert a coin first (press E on the coin slot).");
+            ShowFlowMessage(_flow != null ? _flow.sim2PhoneInsertCoinHint : "Insert a coin first (press E on the coin slot).");
             return false;
         }
 
@@ -548,7 +548,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
             case BoothAction.InsertCoin:
                 if (_step == BoothStep.OpenDoor)
                 {
-                    ShowFlowMessage(_flow != null ? _flow.sim2PhoneNeedDoorHint : "Press E on the door to open the booth first.");
+                    ShowFlowMessage(_flow != null ? _flow.sim2PhoneOpenDoorHint : "Press E on the door to open the booth first.");
                     return;
                 }
 
@@ -590,7 +590,6 @@ public class PublicPhoneBoothMission : MonoBehaviour
     {
         _step = BoothStep.CallComplete;
         _gameManager?.OnEmergencyReported();
-        ShowFlowMessage(_flow != null ? _flow.sim2PhoneCallConnectedHint : "First aid help called. Return to the wounded person for treatment.");
     }
 
     private void LiftReceiver()

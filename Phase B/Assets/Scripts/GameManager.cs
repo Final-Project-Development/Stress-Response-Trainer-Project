@@ -235,7 +235,7 @@ public class GameManager : MonoBehaviour
 
         _casualtyContacted = true;
         ShowMissionMessage(
-            _flow != null ? _flow.sim2CasualtyApproachedHint : "Go to the public telephone and call for first aid help (dial 1, 0, 1).",
+            _flow != null ? _flow.sim2ObjectiveCallDispatch : "Go to the public telephone and call for first aid help (dial 1, 0, 1).",
             Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }

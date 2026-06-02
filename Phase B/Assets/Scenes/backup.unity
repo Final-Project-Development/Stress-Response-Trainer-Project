@@ -15796,10 +15796,10 @@ MonoBehaviour:
   sirenLoop: {fileID: 862452212}
   narrationAudioSource: {fileID: 883422681}
   narrationLibrary: {fileID: 0}
-  introNarrationClip: {fileID: 8300000, guid: 6913008ce4b230c4680d6dc8d15c05e6, type: 3}
-  calibrationNarrationClip: {fileID: 8300000, guid: 7853abb41d3f7da4f931bbafe01870f4, type: 3}
-  missionBriefingNarrationClip: {fileID: 8300000, guid: 2c5f74b068fdda248b1e27d63530cae5, type: 3}
-  sim2BriefingNarrationClip: {fileID: 8300000, guid: 559684ab51be11d49a97bc62ade27546, type: 3}
+  introNarrationClip: {fileID: 8300000, guid: 9961d8bcc43b14145bc05bebec1cf6c6, type: 3}
+  calibrationNarrationClip: {fileID: 8300000, guid: 99db19142170db048898d4d8f6c59dca, type: 3}
+  missionBriefingNarrationClip: {fileID: 8300000, guid: 1c52905bea722a84eb6a61f6e18fbe06, type: 3}
+  sim2BriefingNarrationClip: {fileID: 8300000, guid: e61814afcae7bf2438d4c1aeff4255f1, type: 3}
   onSimulation1Started:
     m_PersistentCalls:
       m_Calls: []
@@ -15916,8 +15916,6 @@ MonoBehaviour:
     wounded person."
   sim2ObjectiveFindWounded: "Find the wounded person in the city. \nPress E when
     you reach them."
-  sim2CasualtyApproachedHint: Go to the public telephone and call for first aid help
-    (101).
   sim2ObjectiveCallDispatch: "press E to open door \u2192 E coin \u2192 E receiver
     \u2192 dial 1, 0, 1."
   sim2ReportCompletedHint: "Report sent to dispatch. \nFind the wounded person and
@@ -15925,18 +15923,14 @@ MonoBehaviour:
   sim2TreatmentStartHint: 'Treatment: press 1, then 2, then 3.'
   sim2PhoneOpenDoorHint: Press E on the booth door to open it.
   sim2PhoneDoorOpenedHint: "Door open. \nPress E on the coin slot, then E on the
-    receiver."
+    phone."
   sim2PhoneDoorAlreadyOpenHint: "The door is already open. \nPress E on the coin
     slot."
   sim2PhoneInsertCoinHint: Press E on the coin slot to insert a coin.
-  sim2PhoneCoinInsertedHint: "Coin inserted. \nPress E on the receiver."
-  sim2PhoneTakeHandsetHint: Press E on the receiver to lift it, then dial 1, 0, 1.
+  sim2PhoneCoinInsertedHint: "Coin inserted. \nPress E on the phone."
+  sim2PhoneTakeHandsetHint: Press E on the phone to lift it, then dial 1, 0, 1.
   sim2PhoneDialStartHint: Dial 1, then 0, then 1 to call for help.
-  sim2PhoneCallConnectedHint: "Call connected. \nReturn to the wounded person and
-    press E, then 1, 2, 3."
-  sim2PhoneNeedDoorHint: Press E on the booth door first.
-  sim2PhoneNeedCoinHint: Insert a coin first (press E on the coin slot).
-  sim2PhoneDialProgressHint: "Correct. Keep dialing 101\u2026"
+  sim2PhoneDialProgressHint: "Keep dialing 101\u2026"
   sim2NeedContactCasualtyBeforePhoneHint: Find the wounded person first and press
     E on the casualty.
   sim2AlreadyReportedHint: "You already reported to dispatch. \nFind the wounded
@@ -19127,6 +19121,7 @@ Transform:
   - {fileID: 309343057}
   - {fileID: 497511639}
   - {fileID: 339761024}
+  - {fileID: 1085725019}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &577332873
@@ -36091,23 +36086,23 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 575828025}
     m_Modifications:
     - target: {fileID: 1923807695599562, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_Name
-      value: UK Phone Box Clean
+      value: PhoneBox
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -27.39
+      value: -15.00079
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.13
+      value: 0.11
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 34.44
+      value: -44.41065
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalRotation.w
@@ -36181,6 +36176,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94f7b22ec44772844999fdbf0db49015, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!4 &1085725019 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+  m_PrefabInstance: {fileID: 1084139447}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1087024512
 GameObject:
   m_ObjectHideFlags: 0
@@ -72301,4 +72301,3 @@ SceneRoots:
   - {fileID: 1547464657}
   - {fileID: 1951179520}
   - {fileID: 575828025}
-  - {fileID: 1084139447}
