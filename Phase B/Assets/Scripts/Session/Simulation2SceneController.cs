@@ -9,8 +9,12 @@ public class Simulation2SceneController : MonoBehaviour
 {
     [Header("Optional UI")]
     public TextMeshProUGUI statusText;
+    [Tooltip("SCI (%) over time during this simulation.")]
+    public SimpleStressLineGraph sciResultsGraph;
+    [Tooltip("Max SCI (%) for graph Y scaling.")]
+    public float sciGraphMaxDisplay = 80f;
     public SimpleStressLineGraph hrvResultsGraph;
-    public float hrvGraphMaxDisplay = 100f;
+    public float hrvGraphMaxDisplay = 120f;
 
     [Header("Flow")]
     public int hubSceneBuildIndex;
@@ -119,8 +123,21 @@ public class Simulation2SceneController : MonoBehaviour
                 "\n\nPress B to return to the hub (menu).";
         }
 
-        if (hrvResultsGraph != null && _recorder != null && _recorder.HrvHistory.Count > 0)
-            hrvResultsGraph.SetFromValues(_recorder.HrvHistory, hrvGraphMaxDisplay);
+        if (sciResultsGraph != null && _recorder != null)
+        {
+            if (_recorder.SciHistory.Count > 0)
+                sciResultsGraph.SetFromValues(_recorder.SciHistory, sciGraphMaxDisplay);
+            else
+                sciResultsGraph.Clear();
+        }
+
+        if (hrvResultsGraph != null && _recorder != null)
+        {
+            if (_recorder.HrvHistory.Count > 0)
+                hrvResultsGraph.SetFromValues(_recorder.HrvHistory, hrvGraphMaxDisplay);
+            else
+                hrvResultsGraph.Clear();
+        }
     }
 
     public void ReturnToHub()

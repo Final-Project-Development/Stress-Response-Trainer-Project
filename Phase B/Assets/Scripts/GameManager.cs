@@ -10,6 +10,13 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI pickupFeedbackText;
     public float pickupFeedbackDuration = 1.4f;
 
+    [Header("Shelter target (Simulation 1)")]
+    [Tooltip("New shelter root object name in the scene.")]
+    public string mamadObjectName = "mamad";
+    [Tooltip("Legacy shelter object name to disable during play so only mamad is used.")]
+    public string legacyOutdoorShelterObjectName = "OutdoorShelter";
+    public bool disableLegacyOutdoorShelter = true;
+
     [Header("Voice (optional)")]
     [Tooltip("e.g. same Narration Audio Source as TrainingFlowController, or a dedicated UI voice source.")]
     public AudioSource voiceAudioSource;
@@ -33,10 +40,53 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        ConfigureShelterTargets();
         _allItemsCollectedRaised = false;
         if (pickupFeedbackText != null)
             pickupFeedbackText.gameObject.SetActive(false);
         UpdateObjectiveText();
+    }
+
+    private void ConfigureShelterTargets()
+    {
+        var mamad = FindSceneObjectByName(mamadObjectName);
+        if (mamad == null)
+        {
+            Debug.LogWarning($"GameManager: Could not find mamad object '{mamadObjectName}'. Shelter objective trigger may not fire.");
+            return;
+        }
+
+        if (mamad.GetComponent<ShelterTrigger>() == null)
+        {
+            mamad.AddComponent<ShelterTrigger>();
+            Debug.Log($"GameManager: Added ShelterTrigger to '{mamadObjectName}'.");
+        }
+
+        if (!disableLegacyOutdoorShelter)
+            return;
+
+        var legacy = FindSceneObjectByName(legacyOutdoorShelterObjectName);
+        if (legacy != null && legacy != mamad)
+        {
+            legacy.SetActive(false);
+            Debug.Log($"GameManager: Disabled legacy shelter '{legacyOutdoorShelterObjectName}'.");
+        }
+    }
+
+    private static GameObject FindSceneObjectByName(string objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+            return null;
+
+        var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            var t = transforms[i];
+            if (t != null && t.name == objectName)
+                return t.gameObject;
+        }
+
+        return null;
     }
 
     public void AddItem()
@@ -126,6 +176,24 @@ public class GameManager : MonoBehaviour
         ShowFeedbackMessage(message, durationSeconds);
     }
 
+    public void ClearMissionMessages()
+    {
+        if (_pickupFeedbackRoutine != null)
+        {
+            StopCoroutine(_pickupFeedbackRoutine);
+            _pickupFeedbackRoutine = null;
+        }
+
+        if (objectiveText != null)
+            objectiveText.text = string.Empty;
+
+        if (pickupFeedbackText != null)
+        {
+            pickupFeedbackText.text = string.Empty;
+            pickupFeedbackText.gameObject.SetActive(false);
+        }
+    }
+
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
@@ -161,14 +229,16 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void ReachShelter()
+    /// <returns>True if the shelter objective was completed now; false if prerequisites are not met yet.</returns>
+    public bool ReachShelter()
     {
-        if (_shelterReached) return;
-        if (!_itemsCollectionComplete) return;
+        if (_shelterReached) return false;
+        if (!_itemsCollectionComplete) return false;
 
         _shelterReached = true;
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();
+        return true;
     }
 
     private void TryCompleteSimulation1Goals()

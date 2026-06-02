@@ -8,18 +8,45 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Game flow:
-/// Gate → Intro (narration) → Calibration (60s) → Simulation 1 briefing → Simulation 1 active
-/// → Results 1 → Simulation 2 briefing → Simulation 2 scene.
+/// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation pick (Level Select UI) → chosen briefing → …
+/// After each simulation’s results screen, flow returns to Simulation pick when <see cref="simulationPickPanel"/> is set (otherwise linear Sim 1 → Sim 2 remains).
+/// Assign <see cref="simulationPickPanel"/> to show after calibration; block buttons call <see cref="UI_PickSimulation1AfterCalibration"/> /
+/// <see cref="UI_PickSimulation2AfterCalibration"/>. If the pick panel is unassigned, calibration goes straight to Simulation 1 mission briefing.
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
 [DefaultExecutionOrder(50)]
 public class TrainingFlowController : MonoBehaviour
 {
+    [Serializable]
+    public class ResultsTabsConfig
+    {
+        [Header("Tab content roots")]
+        public GameObject resultTabContent;
+        public GameObject recommendationsTabContent;
+        public GameObject pressureGraphTabContent;
+
+        [Header("Tab buttons (optional visual highlight)")]
+        public Button resultTabButton;
+        public Button recommendationsTabButton;
+        public Button pressureGraphTabButton;
+        public Color activeTabButtonColor = new Color(0.16f, 0.35f, 0.56f, 1f);
+        public Color inactiveTabButtonColor = new Color(0.11f, 0.21f, 0.33f, 1f);
+    }
+
+    public enum ResultsTab
+    {
+        Result,
+        Recommendations,
+        PressureGraph
+    }
+
     public enum Phase
     {
         Gate,
+        Login,
         IntroNarration,
         Simulation1Calibration,
+        SimulationPick,
         Simulation1MissionBriefing,
         Simulation1Active,
         Simulation1Results,
@@ -31,30 +58,24 @@ public class TrainingFlowController : MonoBehaviour
     [Header("Refs")]
     public MockPhysiologySource physiology;
     public SessionStressRecorder recorder;
-    public SimpleStressLineGraph resultsGraph;
     public GameManager gameManager;
     public UDPReceiver udpReceiver;
 
     [Header("UI roots (enable/disable per phase)")]
     public GameObject hubPanel;
+    [Tooltip("Login / Register UI (opened from Hub). Assign a panel with LoginFlowPanel.")]
+    public GameObject loginPanel;
     public GameObject introPanel;
     public GameObject sim1MissionBriefingPanel;
     public GameObject sim1CalibrationPanel;
+    [Tooltip("Level / simulation selection after baseline calibration. Buttons: UI_PickSimulation1AfterCalibration, UI_PickSimulation2AfterCalibration.")]
+    public GameObject simulationPickPanel;
     public GameObject sim1ResultsPanel;
     public GameObject sim2BriefingPanel;
     public GameObject sim2ResultsPanel;
     public GameObject safetyWarningPanel;
     public TextMeshProUGUI safetyWarningText;
     [TextArea] public string stressWarningMessage = "Warning: this simulation contains stress stimuli (alarm audio, time pressure, emergency context). You can pause at any time with Esc and quit safely.";
-
-    [Header("Safety warning presentation")]
-    [Tooltip("If true, the warning is a centered card instead of stretching across the whole canvas.")]
-    public bool safetyWarningUseCenterCard = true;
-    public Vector2 safetyWarningCardSize = new Vector2(680f, 420f);
-    public Color safetyWarningCardColor = new Color(0.32f, 0.11f, 0.13f, 0.98f);
-    [Tooltip("Dark overlay behind the card so the scene stays visible but de-emphasized.")]
-    public bool safetyWarningShowDimBackdrop = true;
-    public Color safetyWarningDimColor = new Color(0f, 0f, 0f, 0.55f);
 
     [Header("Optional: hide gameplay until mission starts")]
     public GameObject simulation1GameplayRoot;
@@ -109,6 +130,12 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI introBodyText;
     public TextMeshProUGUI missionBriefingBodyText;
     public TextMeshProUGUI calibrationStatusText;
+    [Tooltip("Optional: large remaining-time readout (whole seconds or MM:SS). When set, time is not duplicated in Calibration Status Text.")]
+    public TextMeshProUGUI calibrationRemainingTimeText;
+    [Tooltip("Optional: live HR/HRV (e.g. HRV_DATA). When set, the physiology line is not duplicated in Calibration Status Text.")]
+    public TextMeshProUGUI calibrationHrvDataText;
+    [Tooltip("When using Calibration Remaining Time Text, use MM:SS instead of seconds only.")]
+    public bool calibrationRemainingTimeAsMmSs = false;
     public TextMeshProUGUI resultsSummaryText;
     [Tooltip("Optional: when both Sim 1 metrics + recommendations are set, the summary is split into two columns.")]
     public TextMeshProUGUI sim1ResultsMetricsText;
@@ -119,32 +146,32 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI sim2ResultsMetricsText;
     public TextMeshProUGUI sim2ResultsRecommendationsText;
     public TextMeshProUGUI simulationActiveHudText;
+    [Header("Results graphs (SCI + HRV per simulation)")]
+    [Tooltip("Simulation 1 — Stress Change Index over time (existing).")]
+    public SimpleStressLineGraph resultsGraph;
+    [Tooltip("Simulation 1 — Heart-rate variability (ms) over time. Optional second LineRenderer on results panel.")]
+    public SimpleStressLineGraph sim1HrvResultsGraph;
+    [Tooltip("Max HRV (ms) used to scale the Sim 1 HRV graph Y axis.")]
+    public float sim1HrvGraphMaxDisplay = 120f;
+    [Tooltip("Simulation 2 — HRV (ms) over time.")]
     public SimpleStressLineGraph sim2HrvResultsGraph;
-    public float sim2HrvGraphMaxDisplay = 100f;
+    [Tooltip("Max HRV (ms) for Sim 2 graph scaling.")]
+    public float sim2HrvGraphMaxDisplay = 120f;
+    [Tooltip("Simulation 2 — SCI (%) over time. Optional; complements HRV graph.")]
+    public SimpleStressLineGraph sim2SciResultsGraph;
+    [Tooltip("Max SCI (%) for Sim 2 SCI graph Y axis.")]
+    public float sim2SciGraphMaxDisplay = 80f;
 
-    [Header("Results two-column layout")]
-    [Tooltip("Horizontal gap between the metrics and recommendations columns (world space in canvas units).")]
-    public float resultsColumnGap = 20f;
-
-    [Header("Results screen readability")]
-    [Tooltip("Darken full-screen results panels and add card backgrounds behind column text.")]
-    public bool applyResultsReadabilityStyle = true;
-    [Tooltip("Full-panel tint (simulates a modal overlay over the 3D view).")]
-    public Color resultsScreenDimColor = new Color(0.02f, 0.04f, 0.08f, 0.82f);
-    [Tooltip("Background behind each metrics / recommendations column.")]
-    public Color resultsCardColor = new Color(0.07f, 0.09f, 0.13f, 0.96f);
-    public Color resultsColumnTextColor = new Color(0.93f, 0.95f, 1f, 1f);
-    [Tooltip("Extra horizontal inset so text does not touch screen edges (increase if text clips on world-space canvas).")]
-    public float resultsExtraSideMargin = 72f;
-    [Tooltip("Extra space from the top so columns sit below the SCI graph / header area (Sim 1).")]
-    public float resultsSim1TopInset = 260f;
-    [Tooltip("Extra space from the top for Sim 2 results (HRV graph).")]
-    public float resultsSim2TopInset = 220f;
-    [Tooltip("Padding between card edge and text inside each column.")]
-    public float resultsCardInnerPadding = 20f;
+    [Header("Results tabs (manual inspector wiring)")]
+    [Tooltip("Simulation 1 tabs: assign tab content roots and tab buttons manually.")]
+    public ResultsTabsConfig sim1ResultsTabs;
+    [Tooltip("Simulation 2 tabs: assign tab content roots and tab buttons manually.")]
+    public ResultsTabsConfig sim2ResultsTabs;
 
     [Header("UI polish")]
     public bool autoPolishUi = false;
+    [Tooltip("If false, keep button labels exactly as set in the Inspector/scene.")]
+    public bool applyDefaultButtonTextsAtRuntime = false;
     public Color panelTint = new Color(0.07f, 0.11f, 0.16f, 0.84f);
     public Color buttonColor = new Color(0.16f, 0.35f, 0.56f, 1f);
     public Color buttonTextColor = Color.white;
@@ -159,6 +186,8 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string hubTitle = "VR Stress Response Trainer";
+    [Tooltip("If false, keep Hub title text exactly as set on the TMP in the Inspector/scene.")]
+    public bool applyHubTitleFromController = false;
 
     [TextArea]
     public string hubConnectionStatusDemo =
@@ -217,12 +246,14 @@ public class TrainingFlowController : MonoBehaviour
     public int simulation2SceneIndex = 1;
 
     public Phase CurrentPhase { get; private set; } = Phase.Gate;
+    public bool IsPaused => _paused;
 
     private float _calibrationTimer;
     private bool _sim2Subscribed;
     private bool _paused;
     private PendingStart _pendingStart = PendingStart.None;
-    private GameObject _safetyWarningDimBackdrop;
+    private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
+    private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
 
     private enum PendingStart
     {
@@ -233,14 +264,10 @@ public class TrainingFlowController : MonoBehaviour
 
     void Start()
     {
-        EnsureRuntimeResultsSplitTexts();
-
         if (autoPolishUi)
             ApplyUiPolish();
 
-        SetupResultsColumnLayouts();
-
-        ApplySafetyWarningCardLayout();
+        ApplyCurrentResultsTabs();
 
         ApplyDefaultCopyToUi();
         ApplyPhaseUI();
@@ -259,10 +286,9 @@ public class TrainingFlowController : MonoBehaviour
 
     public void ApplyDefaultCopyToUi()
     {
-        if (hubTitleText != null)
+        if (applyHubTitleFromController && hubTitleText != null)
             hubTitleText.text = hubTitle;
-        if (hubConnectionStatusText != null)
-            hubConnectionStatusText.text = hubConnectionStatusDemo;
+        RefreshHubConnectionStatusText();
         if (introBodyText != null)
             introBodyText.text = introNarrationText;
         if (missionBriefingBodyText != null)
@@ -270,7 +296,8 @@ public class TrainingFlowController : MonoBehaviour
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
 
-        ApplyDefaultButtonTexts();
+        if (applyDefaultButtonTextsAtRuntime)
+            ApplyDefaultButtonTexts();
 
     }
 
@@ -285,13 +312,7 @@ public class TrainingFlowController : MonoBehaviour
         {
             _calibrationTimer += Time.deltaTime;
             float remaining = Mathf.Max(0f, calibrationDurationSeconds - _calibrationTimer);
-            if (calibrationStatusText != null)
-            {
-                calibrationStatusText.text =
-                    $"{calibrationInstruction}\n\n" +
-                    $"Time remaining: {remaining:F0} s\n" +
-                    $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
-            }
+            UpdateCalibrationBaselineUi(remaining);
 
             if (_calibrationTimer >= calibrationDurationSeconds)
                 FinishCalibrationAndShowMissionBriefing();
@@ -301,14 +322,75 @@ public class TrainingFlowController : MonoBehaviour
         UpdateActivePhaseHud();
     }
 
+    /// <summary>From Hub — opens Login / Register panel.</summary>
+    public void UI_OpenLogin()
+    {
+        CurrentPhase = Phase.Login;
+        ApplyPhaseUI();
+    }
+
+    /// <summary>Called from <see cref="LoginFlowPanel"/> after successful login — returns to Hub only.</summary>
+    public void UI_LoginSuccess()
+    {
+        CurrentPhase = Phase.Gate;
+        RefreshHubConnectionStatusText();
+        ApplyPhaseUI();
+    }
+
+    /// <summary>After successful login from the Login panel — refresh Hub status for later, then open Intro.</summary>
+    public void UI_CompleteLoginAndStartIntro()
+    {
+        RefreshHubConnectionStatusText();
+        UI_StartIntro();
+    }
+
+    private void RefreshHubConnectionStatusText()
+    {
+        if (hubConnectionStatusText == null) return;
+        string email = LocalAuthStore.GetLastLoggedInEmail();
+        if (!string.IsNullOrEmpty(email))
+            hubConnectionStatusText.text = $"Signed in: {email}\n" + hubConnectionStatusDemo;
+        else
+            hubConnectionStatusText.text = hubConnectionStatusDemo;
+    }
+
+    /// <summary>Close login panel and return to Hub without signing in.</summary>
+    public void UI_CancelLogin()
+    {
+        StopAllNarration();
+        CurrentPhase = Phase.Gate;
+        ApplyPhaseUI();
+    }
+
     /// <summary>Gate start button — opens intro panel and optional narration.</summary>
     public void UI_StartSimulation1()
     {
-        UI_StartIntro();
+        UI_MenuPickSimulation1Flow();
+    }
+
+    /// <summary>Hub — start intro (simulation choice happens after calibration when <see cref="simulationPickPanel"/> is set).</summary>
+    public void UI_MenuPickSimulation1Flow() => UI_StartIntro();
+
+    /// <summary>Legacy hub binding; same as <see cref="UI_MenuPickSimulation1Flow"/>.</summary>
+    public void UI_MenuPickSimulation2Flow() => UI_StartIntro();
+
+    /// <summary>Level-select block — Simulation 1 (after calibration).</summary>
+    public void UI_PickSimulation1AfterCalibration()
+    {
+        if (CurrentPhase != Phase.SimulationPick) return;
+        ShowSimulation1MissionBriefingAfterCalibration();
+    }
+
+    /// <summary>Level-select block — Simulation 2, skip Simulation 1 briefing (after calibration).</summary>
+    public void UI_PickSimulation2AfterCalibration()
+    {
+        if (CurrentPhase != Phase.SimulationPick) return;
+        ShowSimulation2BriefingAfterCalibration();
     }
 
     public void UI_StartIntro()
     {
+        StopAllNarration();
         if (introPanel == null)
         {
             UI_ContinueFromIntro();
@@ -322,9 +404,9 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_ContinueFromIntro()
     {
+        StopAllNarration();
         CurrentPhase = Phase.Simulation1Calibration;
         _calibrationTimer = 0f;
-        StopIntroNarration();
         PlayCalibrationNarration();
         physiology?.StartBaselineCapture();
         ApplyPhaseUI();
@@ -336,6 +418,58 @@ public class TrainingFlowController : MonoBehaviour
     /// <summary>Legacy — starts calibration directly.</summary>
     public void UI_StartBaseline() => UI_ContinueFromIntro();
 
+    private void UpdateCalibrationBaselineUi(float remainingSeconds)
+    {
+        bool splitTimer = calibrationRemainingTimeText != null;
+        bool splitHrv = calibrationHrvDataText != null;
+
+        if (splitTimer)
+            calibrationRemainingTimeText.text = FormatCalibrationRemainingDisplay(remainingSeconds);
+
+        if (splitHrv && physiology != null)
+        {
+            calibrationHrvDataText.text =
+                $"HR: {physiology.CurrentHeartRate:F0} bpm\n" +
+                $"HRV: {physiology.CurrentHrvMs:F1} ms";
+        }
+
+        if (calibrationStatusText == null)
+            return;
+
+        if (splitTimer && splitHrv)
+        {
+            calibrationStatusText.text = calibrationInstruction;
+            return;
+        }
+
+        string timePart = $"Time remaining: {remainingSeconds:F0} s";
+        string livePart =
+            $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
+
+        if (splitTimer)
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{livePart}";
+        else if (splitHrv)
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
+        else
+        {
+            calibrationStatusText.text =
+                $"{calibrationInstruction}\n\n{timePart}\n{livePart}";
+        }
+    }
+
+    private string FormatCalibrationRemainingDisplay(float remainingSeconds)
+    {
+        if (calibrationRemainingTimeAsMmSs)
+        {
+            int sec = Mathf.Max(0, Mathf.CeilToInt(remainingSeconds));
+            int m = sec / 60;
+            int s = sec % 60;
+            return $"{m:00}:{s:00}";
+        }
+
+        return Mathf.CeilToInt(remainingSeconds).ToString();
+    }
+
     private void FinishCalibrationAndShowMissionBriefing()
     {
         StopCalibrationNarration();
@@ -343,6 +477,18 @@ public class TrainingFlowController : MonoBehaviour
         if (physiology != null)
             SessionHistoryStore.BeginSession(physiology.HrvBaselineMs);
 
+        if (simulationPickPanel != null)
+        {
+            CurrentPhase = Phase.SimulationPick;
+            ApplyPhaseUI();
+            return;
+        }
+
+        ShowSimulation1MissionBriefingAfterCalibration();
+    }
+
+    private void ShowSimulation1MissionBriefingAfterCalibration()
+    {
         CurrentPhase = Phase.Simulation1MissionBriefing;
         if (missionBriefingBodyText != null && physiology != null)
         {
@@ -355,6 +501,21 @@ public class TrainingFlowController : MonoBehaviour
         PlayMissionBriefingNarration();
     }
 
+    private void ShowSimulation2BriefingAfterCalibration()
+    {
+        if (sim2BriefingPanel == null)
+        {
+            UI_StartSimulation2Scene();
+            return;
+        }
+
+        StopAllNarration();
+        CurrentPhase = Phase.Simulation2Briefing;
+        SetSimulationGameplayState(false, false);
+        ApplyPhaseUI();
+        SetSimulation2Status(sim2BriefingBody);
+    }
+
     public void UI_BeginSimulation1()
     {
         if (ShowSafetyWarningFor(PendingStart.Simulation1))
@@ -365,8 +526,7 @@ public class TrainingFlowController : MonoBehaviour
 
     private void BeginSimulation1Now()
     {
-        StopCalibrationNarration();
-        StopMissionBriefingNarration();
+        StopAllNarration();
         CurrentPhase = Phase.Simulation1Active;
         SetSimulationGameplayState(true, false);
         MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
@@ -398,8 +558,7 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(false);
 
         CurrentPhase = Phase.Simulation1Results;
-        if (resultsGraph != null && recorder != null)
-            resultsGraph.SetFromSciPoints(recorder.SciHistory);
+        ApplySimulation1ResultGraphs();
 
         if (physiology != null && recorder != null)
         {
@@ -433,7 +592,10 @@ public class TrainingFlowController : MonoBehaviour
                 rec.AppendLine(StressRecommendations.BuildBehavioralTips(recorder.SciHistory));
                 rec.AppendLine();
                 rec.AppendLine(nextStage);
+                AppendSimulationPickFooter(rec);
 
+                PrepareResultsTextForManualBox(sim1ResultsMetricsText);
+                PrepareResultsTextForManualBox(sim1ResultsRecommendationsText);
                 sim1ResultsMetricsText.text = metrics.ToString().TrimEnd();
                 sim1ResultsRecommendationsText.text = rec.ToString().TrimEnd();
             }
@@ -457,12 +619,14 @@ public class TrainingFlowController : MonoBehaviour
                 sb.AppendLine(tips);
                 sb.AppendLine();
                 sb.AppendLine(nextStage);
+                AppendSimulationPickFooter(sb);
+                PrepareResultsTextForManualBox(resultsSummaryText);
                 resultsSummaryText.text = sb.ToString();
             }
         }
 
         ApplyPhaseUI();
-        FinalizeResultsScreenPresentation(true);
+        ApplySim1ResultsTab(ResultsTab.Result);
     }
 
     private static float MaxSci(System.Collections.Generic.IReadOnlyList<float> list)
@@ -481,13 +645,44 @@ public class TrainingFlowController : MonoBehaviour
         return list.Count > 0 ? s / list.Count : 0f;
     }
 
-    public void UI_GoToSimulation2()
+    /// <summary>
+    /// Wired from Simulation 1 results — opens level-select when assigned; otherwise legacy jump to Simulation 2 briefing.
+    /// From Simulation 2 results use <see cref="UI_ReturnToSimulationPickFromResults"/> (same behavior).
+    /// </summary>
+    public void UI_GoToSimulation2() => UI_ReturnToSimulationPickFromResults();
+
+    /// <summary>
+    /// Returns to <see cref="simulationPickPanel"/> after viewing results when it is assigned.
+    /// Legacy fallback: Simulation 1 results → Simulation 2 briefing; Simulation 2 results → hub.
+    /// </summary>
+    public void UI_ReturnToSimulationPickFromResults()
+    {
+        StopAllNarration();
+        if (simulationPickPanel != null)
+        {
+            CurrentPhase = Phase.SimulationPick;
+            SetSimulationGameplayState(false, false);
+            ApplyPhaseUI();
+            return;
+        }
+
+        if (CurrentPhase == Phase.Simulation2Results)
+        {
+            UI_BackToHub();
+            return;
+        }
+
+        GoToSimulation2BriefingDirect();
+    }
+
+    private void GoToSimulation2BriefingDirect()
     {
         if (sim2BriefingPanel == null)
         {
             UI_StartSimulation2Scene();
             return;
         }
+
         CurrentPhase = Phase.Simulation2Briefing;
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
@@ -495,6 +690,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_StartSimulation2Scene()
     {
+        StopAllNarration();
         if (ShowSafetyWarningFor(PendingStart.Simulation2))
             return;
 
@@ -515,8 +711,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_BackToHub()
     {
-        StopCalibrationNarration();
-        StopMissionBriefingNarration();
+        StopAllNarration();
         CurrentPhase = Phase.Gate;
         recorder?.Clear();
         physiology?.StartBaselineCapture();
@@ -551,6 +746,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_TogglePause() => SetPaused(!_paused);
     public void UI_Resume() => SetPaused(false);
+    public void UI_SetPause(bool paused) => SetPaused(paused);
 
     public void UI_QuitApplication()
     {
@@ -614,8 +810,10 @@ public class TrainingFlowController : MonoBehaviour
     private void ApplyPhaseUI()
     {
         SetActiveSafe(hubPanel, CurrentPhase == Phase.Gate);
+        SetActiveSafe(loginPanel, CurrentPhase == Phase.Login);
         SetActiveSafe(introPanel, CurrentPhase == Phase.IntroNarration);
         SetActiveSafe(sim1CalibrationPanel, CurrentPhase == Phase.Simulation1Calibration);
+        SetActiveSafe(simulationPickPanel, CurrentPhase == Phase.SimulationPick);
         SetActiveSafe(sim1MissionBriefingPanel, CurrentPhase == Phase.Simulation1MissionBriefing);
         SetActiveSafe(sim1ResultsPanel, CurrentPhase == Phase.Simulation1Results);
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
@@ -648,266 +846,6 @@ public class TrainingFlowController : MonoBehaviour
 
     private bool UseSim2SplitColumns() =>
         sim2ResultsMetricsText != null && sim2ResultsRecommendationsText != null;
-
-    private void SetupResultsColumnLayouts()
-    {
-        ApplyResultsPanelsRootDim();
-
-        if (UseSim1SplitColumns() && sim1ResultsPanel != null)
-        {
-            ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
-            if (resultsSummaryText != null)
-                resultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (UseSim2SplitColumns() && sim2ResultsPanel != null)
-        {
-            ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
-            if (sim2ResultsSummaryText != null)
-                sim2ResultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (applyResultsReadabilityStyle)
-        {
-            if (!UseSim1SplitColumns() && resultsSummaryText != null)
-                ApplyReadabilityToResultsText(resultsSummaryText);
-            if (!UseSim2SplitColumns() && sim2ResultsSummaryText != null)
-                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
-        }
-    }
-
-    /// <summary>
-    /// If split column TMPs are not wired in the Inspector, clone the existing summary text so the two-column layout works without manual scene edits.
-    /// </summary>
-    private void EnsureRuntimeResultsSplitTexts()
-    {
-        if (sim1ResultsMetricsText == null && sim1ResultsRecommendationsText == null
-            && resultsSummaryText != null && sim1ResultsPanel != null)
-        {
-            sim1ResultsMetricsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
-            sim1ResultsMetricsText.gameObject.name = "ResultsMetricsColumn";
-            sim1ResultsRecommendationsText = Instantiate(resultsSummaryText, sim1ResultsPanel.transform);
-            sim1ResultsRecommendationsText.gameObject.name = "ResultsRecommendationsColumn";
-            sim1ResultsMetricsText.transform.SetAsLastSibling();
-            sim1ResultsRecommendationsText.transform.SetAsLastSibling();
-            resultsSummaryText.gameObject.SetActive(false);
-        }
-
-        if (sim2ResultsMetricsText == null && sim2ResultsRecommendationsText == null
-            && sim2ResultsSummaryText != null && sim2ResultsPanel != null)
-        {
-            sim2ResultsMetricsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
-            sim2ResultsMetricsText.gameObject.name = "Sim2ResultsMetricsColumn";
-            sim2ResultsRecommendationsText = Instantiate(sim2ResultsSummaryText, sim2ResultsPanel.transform);
-            sim2ResultsRecommendationsText.gameObject.name = "Sim2ResultsRecommendationsColumn";
-            sim2ResultsMetricsText.transform.SetAsLastSibling();
-            sim2ResultsRecommendationsText.transform.SetAsLastSibling();
-            sim2ResultsSummaryText.gameObject.SetActive(false);
-        }
-    }
-
-    private void ApplyResultsPanelsRootDim()
-    {
-        if (!applyResultsReadabilityStyle)
-            return;
-
-        DimResultsPanelRoot(sim1ResultsPanel);
-        DimResultsPanelRoot(sim2ResultsPanel);
-    }
-
-    private void DimResultsPanelRoot(GameObject panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        var img = panelRoot.GetComponent<Image>();
-        if (img != null)
-        {
-            img.color = resultsScreenDimColor;
-            img.raycastTarget = true;
-        }
-    }
-
-    private void ApplyReadabilityToResultsText(TextMeshProUGUI tmp)
-    {
-        if (tmp == null || !applyResultsReadabilityStyle)
-            return;
-
-        tmp.color = resultsColumnTextColor;
-    }
-
-    private void ConfigureResultsSplitColumns(
-        TextMeshProUGUI leftColumn,
-        TextMeshProUGUI rightColumn,
-        float extraTopInset,
-        Transform panelRoot)
-    {
-        if (leftColumn == null || rightColumn == null || panelRoot == null)
-            return;
-
-        float halfGap = resultsColumnGap * 0.5f;
-        float side = panelSidePadding + resultsExtraSideMargin;
-        float top = panelTopPadding + extraTopInset;
-
-        DestroyLegacyCardBackdropsUnder(panelRoot);
-
-        var leftOuterMin = new Vector2(side, panelBottomPadding);
-        var leftOuterMax = new Vector2(-halfGap, -top);
-        var rightOuterMin = new Vector2(halfGap, panelBottomPadding);
-        var rightOuterMax = new Vector2(-side, -top);
-
-        PlaceColumnInCard(leftColumn, panelRoot, leftOuterMin, leftOuterMax, true);
-        PlaceColumnInCard(rightColumn, panelRoot, rightOuterMin, rightOuterMax, false);
-
-        ApplyReadabilityToResultsText(leftColumn);
-        ApplyReadabilityToResultsText(rightColumn);
-
-        if (leftColumn.transform.parent != null)
-            leftColumn.transform.parent.SetAsLastSibling();
-        if (rightColumn.transform.parent != null)
-            rightColumn.transform.parent.SetAsLastSibling();
-
-        BringPanelButtonsToFront(panelRoot);
-    }
-
-    private void DestroyLegacyCardBackdropsUnder(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        const string legacyBackdropSuffix = "_CardBackdrop";
-        for (int i = panelRoot.childCount - 1; i >= 0; i--)
-        {
-            var ch = panelRoot.GetChild(i);
-            if (ch.name.EndsWith(legacyBackdropSuffix, StringComparison.Ordinal))
-            {
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(ch.gameObject);
-                else
-                    UnityEngine.Object.DestroyImmediate(ch.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Puts column text inside a card with a fixed rect + RectMask2D so TMP wraps inside the column and cannot bleed into the other column.
-    /// </summary>
-    private void PlaceColumnInCard(
-        TextMeshProUGUI tmp,
-        Transform panelRoot,
-        Vector2 outerOffsetMin,
-        Vector2 outerOffsetMax,
-        bool leftHalfOfScreen)
-    {
-        if (tmp == null || panelRoot == null)
-            return;
-
-        float pad = resultsCardInnerPadding;
-        const string cardSuffix = "_ColumnCard";
-
-        Transform cardT = tmp.transform.parent;
-        GameObject cardGo;
-        RectTransform cardRt;
-
-        if (cardT != null && cardT.name.EndsWith(cardSuffix, StringComparison.Ordinal) && cardT.parent == panelRoot)
-        {
-            cardGo = cardT.gameObject;
-            cardRt = cardGo.GetComponent<RectTransform>();
-            var imgEx = cardGo.GetComponent<Image>();
-            if (imgEx != null)
-                imgEx.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
-            if (cardGo.GetComponent<RectMask2D>() == null)
-                cardGo.AddComponent<RectMask2D>();
-        }
-        else
-        {
-            if (tmp.transform.parent != panelRoot)
-                tmp.transform.SetParent(panelRoot, false);
-
-            cardGo = new GameObject(tmp.name + cardSuffix);
-            cardRt = cardGo.AddComponent<RectTransform>();
-            cardGo.transform.SetParent(panelRoot, false);
-            tmp.transform.SetParent(cardRt, false);
-
-            var img = cardGo.AddComponent<Image>();
-            img.sprite = GetUiWhiteSprite();
-            img.type = Image.Type.Simple;
-            img.color = applyResultsReadabilityStyle ? resultsCardColor : new Color(0.08f, 0.1f, 0.14f, 0.94f);
-            img.raycastTarget = false;
-            cardGo.AddComponent<RectMask2D>();
-        }
-
-        cardRt.anchorMin = leftHalfOfScreen ? new Vector2(0f, 0f) : new Vector2(0.5f, 0f);
-        cardRt.anchorMax = leftHalfOfScreen ? new Vector2(0.5f, 1f) : new Vector2(1f, 1f);
-        cardRt.pivot = new Vector2(0.5f, 0.5f);
-        cardRt.offsetMin = outerOffsetMin;
-        cardRt.offsetMax = outerOffsetMax;
-
-        var textRt = tmp.rectTransform;
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.pivot = new Vector2(0.5f, 0.5f);
-        textRt.offsetMin = new Vector2(pad, pad);
-        textRt.offsetMax = new Vector2(-pad, -pad);
-        textRt.localScale = Vector3.one;
-
-        tmp.enableWordWrapping = true;
-        tmp.textWrappingMode = TextWrappingModes.Normal;
-        tmp.overflowMode = TextOverflowModes.Overflow;
-        tmp.richText = true;
-        tmp.margin = Vector4.zero;
-        tmp.alignment = TextAlignmentOptions.TopLeft;
-    }
-
-    private static Sprite _uiWhiteSprite;
-
-    private static Sprite GetUiWhiteSprite()
-    {
-        if (_uiWhiteSprite == null)
-        {
-            var tex = Texture2D.whiteTexture;
-            _uiWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-
-        return _uiWhiteSprite;
-    }
-
-    /// <summary>Re-apply dim/cards after the results panel becomes active (layout was first computed while hidden).</summary>
-    private void FinalizeResultsScreenPresentation(bool simulation1)
-    {
-        if (applyResultsReadabilityStyle)
-            ApplyResultsPanelsRootDim();
-        if (simulation1)
-        {
-            if (UseSim1SplitColumns() && sim1ResultsPanel != null)
-                ConfigureResultsSplitColumns(sim1ResultsMetricsText, sim1ResultsRecommendationsText, resultsSim1TopInset, sim1ResultsPanel.transform);
-            else if (resultsSummaryText != null)
-                ApplyReadabilityToResultsText(resultsSummaryText);
-        }
-        else
-        {
-            if (UseSim2SplitColumns() && sim2ResultsPanel != null)
-                ConfigureResultsSplitColumns(sim2ResultsMetricsText, sim2ResultsRecommendationsText, resultsSim2TopInset, sim2ResultsPanel.transform);
-            else if (sim2ResultsSummaryText != null)
-                ApplyReadabilityToResultsText(sim2ResultsSummaryText);
-        }
-
-        BringPanelButtonsToFront(simulation1 ? sim1ResultsPanel?.transform : sim2ResultsPanel?.transform);
-        Canvas.ForceUpdateCanvases();
-    }
-
-    private static void BringPanelButtonsToFront(Transform panelRoot)
-    {
-        if (panelRoot == null)
-            return;
-
-        var buttons = panelRoot.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            if (buttons[i] != null)
-                buttons[i].transform.SetAsLastSibling();
-        }
-    }
 
     private void SetSimulationGameplayState(bool simulation1On, bool simulation2On)
     {
@@ -974,6 +912,13 @@ public class TrainingFlowController : MonoBehaviour
         if (narrationAudioSource == null) return;
         if (narrationAudioSource.clip == missionBriefingNarrationClip)
             narrationAudioSource.Stop();
+    }
+
+    private void StopAllNarration()
+    {
+        StopIntroNarration();
+        StopCalibrationNarration();
+        StopMissionBriefingNarration();
     }
 
     private void UpdateIntroSubtitleByNarrationTime()
@@ -1065,88 +1010,9 @@ public class TrainingFlowController : MonoBehaviour
         ApplyPhaseUI();
     }
 
-    private void ApplySafetyWarningCardLayout()
-    {
-        if (!safetyWarningUseCenterCard || safetyWarningPanel == null)
-            return;
-
-        var cardRt = safetyWarningPanel.GetComponent<RectTransform>();
-        if (cardRt == null)
-            return;
-
-        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRt.pivot = new Vector2(0.5f, 0.5f);
-        cardRt.sizeDelta = safetyWarningCardSize;
-        cardRt.anchoredPosition = Vector2.zero;
-
-        var img = safetyWarningPanel.GetComponent<Image>();
-        if (img != null)
-            img.color = safetyWarningCardColor;
-
-        if (safetyWarningShowDimBackdrop)
-            EnsureSafetyWarningDimBackdrop(cardRt.parent);
-
-        if (safetyWarningText != null)
-        {
-            var tr = safetyWarningText.rectTransform;
-            tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0.5f);
-            tr.pivot = new Vector2(0.5f, 0.5f);
-            tr.anchoredPosition = new Vector2(0f, 48f);
-            tr.sizeDelta = new Vector2(safetyWarningCardSize.x - 48f, 220f);
-            safetyWarningText.enableWordWrapping = true;
-            safetyWarningText.textWrappingMode = TextWrappingModes.Normal;
-            safetyWarningText.alignment = TextAlignmentOptions.Center;
-            safetyWarningText.margin = Vector4.zero;
-        }
-
-        var buttons = safetyWarningPanel.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var brt = buttons[i].GetComponent<RectTransform>();
-            if (brt == null)
-                continue;
-
-            brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
-            brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.sizeDelta = new Vector2(240f, 52f);
-            string n = buttons[i].gameObject.name.ToLowerInvariant();
-            if (n.Contains("continue"))
-                brt.anchoredPosition = new Vector2(0f, -52f);
-            else if (n.Contains("cancel"))
-                brt.anchoredPosition = new Vector2(0f, -126f);
-        }
-    }
-
-    private void EnsureSafetyWarningDimBackdrop(Transform panelParent)
-    {
-        if (panelParent == null || safetyWarningPanel == null)
-            return;
-
-        if (_safetyWarningDimBackdrop == null)
-        {
-            _safetyWarningDimBackdrop = new GameObject("SafetyWarningDimBackdrop");
-            _safetyWarningDimBackdrop.transform.SetParent(panelParent, false);
-            var dimRt = _safetyWarningDimBackdrop.AddComponent<RectTransform>();
-            dimRt.anchorMin = Vector2.zero;
-            dimRt.anchorMax = Vector2.one;
-            dimRt.offsetMin = Vector2.zero;
-            dimRt.offsetMax = Vector2.zero;
-            var dimImg = _safetyWarningDimBackdrop.AddComponent<Image>();
-            dimImg.sprite = GetUiWhiteSprite();
-            dimImg.color = safetyWarningDimColor;
-            dimImg.raycastTarget = true;
-        }
-
-        int panelIdx = safetyWarningPanel.transform.GetSiblingIndex();
-        _safetyWarningDimBackdrop.transform.SetSiblingIndex(panelIdx);
-    }
-
     private void SetSafetyWarningVisible(bool visible)
     {
         SetActiveSafe(safetyWarningPanel, visible);
-        if (_safetyWarningDimBackdrop != null)
-            SetActiveSafe(_safetyWarningDimBackdrop, visible && safetyWarningShowDimBackdrop);
     }
 
     private bool ShowSafetyWarningFor(PendingStart startAction)
@@ -1207,6 +1073,7 @@ public class TrainingFlowController : MonoBehaviour
             physiology.StressorActive = false;
         StopSiren();
         recorder?.EndRecording();
+        gameManager?.ClearMissionMessages();
         SetSimulationGameplayState(false, false);
         SetHudVisible(false);
         SetActiveSafe(highStressWarningRoot, false);
@@ -1258,8 +1125,10 @@ public class TrainingFlowController : MonoBehaviour
             rec.AppendLine();
             rec.AppendLine(tips);
             rec.AppendLine();
-            rec.AppendLine("Press <b>Back To Hub</b> when ready.");
+            rec.AppendLine(Sim2ResultsFooterLine());
 
+            PrepareResultsTextForManualBox(sim2ResultsMetricsText);
+            PrepareResultsTextForManualBox(sim2ResultsRecommendationsText);
             sim2ResultsMetricsText.text = metrics.ToString().TrimEnd();
             sim2ResultsRecommendationsText.text = rec.ToString().TrimEnd();
         }
@@ -1281,21 +1150,91 @@ public class TrainingFlowController : MonoBehaviour
             sb.AppendLine("Recommendations:");
             sb.AppendLine(tips);
             sb.AppendLine();
-            sb.AppendLine("Press Back To Hub when ready.");
+            sb.AppendLine(Sim2ResultsFooterLinePlain());
+            PrepareResultsTextForManualBox(sim2ResultsSummaryText);
             sim2ResultsSummaryText.text = sb.ToString();
         }
-        else
+        else if (sim2BriefingBodyText != null)
         {
-            SetSimulation2Status("First aid completed. Results ready. Press Back To Hub.");
+            // Avoid showing fallback status text over the custom Results panel design.
+            sim2BriefingBodyText.text = string.Empty;
         }
 
-        if (sim2HrvResultsGraph != null && recorder != null && recorder.HrvHistory.Count > 0)
-            sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
-        else
-            Debug.LogWarning("Sim2 HRV graph was not rendered. Check sim2HrvResultsGraph reference and recorded HRV samples.");
+        ApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
-        FinalizeResultsScreenPresentation(false);
+        ApplySim2ResultsTab(ResultsTab.Result);
+    }
+
+    // Wire these to the three tab buttons in the Inspector (Simulation 1 panel).
+    public void UI_ShowSim1ResultTab() => ApplySim1ResultsTab(ResultsTab.Result);
+    public void UI_ShowSim1RecommendationsTab() => ApplySim1ResultsTab(ResultsTab.Recommendations);
+    public void UI_ShowSim1PressureGraphTab() => ApplySim1ResultsTab(ResultsTab.PressureGraph);
+
+    // Wire these to the three tab buttons in the Inspector (Simulation 2 panel).
+    public void UI_ShowSim2ResultTab() => ApplySim2ResultsTab(ResultsTab.Result);
+    public void UI_ShowSim2RecommendationsTab() => ApplySim2ResultsTab(ResultsTab.Recommendations);
+    public void UI_ShowSim2PressureGraphTab() => ApplySim2ResultsTab(ResultsTab.PressureGraph);
+
+    private void ApplySimulation1ResultGraphs()
+    {
+        if (recorder == null)
+        {
+            resultsGraph?.Clear();
+            sim1HrvResultsGraph?.Clear();
+            return;
+        }
+
+        if (resultsGraph != null)
+        {
+            if (recorder.SciHistory.Count > 0)
+                resultsGraph.SetFromSciPoints(recorder.SciHistory);
+            else
+                resultsGraph.Clear();
+        }
+
+        if (sim1HrvResultsGraph != null)
+        {
+            if (ReferenceEquals(sim1HrvResultsGraph, resultsGraph))
+            {
+                // Guard against accidental inspector wiring to the same graph object.
+                return;
+            }
+
+            if (recorder.HrvHistory.Count > 0)
+                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay);
+            else
+                sim1HrvResultsGraph.Clear();
+        }
+    }
+
+    private void ApplySimulation2ResultGraphs()
+    {
+        if (recorder == null)
+        {
+            sim2SciResultsGraph?.Clear();
+            sim2HrvResultsGraph?.Clear();
+            return;
+        }
+
+        if (sim2SciResultsGraph != null)
+        {
+            if (recorder.SciHistory.Count > 0)
+                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay);
+            else
+                sim2SciResultsGraph.Clear();
+        }
+
+        if (sim2HrvResultsGraph != null)
+        {
+            if (recorder.HrvHistory.Count > 0)
+                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
+            else
+                sim2HrvResultsGraph.Clear();
+        }
+
+        if (recorder.SciHistory.Count == 0 && recorder.HrvHistory.Count == 0)
+            Debug.LogWarning("Simulation 2 results: no SCI/HRV samples recorded. Check recorder and active simulation.");
     }
 
     private static float MinValue(System.Collections.Generic.IReadOnlyList<float> list)
@@ -1333,6 +1272,7 @@ public class TrainingFlowController : MonoBehaviour
     private void ApplyUiPolish()
     {
         StylePanel(hubPanel);
+        StylePanel(loginPanel);
         StylePanel(introPanel);
         StylePanel(sim1MissionBriefingPanel);
         StylePanel(sim1CalibrationPanel);
@@ -1352,6 +1292,7 @@ public class TrainingFlowController : MonoBehaviour
         if (sim2ResultsRecommendationsText != null) sim2ResultsRecommendationsText.fontSize = bodyTextSize - 2f;
 
         FixPanelLayoutCollisions(hubPanel, hubConnectionStatusText);
+        FixPanelLayoutCollisions(loginPanel, null);
         FixPanelLayoutCollisions(introPanel, introBodyText);
         FixPanelLayoutCollisions(sim1MissionBriefingPanel, missionBriefingBodyText);
         FixPanelLayoutCollisions(sim1CalibrationPanel, calibrationStatusText);
@@ -1464,7 +1405,30 @@ public class TrainingFlowController : MonoBehaviour
         label.text = text;
     }
 
-    private static string GuessButtonTextByMethod(Button button)
+    private void AppendSimulationPickFooter(StringBuilder sb)
+    {
+        if (sb == null || simulationPickPanel == null)
+            return;
+        sb.AppendLine();
+        sb.AppendLine(
+            "When you are ready, use <b>Choose Simulation</b> to open the scenario menu (Simulation 1 — supplies, Simulation 2 — first aid).");
+    }
+
+    private string Sim2ResultsFooterLine()
+    {
+        return simulationPickPanel != null
+            ? "When ready, use <b>Choose Simulation</b> to pick another scenario."
+            : "Press <b>Back To Hub</b> when ready.";
+    }
+
+    private string Sim2ResultsFooterLinePlain()
+    {
+        return simulationPickPanel != null
+            ? "Use Choose Simulation on this screen to pick another scenario."
+            : "Press Back To Hub when ready.";
+    }
+
+    private string GuessButtonTextByMethod(Button button)
     {
         int count = button.onClick.GetPersistentEventCount();
         for (int i = 0; i < count; i++)
@@ -1480,28 +1444,131 @@ public class TrainingFlowController : MonoBehaviour
                 return "Continue";
             if (method == "UI_BeginSimulation1")
                 return "Start Simulation 1";
-            if (method == "UI_GoToSimulation2")
-                return "Continue To Simulation 2";
+            if (method == "UI_GoToSimulation2" || method == "UI_ReturnToSimulationPickFromResults")
+                return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
             if (method == "UI_StartSimulation2Scene")
                 return "Start Simulation 2";
-            if (method == "UI_BackToHub")
-                return "Back To Hub";
+            if (method == "UI_OpenLogin")
+                return "Login / Register";
         }
 
         return null;
     }
 
-    private static string GuessButtonTextByName(string buttonName)
+    private string GuessButtonTextByName(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName)) return null;
 
         string n = buttonName.ToLowerInvariant();
         if (n.Contains("start experience")) return "Start Training";
         if (n.Contains("start mission")) return "Start Simulation 1";
-        if (n.Contains("movetosimulation2")) return "Continue To Simulation 2";
+        if (n.Contains("movetosimulation2"))
+            return simulationPickPanel != null ? "Choose Simulation" : "Continue To Simulation 2";
         if (n.Contains("btnstartsimulation2")) return "Start Simulation 2";
         if (n.Contains("continuefromintro")) return "Continue";
-        if (n.Contains("back")) return "Back To Hub";
         return null;
+    }
+
+    private void ApplyCurrentResultsTabs()
+    {
+        ApplySim1ResultsTab(_currentSim1ResultsTab);
+        ApplySim2ResultsTab(_currentSim2ResultsTab);
+    }
+
+    private void ApplySim1ResultsTab(ResultsTab tab)
+    {
+        _currentSim1ResultsTab = tab;
+        ApplyResultsTabState(sim1ResultsTabs, tab);
+        EnforceSim1ResultsVisibilityForTab(tab);
+    }
+
+    private void ApplySim2ResultsTab(ResultsTab tab)
+    {
+        _currentSim2ResultsTab = tab;
+        ApplyResultsTabState(sim2ResultsTabs, tab);
+        EnforceSim2ResultsVisibilityForTab(tab);
+    }
+
+    private static void ApplyResultsTabState(ResultsTabsConfig config, ResultsTab activeTab)
+    {
+        if (config == null)
+            return;
+
+        SetActiveSafe(config.resultTabContent, activeTab == ResultsTab.Result);
+        SetActiveSafe(config.recommendationsTabContent, activeTab == ResultsTab.Recommendations);
+        SetActiveSafe(config.pressureGraphTabContent, activeTab == ResultsTab.PressureGraph);
+
+        ApplyTabButtonVisual(config.resultTabButton, activeTab == ResultsTab.Result, config);
+        ApplyTabButtonVisual(config.recommendationsTabButton, activeTab == ResultsTab.Recommendations, config);
+        ApplyTabButtonVisual(config.pressureGraphTabButton, activeTab == ResultsTab.PressureGraph, config);
+    }
+
+    private static void ApplyTabButtonVisual(Button button, bool active, ResultsTabsConfig config)
+    {
+        if (button == null)
+            return;
+
+        var image = button.GetComponent<Image>();
+        if (image != null)
+            image.color = active ? config.activeTabButtonColor : config.inactiveTabButtonColor;
+    }
+
+    private static void PrepareResultsTextForManualBox(TextMeshProUGUI tmp)
+    {
+        if (tmp == null)
+            return;
+
+        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+    }
+
+    /// <summary>
+    /// Keeps legacy summary text hidden when Sim 1 uses manual split tabs,
+    /// without overriding the scene's manual visual design.
+    /// </summary>
+    private void EnforceSim1ResultsVisibilityForTab(ResultsTab activeTab)
+    {
+        bool splitColumns = UseSim1SplitColumns();
+
+        // In split mode, never show the legacy combined summary text.
+        if (splitColumns && resultsSummaryText != null)
+            SetActiveSafe(resultsSummaryText.gameObject, false);
+
+        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
+        if (!splitColumns)
+            return;
+
+        bool showResult = activeTab == ResultsTab.Result;
+        bool showRecommendations = activeTab == ResultsTab.Recommendations;
+
+        if (sim1ResultsMetricsText != null)
+            SetActiveSafe(sim1ResultsMetricsText.gameObject, showResult);
+        if (sim1ResultsRecommendationsText != null)
+            SetActiveSafe(sim1ResultsRecommendationsText.gameObject, showRecommendations);
+    }
+
+    /// <summary>
+    /// Keeps legacy summary text hidden when Sim 2 uses manual split tabs,
+    /// without overriding the scene's manual visual design.
+    /// </summary>
+    private void EnforceSim2ResultsVisibilityForTab(ResultsTab activeTab)
+    {
+        bool splitColumns = UseSim2SplitColumns();
+
+        // In split mode, never show the legacy combined summary text.
+        if (splitColumns && sim2ResultsSummaryText != null)
+            SetActiveSafe(sim2ResultsSummaryText.gameObject, false);
+
+        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
+        if (!splitColumns)
+            return;
+
+        bool showResult = activeTab == ResultsTab.Result;
+        bool showRecommendations = activeTab == ResultsTab.Recommendations;
+
+        if (sim2ResultsMetricsText != null)
+            SetActiveSafe(sim2ResultsMetricsText.gameObject, showResult);
+        if (sim2ResultsRecommendationsText != null)
+            SetActiveSafe(sim2ResultsRecommendationsText.gameObject, showRecommendations);
     }
 }
