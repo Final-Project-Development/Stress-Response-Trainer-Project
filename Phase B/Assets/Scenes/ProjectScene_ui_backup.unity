@@ -13683,7 +13683,7 @@ MonoBehaviour:
   gatewayDisconnectWarningRoot: {fileID: 0}
   gatewayStaleSeconds: 2.5
   pausePanel: {fileID: 1963956166}
-  pauseKey: 0
+  pauseKey: 27
   quickQuitKey: 291
   hubTitleText: {fileID: 2013491042}
   hubConnectionStatusText: {fileID: 0}

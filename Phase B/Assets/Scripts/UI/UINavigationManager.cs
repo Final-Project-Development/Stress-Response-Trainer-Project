@@ -58,6 +58,27 @@ public class UINavigationManager : MonoBehaviour
             ToggleHelp();
     }
 
+    /// <summary>
+    /// Returns true when ESC should only dismiss Help / back-confirm (not pause).
+    /// Uses the tracked Help flag only — not raw panel active state (Settings may share the panel).
+    /// </summary>
+    public bool ConsumeEscapeForOverlay()
+    {
+        if (_helpOpen)
+        {
+            CloseHelp();
+            return true;
+        }
+
+        if (confirmBackPanel != null && confirmBackPanel.activeSelf)
+        {
+            ConfirmBackNo();
+            return true;
+        }
+
+        return false;
+    }
+
     void LateUpdate()
     {
         ApplyPlayerCursorMode();
@@ -212,6 +233,8 @@ public class UINavigationManager : MonoBehaviour
 
     public void ApplyPlayerCursorMode()
     {
+        SetActiveSafe(topBar, true);
+
         if (playerController == null)
             return;
 
@@ -228,6 +251,10 @@ public class UINavigationManager : MonoBehaviour
 
         playerController.SetOverlayUiOpen(false);
         playerController.SetUiMenuMode(!activeSimulation);
+        playerController.SetSimulationToolbarMode(activeSimulation);
+
+        if (topBar != null)
+            playerController.SetToolbarScreenRegion(topBar.GetComponent<RectTransform>());
     }
 
     private static void SetActiveSafe(GameObject go, bool on)

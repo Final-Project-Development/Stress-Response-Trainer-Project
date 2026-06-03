@@ -901,8 +901,10 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         bool menuPhase = CurrentPhase != Phase.Simulation1Active && CurrentPhase != Phase.Simulation2Active;
+        bool activeSimulation = !menuPhase;
         playerFpsController.SetOverlayUiOpen(false);
         playerFpsController.SetUiMenuMode(menuPhase);
+        playerFpsController.SetSimulationToolbarMode(activeSimulation);
     }
 
     private static void SetActiveSafe(GameObject go, bool on)
@@ -1107,11 +1109,28 @@ public class TrainingFlowController : MonoBehaviour
 
     private void HandleSafetyKeys()
     {
-        if (Input.GetKeyDown(pauseKey))
+        if (WasPauseKeyPressed())
+        {
+            var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
+            if (navigation != null && navigation.ConsumeEscapeForOverlay())
+            {
+                navigation.ApplyPlayerCursorMode();
+                return;
+            }
+
             SetPaused(!_paused);
+        }
 
         if (Input.GetKeyDown(quickQuitKey))
             UI_QuitApplication();
+    }
+
+    private bool WasPauseKeyPressed()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+            return true;
+
+        return pauseKey != KeyCode.None && pauseKey != KeyCode.Escape && Input.GetKeyDown(pauseKey);
     }
 
     private void SetPaused(bool paused)

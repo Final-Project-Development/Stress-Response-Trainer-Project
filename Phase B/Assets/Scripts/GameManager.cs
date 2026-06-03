@@ -69,10 +69,21 @@ public class GameManager : MonoBehaviour
     {
         _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
         ConfigureShelterTargets();
+        ConfigureNonBlockingMissionHud();
         _allItemsCollectedRaised = false;
         if (pickupFeedbackText != null)
             pickupFeedbackText.gameObject.SetActive(false);
         UpdateObjectiveText();
+    }
+
+    /// <summary>Mission hint text must not steal mouse input (full-screen TMP raycasts block look).</summary>
+    private void ConfigureNonBlockingMissionHud()
+    {
+        if (pickupFeedbackText != null)
+            pickupFeedbackText.raycastTarget = false;
+
+        if (objectiveText != null)
+            objectiveText.raycastTarget = false;
     }
 
     public void PrepareSimulation1Mission()
@@ -357,8 +368,9 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator HidePickupFeedbackAfterDelay()
     {
+        pickupFeedbackText.raycastTarget = false;
         pickupFeedbackText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(pickupFeedbackDuration);
+        yield return new WaitForSecondsRealtime(pickupFeedbackDuration);
         if (pickupFeedbackText != null)
             pickupFeedbackText.gameObject.SetActive(false);
         _pickupFeedbackRoutine = null;
@@ -366,8 +378,9 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator HideFeedbackAfterDelay(float delay)
     {
+        pickupFeedbackText.raycastTarget = false;
         pickupFeedbackText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(delay);
+        yield return new WaitForSecondsRealtime(delay);
         if (pickupFeedbackText != null)
             pickupFeedbackText.gameObject.SetActive(false);
         _pickupFeedbackRoutine = null;
