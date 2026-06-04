@@ -21,7 +21,7 @@ public static class WorldLabelPanelPrefabCreator
 
         var canvasRect = root.GetComponent<RectTransform>();
         canvasRect.sizeDelta = WorldLabelAppearance.PanelSize;
-        canvasRect.localScale = Vector3.one * 0.01f;
+        canvasRect.localScale = Vector3.one * WorldLabelAppearance.DefaultWorldScale;
 
         var panelGo = new GameObject("Panel");
         panelGo.transform.SetParent(root.transform, false);
@@ -47,7 +47,7 @@ public static class WorldLabelPanelPrefabCreator
 
         var tmp = textGo.AddComponent<TextMeshProUGUI>();
         tmp.text = "ממ\"ד";
-        tmp.fontSize = 26f;
+        tmp.fontSize = 18f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
 

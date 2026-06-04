@@ -1,6 +1,9 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Small square panel with text above an important object during Environment Learning.
@@ -12,18 +15,21 @@ public class WorldItemLabel : MonoBehaviour
     [TextArea]
     public string labelText = "פריט";
 
-    [Tooltip("Offset from this object's pivot (usually up).")]
+    [Tooltip("Optional child Transform — drag in Scene to place the panel exactly (overrides World Offset).")]
+    public Transform labelAnchor;
+
+    [Tooltip("Offset from this object's pivot when Label Anchor is empty.")]
     public Vector3 worldOffset = new Vector3(0f, 2.5f, 0f);
 
     [Tooltip("Your designed square panel prefab (Image + TextMeshProUGUI).")]
     public GameObject labelPanelPrefab;
 
     [Header("Default panel (when prefab is empty)")]
-    public Vector2 defaultPanelSize = new Vector2(280f, 96f);
+    public Vector2 defaultPanelSize = new Vector2(140f, 44f);
     public Color defaultPanelColor = Color.white;
     public Color defaultTextColor = Color.white;
-    public float defaultFontSize = 24f;
-    public float worldCanvasScale = 0.01f;
+    public float defaultFontSize = 18f;
+    public float worldCanvasScale = 0.006f;
 
     Transform _anchor;
     TextMeshProUGUI _labelTmp;
@@ -31,7 +37,7 @@ public class WorldItemLabel : MonoBehaviour
 
     void Awake()
     {
-        BuildLabel();
+        EnsureLabelBuilt();
         SetVisible(false);
     }
 
@@ -60,21 +66,39 @@ public class WorldItemLabel : MonoBehaviour
             _anchor.gameObject.SetActive(visible);
     }
 
+    public void EnsureLabelBuilt()
+    {
+        if (_anchor == null)
+            BuildLabel();
+        else
+            SyncAnchorPosition();
+    }
+
+    public void ApplyAppearanceFromController()
+    {
+        if (_anchor == null)
+            return;
+
+        var panelRoot = _anchor.childCount > 0 ? _anchor.GetChild(0).gameObject : null;
+        if (panelRoot != null)
+            ApplyTourPanelAppearance(panelRoot);
+    }
+
     void BuildLabel()
     {
         if (_anchor != null)
             return;
 
-        _anchor = new GameObject($"{name}_LabelAnchor").transform;
+        _anchor = new GameObject($"{name}_LabelAnchor_Runtime").transform;
         _anchor.SetParent(transform, false);
-        _anchor.localPosition = worldOffset;
+        SyncAnchorPosition();
 
         if (labelPanelPrefab != null)
         {
             var instance = Instantiate(labelPanelPrefab, _anchor);
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = Vector3.one;
+            ApplyTourPanelAppearance(instance);
             _labelTmp = instance.GetComponentInChildren<TextMeshProUGUI>(true);
             if (instance.GetComponent<WorldLabelBillboard>() == null)
                 instance.AddComponent<WorldLabelBillboard>();
@@ -95,10 +119,7 @@ public class WorldItemLabel : MonoBehaviour
         canvasGo.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 10f;
 
         var canvasRect = canvasGo.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = defaultPanelSize.sqrMagnitude > 0f
-            ? defaultPanelSize
-            : WorldLabelAppearance.PanelSize;
-        canvasRect.localScale = Vector3.one * worldCanvasScale;
+        ApplyTourPanelAppearance(canvasGo);
 
         var panelGo = new GameObject("Panel");
         panelGo.transform.SetParent(canvasGo.transform, false);
@@ -156,11 +177,82 @@ public class WorldItemLabel : MonoBehaviour
         return WorldLabelAppearance.PanelColor;
     }
 
+    void ApplyTourPanelAppearance(GameObject panelRoot)
+    {
+        var ctrl = EnvironmentLearningController.Instance;
+        float scale = ctrl != null ? ctrl.worldLabelWorldScale : worldCanvasScale;
+        Vector2 size = ctrl != null ? ctrl.worldLabelPanelSize : defaultPanelSize;
+        float fontSize = ctrl != null && ctrl.worldLabelFontSize > 0f
+            ? ctrl.worldLabelFontSize
+            : defaultFontSize;
+
+        var rect = panelRoot.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            if (size.sqrMagnitude > 0.01f)
+                rect.sizeDelta = size;
+            rect.localScale = Vector3.one * Mathf.Max(0.0001f, scale);
+        }
+
+        var tmp = panelRoot.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (tmp != null && fontSize > 0f)
+            tmp.fontSize = fontSize;
+    }
+
+    void SyncAnchorPosition()
+    {
+        if (_anchor == null)
+            return;
+
+        if (labelAnchor != null)
+            _anchor.position = labelAnchor.position;
+        else
+            _anchor.localPosition = worldOffset;
+    }
+
 #if UNITY_EDITOR
+    public void EnsureLabelAnchor()
+    {
+        Transform existing = transform.Find("LabelAnchor");
+        if (existing == null)
+        {
+            var go = new GameObject("LabelAnchor");
+            existing = go.transform;
+            existing.SetParent(transform, false);
+            existing.localPosition = worldOffset.sqrMagnitude > 0.001f ? worldOffset : new Vector3(0f, 2.5f, 0f);
+        }
+
+        labelAnchor = existing;
+        Selection.activeTransform = existing;
+        EditorGUIUtility.PingObject(existing.gameObject);
+        EnsureLabelBuilt();
+        EditorUtility.SetDirty(this);
+    }
+
+    public void DrawSceneHandles()
+    {
+        Transform handle = labelAnchor != null ? labelAnchor : transform;
+        EditorGUI.BeginChangeCheck();
+        Vector3 world = Handles.PositionHandle(handle.position, Quaternion.identity);
+        if (!EditorGUI.EndChangeCheck())
+            return;
+
+        Undo.RecordObject(handle, "Move Label Anchor");
+        if (labelAnchor != null)
+            labelAnchor.position = world;
+        else
+            worldOffset = transform.InverseTransformPoint(world);
+
+        EnsureLabelBuilt();
+        EditorUtility.SetDirty(this);
+    }
+
     void OnValidate()
     {
         if (_labelTmp != null)
             ApplyText();
+        if (_anchor != null)
+            SyncAnchorPosition();
     }
 #endif
 }

@@ -1223,9 +1223,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningController
   learningHudRoot: {fileID: 1704750772}
   learningHudBodyText: {fileID: 1000183006}
+  applyDefaultHudTextAtStart: 0
   learningHudDefaultText: 
-  worldLabelPanelSprite: {fileID: 2158309332458421133, guid: 84af1e1dff4d84e4da23b7114a108818, type: 3}
+  worldLabelPanelSprite: {fileID: 0}
   worldLabelPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  worldLabelWorldScale: 0.006
+  worldLabelPanelSize: {x: 140, y: 44}
+  worldLabelFontSize: 18
   labelsRoot: {fileID: 0}
 --- !u!4 &26590991
 Transform:
@@ -3463,11 +3467,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: map
+  labelText: Map
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -14330,11 +14334,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: first aid
+  labelText: First Aid
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -16029,7 +16033,8 @@ MonoBehaviour:
   simulation2SpawnUseWorldCoordinates: 0
   simulation2SpawnWorldPosition: {x: 0, y: 0, z: 0}
   simulation2SpawnWorldEuler: {x: 0, y: 0, z: 0}
-  environmentLearningSpawnPoint: {fileID: 1208897045}
+  environmentLearningSpawnPoint: {fileID: 816215554}
+  environmentLearningFallbackToSim2Spawn: 1
   environmentLearningSpawnUseWorldCoordinates: 0
   environmentLearningSpawnWorldPosition: {x: 0, y: 0, z: 0}
   environmentLearningSpawnWorldEuler: {x: 0, y: 0, z: 0}
@@ -33528,11 +33533,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: radio
+  labelText: Radio
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -34993,11 +34998,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: flash light
+  labelText: Flashlight
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -36623,9 +36628,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
   labelText: phone box
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  labelPanelPrefab: {fileID: 0}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -37325,11 +37330,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: water bottle
+  labelText: Water Bottle
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -40728,13 +40733,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1208897044}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.30551326, z: -0, w: 0.95218784}
-  m_LocalPosition: {x: -2.5, y: 0.56, z: 10.5}
+  m_LocalRotation: {x: 0.000000008234608, y: -0.096500926, z: -0.000000036449403, w: 0.9953329}
+  m_LocalPosition: {x: -1.85, y: 0.56, z: 6.64}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1426506262}
-  m_LocalEulerAnglesHint: {x: 0, y: 35.578, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -11.075, z: 0}
 --- !u!1001 &1210163510
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46734,6 +46739,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1876776949}
     m_Modifications:
+    - target: {fileID: 765396347467177329, guid: 4563cd8ca3d35de49ab2f8b59f8f2f0e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.003
+      objectReference: {fileID: 0}
     - target: {fileID: 1132054481357916534, guid: 4563cd8ca3d35de49ab2f8b59f8f2f0e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 3.47
@@ -47046,11 +47055,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: home
+  labelText: Home
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -52456,11 +52465,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: compass
+  labelText: Compass
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -53853,11 +53862,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: wounded character
+  labelText: Wounded Character
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01
@@ -56152,14 +56161,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.07, g: 0.1, b: 0.15, a: 0.88}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 2158309332458421133, guid: 84af1e1dff4d84e4da23b7114a108818, type: 3}
+  m_Sprite: {fileID: -623274065696370270, guid: 3bba298781e12fd4c9f8361b92fe91ea, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -62768,11 +62777,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: mamad
+  labelText: Mamad
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 280, y: 96}
-  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultPanelSize: {x: 200, y: 64}
+  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
   defaultFontSize: 24
   worldCanvasScale: 0.01

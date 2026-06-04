@@ -9,9 +9,15 @@ public class EnvironmentLearningController : MonoBehaviour
 {
     public static EnvironmentLearningController Instance { get; private set; }
 
-    [Header("HUD (screen-space)")]
+    [Header("HUD (design in scene — no auto layout)")]
+    [Tooltip("Your EnvironmentLearningHud GameObject from the Canvas. Image, size, sprite, colors = edit in Inspector only.")]
     public GameObject learningHudRoot;
+
+    [Tooltip("Optional TMP for dynamic text. Leave empty if all copy is static in the hierarchy.")]
     public TextMeshProUGUI learningHudBodyText;
+
+    [Tooltip("When off, Play mode keeps the text you typed in the scene / prefab.")]
+    public bool applyDefaultHudTextAtStart;
 
     [TextArea]
     public string learningHudDefaultText =
@@ -25,6 +31,15 @@ public class EnvironmentLearningController : MonoBehaviour
     public Sprite worldLabelPanelSprite;
 
     public Color worldLabelPanelColor = Color.white;
+
+    [Header("World label panel size (HUB above items)")]
+    [Tooltip("World-space canvas scale. Smaller = smaller panel (try 0.004–0.008).")]
+    public float worldLabelWorldScale = 0.006f;
+
+    public Vector2 worldLabelPanelSize = new Vector2(140f, 44f);
+
+    [Tooltip("Text size on the panel. 0 = keep prefab value.")]
+    public float worldLabelFontSize = 18f;
 
     [Tooltip("Optional parent of all WorldItemLabel objects.")]
     public Transform labelsRoot;
@@ -66,11 +81,14 @@ public class EnvironmentLearningController : MonoBehaviour
     public void BeginLearning()
     {
         _active = true;
-        if (learningHudBodyText != null)
+
+        if (applyDefaultHudTextAtStart && learningHudBodyText != null && !string.IsNullOrWhiteSpace(learningHudDefaultText))
             learningHudBodyText.text = learningHudDefaultText;
+
         if (learningHudRoot != null)
             learningHudRoot.SetActive(true);
-        SetAllLabelsVisible(true);
+
+        RefreshAllTourLabels(true);
     }
 
     public void EndLearning()
@@ -78,28 +96,42 @@ public class EnvironmentLearningController : MonoBehaviour
         _active = false;
         if (learningHudRoot != null)
             learningHudRoot.SetActive(false);
-        SetAllLabelsVisible(false);
+        RefreshAllTourLabels(false);
     }
 
-    void SetAllLabelsVisible(bool on)
+    public void RefreshAllTourLabels(bool visible)
     {
-        if (labelsRoot != null)
+        _labels.Clear();
+
+        WorldItemLabel[] labels = labelsRoot != null
+            ? labelsRoot.GetComponentsInChildren<WorldItemLabel>(true)
+            : FindObjectsByType<WorldItemLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < labels.Length; i++)
         {
-            var labels = labelsRoot.GetComponentsInChildren<WorldItemLabel>(true);
-            for (int i = 0; i < labels.Length; i++)
-                labels[i].SetVisible(on);
+            WorldItemLabel label = labels[i];
+            if (label == null)
+                continue;
+
+            EnsureHostHierarchyActive(label.gameObject);
+            label.EnsureLabelBuilt();
+            label.ApplyAppearanceFromController();
+            Register(label);
+            label.SetVisible(visible);
+        }
+    }
+
+    static void EnsureHostHierarchyActive(GameObject host)
+    {
+        if (host == null)
             return;
-        }
 
-        _labels.RemoveAll(l => l == null);
-        if (_labels.Count == 0)
+        Transform current = host.transform;
+        while (current != null)
         {
-            var found = FindObjectsByType<WorldItemLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < found.Length; i++)
-                _labels.Add(found[i]);
+            if (!current.gameObject.activeSelf)
+                current.gameObject.SetActive(true);
+            current = current.parent;
         }
-
-        for (int i = 0; i < _labels.Count; i++)
-            _labels[i].SetVisible(on);
     }
 }

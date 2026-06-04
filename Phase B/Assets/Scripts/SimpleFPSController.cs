@@ -54,7 +54,10 @@ public class SimpleFPSController : MonoBehaviour
             cameraTransform.localRotation = Quaternion.identity;
 
         if (controller != null)
+        {
             controller.enabled = wasEnabled;
+            Physics.SyncTransforms();
+        }
     }
 
     /// <summary>Resets fall speed after teleport (called by ground snap).</summary>

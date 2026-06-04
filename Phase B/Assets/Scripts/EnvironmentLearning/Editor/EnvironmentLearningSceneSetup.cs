@@ -3,7 +3,6 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// One-click helpers for backup scene wiring (run while backup.unity is open).
@@ -34,26 +33,55 @@ public static class EnvironmentLearningSceneSetup
         if (flow.environmentLearningController == null)
             flow.environmentLearningController = learning;
 
-        if (flow.environmentLearningHudPanel == null)
+        if (!TryWireExistingLearningHud(flow, learning))
         {
-            var hud = CreateLearningHud(flow.transform);
-            flow.environmentLearningHudPanel = hud;
-            learning.learningHudRoot = hud;
-            learning.learningHudBodyText = hud.GetComponentInChildren<TextMeshProUGUI>(true);
+            Debug.LogWarning(
+                "Environment Learning: create and style EnvironmentLearningHud under your Canvas, " +
+                "then run Tools → Stress Trainer → Wire Environment Learning HUD.");
         }
 
         flow.environmentLearningUseGateSpawn = false;
         flow.environmentLearningSpawnHeightMode = PlayerGroundSnap.SpawnHeightMode.FeetAtMarker;
 
-        SnapEnvironmentLearningSpawnOutsideHome(flow, createIfMissing: flow.environmentLearningSpawnPoint == null);
+        SnapEnvironmentLearningSpawnToSimulation2(flow, createIfMissing: flow.environmentLearningSpawnPoint == null);
 
         EditorUtility.SetDirty(flow);
         EditorUtility.SetDirty(learning);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("Environment Learning setup done. EnvironmentLearningSpawn is outside Home (near Simulation1SpawnPoint).");
+        Debug.Log("Environment Learning setup done. Tour starts at Simulation2SpawnPoint.");
     }
 
-    [MenuItem("Tools/Stress Trainer/Snap Environment Learning Spawn Outside Home")]
+    [MenuItem("Tools/Stress Trainer/Wire Environment Learning HUD")]
+    public static void WireLearningHudMenu()
+    {
+        var flow = Object.FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+        var learning = Object.FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
+        if (flow == null || learning == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Stress Trainer",
+                "Need FlowManager (TrainingFlowController) and EnvironmentLearning in the scene.",
+                "OK");
+            return;
+        }
+
+        if (!TryWireExistingLearningHud(flow, learning))
+        {
+            EditorUtility.DisplayDialog(
+                "Stress Trainer",
+                "No GameObject named EnvironmentLearningHud found. Create it under the Canvas and design it in the Inspector.",
+                "OK");
+            return;
+        }
+
+        learning.applyDefaultHudTextAtStart = false;
+        EditorUtility.SetDirty(flow);
+        EditorUtility.SetDirty(learning);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("Wired EnvironmentLearningHud. Design stays as you set in the scene.");
+    }
+
+    [MenuItem("Tools/Stress Trainer/Snap Environment Learning Spawn To Simulation 2")]
     public static void SnapSpawnOutsideHomeMenu()
     {
         var flow = Object.FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
@@ -63,79 +91,54 @@ public static class EnvironmentLearningSceneSetup
             return;
         }
 
-        SnapEnvironmentLearningSpawnOutsideHome(flow, createIfMissing: true);
+        SnapEnvironmentLearningSpawnToSimulation2(flow, createIfMissing: true);
         EditorUtility.SetDirty(flow);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
     }
 
-    static void SnapEnvironmentLearningSpawnOutsideHome(TrainingFlowController flow, bool createIfMissing)
+    static void SnapEnvironmentLearningSpawnToSimulation2(TrainingFlowController flow, bool createIfMissing)
     {
-        if (flow.simulation1SpawnPoint == null)
+        if (flow.simulation2SpawnPoint == null)
         {
-            Debug.LogWarning("Simulation1SpawnPoint is not assigned on FlowManager.");
+            Debug.LogWarning("Simulation2SpawnPoint is not assigned on FlowManager.");
             return;
         }
 
-        Transform spawn = flow.environmentLearningSpawnPoint;
-        if (spawn == null)
-            spawn = GameObject.Find("EnvironmentLearningSpawn")?.transform;
+        flow.environmentLearningSpawnPoint = flow.simulation2SpawnPoint;
+        flow.environmentLearningFallbackToSim2Spawn = true;
+        flow.environmentLearningUseGateSpawn = false;
 
+        Transform spawn = GameObject.Find("EnvironmentLearningSpawn")?.transform;
         if (spawn == null && createIfMissing)
-        {
-            var go = new GameObject("EnvironmentLearningSpawn");
-            spawn = go.transform;
-        }
+            spawn = new GameObject("EnvironmentLearningSpawn").transform;
 
         if (spawn == null)
             return;
 
-        Transform homeRoot = flow.simulation1SpawnPoint.parent;
+        Transform homeRoot = flow.simulation2SpawnPoint.parent;
         if (homeRoot != null)
             spawn.SetParent(homeRoot, false);
 
-        Vector3 outdoorOffset = flow.simulation1SpawnPoint.forward * 2f;
         spawn.SetPositionAndRotation(
-            flow.simulation1SpawnPoint.position + outdoorOffset,
-            flow.simulation1SpawnPoint.rotation);
-
-        flow.environmentLearningSpawnPoint = spawn;
-        flow.environmentLearningFallbackToSim1Spawn = true;
-        flow.environmentLearningUseGateSpawn = false;
+            flow.simulation2SpawnPoint.position,
+            flow.simulation2SpawnPoint.rotation);
     }
 
-    static GameObject CreateLearningHud(Transform parentHint)
+    static bool TryWireExistingLearningHud(TrainingFlowController flow, EnvironmentLearningController learning)
     {
-        var canvas = Object.FindFirstObjectByType<Canvas>();
-        Transform parent = canvas != null ? canvas.transform : parentHint;
+        var hud = GameObject.Find("EnvironmentLearningHud");
+        if (hud == null)
+            return false;
 
-        var hud = new GameObject("EnvironmentLearningHud");
-        hud.transform.SetParent(parent, false);
-        var rect = hud.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -24f);
-        rect.sizeDelta = new Vector2(720f, 120f);
+        flow.environmentLearningHudPanel = hud;
+        learning.learningHudRoot = hud;
+        learning.learningHudBodyText = hud.GetComponentInChildren<TextMeshProUGUI>(true);
+        learning.applyDefaultHudTextAtStart = false;
 
-        var bg = hud.AddComponent<Image>();
-        bg.color = new Color(0.07f, 0.1f, 0.15f, 0.88f);
-        bg.raycastTarget = true;
+        if (!hud.activeSelf)
+            hud.SetActive(false);
 
-        var textGo = new GameObject("Body");
-        textGo.transform.SetParent(hud.transform, false);
-        var textRect = textGo.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(16f, 16f);
-        textRect.offsetMax = new Vector2(-16f, -16f);
-        var tmp = textGo.AddComponent<TextMeshProUGUI>();
-        tmp.fontSize = 22f;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.text = "סיור היכרות — Back / Esc לחזרה";
-
-        hud.SetActive(false);
-        return hud;
+        return true;
     }
 }
 #endif
