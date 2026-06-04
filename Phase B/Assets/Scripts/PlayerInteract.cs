@@ -12,6 +12,10 @@ public class PlayerInteract : MonoBehaviour
 
     void Update()
     {
+        if (TrainingFlowController.Instance != null &&
+            !TrainingFlowController.Instance.AllowsMissionGameplay)
+            return;
+
         PollPhoneBoothDialInput();
 
         if (Input.GetKeyDown(KeyCode.E))

@@ -10,8 +10,9 @@ using UnityEngine.UI;
 /// Game flow:
 /// Gate (Hub) → optional Login / Register → Intro (narration) → Calibration (60s) → Simulation pick (Level Select UI) → chosen briefing → …
 /// After each simulation’s results screen, flow returns to Simulation pick when <see cref="simulationPickPanel"/> is set (otherwise linear Sim 1 → Sim 2 remains).
-/// Assign <see cref="simulationPickPanel"/> to show after calibration; block buttons call <see cref="UI_PickSimulation1AfterCalibration"/> /
-/// <see cref="UI_PickSimulation2AfterCalibration"/>. If the pick panel is unassigned, calibration goes straight to Simulation 1 mission briefing.
+/// Assign <see cref="simulationPickPanel"/> (Level_Select_UI) after calibration; buttons:
+/// <see cref="UI_PickSimulation1AfterCalibration"/>, <see cref="UI_PickSimulation2AfterCalibration"/>,
+/// <see cref="UI_PickEnvironmentLearningAfterCalibration"/>.
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
 [DefaultExecutionOrder(50)]
@@ -47,6 +48,7 @@ public class TrainingFlowController : MonoBehaviour
         IntroNarration,
         Simulation1Calibration,
         SimulationPick,
+        EnvironmentLearning,
         Simulation1MissionBriefing,
         Simulation1Active,
         Simulation1Results,
@@ -55,10 +57,17 @@ public class TrainingFlowController : MonoBehaviour
         Simulation2Results
     }
 
+    public static TrainingFlowController Instance { get; private set; }
+
+    /// <summary>Pickup, doors, shelter, phone booth, etc. only during active simulations.</summary>
+    public bool AllowsMissionGameplay =>
+        CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
+
     [Header("Refs")]
     public MockPhysiologySource physiology;
     public SessionStressRecorder recorder;
     public GameManager gameManager;
+    public EnvironmentLearningController environmentLearningController;
     public UDPReceiver udpReceiver;
 
     [Header("UI roots (enable/disable per phase)")]
@@ -68,8 +77,10 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject introPanel;
     public GameObject sim1MissionBriefingPanel;
     public GameObject sim1CalibrationPanel;
-    [Tooltip("Level / simulation selection after baseline calibration. Buttons: UI_PickSimulation1AfterCalibration, UI_PickSimulation2AfterCalibration.")]
+    [Tooltip("Level_Select_UI after calibration. Buttons: UI_PickSimulation1/2/EnvironmentLearning AfterCalibration.")]
     public GameObject simulationPickPanel;
+    [Tooltip("Small HUD while touring the city (instructions).")]
+    public GameObject environmentLearningHudPanel;
     public GameObject sim1ResultsPanel;
     public GameObject sim2BriefingPanel;
     public GameObject sim2ResultsPanel;
@@ -102,6 +113,17 @@ public class TrainingFlowController : MonoBehaviour
     public bool simulation2SpawnUseWorldCoordinates;
     public Vector3 simulation2SpawnWorldPosition;
     public Vector3 simulation2SpawnWorldEuler;
+    [Tooltip("Drag EnvironmentLearningSpawn (place outside Home, near Simulation1SpawnPoint).")]
+    public Transform environmentLearningSpawnPoint;
+    [Tooltip("If Environment Learning Spawn is empty, use Simulation 1 spawn (outside home).")]
+    public bool environmentLearningFallbackToSim1Spawn = true;
+    public bool environmentLearningSpawnUseWorldCoordinates;
+    public Vector3 environmentLearningSpawnWorldPosition;
+    public Vector3 environmentLearningSpawnWorldEuler;
+    [Tooltip("Fallback only: use Gate Spawn when Environment Learning Spawn Point is not assigned.")]
+    public bool environmentLearningUseGateSpawn;
+    [Tooltip("How EnvironmentLearningSpawn Y is interpreted when placing the player.")]
+    public PlayerGroundSnap.SpawnHeightMode environmentLearningSpawnHeightMode = PlayerGroundSnap.SpawnHeightMode.FeetAtMarker;
 
     [Header("Optional feedback")]
     public AudioSource sirenLoop;
@@ -318,6 +340,19 @@ public class TrainingFlowController : MonoBehaviour
         Simulation2
     }
 
+    void Awake()
+    {
+        Instance = this;
+        if (environmentLearningController == null)
+            environmentLearningController = FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     void Start()
     {
         ApplyNarrationFromLibrary();
@@ -337,6 +372,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(pausePanel, false);
         SetSafetyWarningVisible(false);
         SetSimulation2Status(sim2BriefingBody);
+        environmentLearningController?.EndLearning();
     }
 
     public void ApplyDefaultCopyToUi()
@@ -437,6 +473,23 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (CurrentPhase != Phase.SimulationPick) return;
         ShowSimulation2BriefingAfterCalibration();
+    }
+
+    /// <summary>Level_Select_UI — city tour with labels on important objects.</summary>
+    public void UI_PickEnvironmentLearningAfterCalibration()
+    {
+        if (CurrentPhase != Phase.SimulationPick) return;
+        BeginEnvironmentLearning();
+    }
+
+    /// <summary>Leave the tour and return to Level_Select_UI.</summary>
+    public void UI_EndEnvironmentLearning()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning) return;
+        environmentLearningController?.EndLearning();
+        CurrentPhase = Phase.SimulationPick;
+        SetSimulationGameplayState(false, false);
+        ApplyPhaseUI();
     }
 
     public void UI_StartIntro()
@@ -772,6 +825,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_BackToHub()
     {
         StopAllNarration();
+        environmentLearningController?.EndLearning();
         CurrentPhase = Phase.Gate;
         recorder?.Clear();
         physiology?.StartBaselineCapture();
@@ -873,7 +927,11 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(loginPanel, CurrentPhase == Phase.Login);
         SetActiveSafe(introPanel, CurrentPhase == Phase.IntroNarration);
         SetActiveSafe(sim1CalibrationPanel, CurrentPhase == Phase.Simulation1Calibration);
-        SetActiveSafe(simulationPickPanel, CurrentPhase == Phase.SimulationPick);
+        bool showLevelSelect = CurrentPhase == Phase.SimulationPick;
+        SetActiveSafe(simulationPickPanel, showLevelSelect);
+        if (showLevelSelect)
+            ScrollLevelSelectToTop();
+        SetActiveSafe(environmentLearningHudPanel, CurrentPhase == Phase.EnvironmentLearning);
         SetActiveSafe(sim1MissionBriefingPanel, CurrentPhase == Phase.Simulation1MissionBriefing);
         SetActiveSafe(sim1ResultsPanel, CurrentPhase == Phase.Simulation1Results);
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
@@ -1027,6 +1085,119 @@ public class TrainingFlowController : MonoBehaviour
             introBodyText.text = introParagraph1;
     }
 
+    private void BeginEnvironmentLearning()
+    {
+        StopAllNarration();
+        CurrentPhase = Phase.EnvironmentLearning;
+        SetSimulationGameplayState(false, false);
+
+        ResolveEnvironmentLearningSpawn();
+        bool usedDedicatedSpawn = environmentLearningSpawnPoint != null || environmentLearningSpawnUseWorldCoordinates;
+
+        ResolvePlayerRoot();
+
+        if (usedDedicatedSpawn)
+        {
+            Transform spawn = environmentLearningSpawnPoint;
+            Quaternion rot = spawn != null
+                ? spawn.rotation
+                : Quaternion.Euler(environmentLearningSpawnWorldEuler);
+
+            if (spawn != null)
+            {
+                PlayerGroundSnap.PlacePlayerAtSpawnMarker(
+                    playerRoot,
+                    spawn,
+                    rot,
+                    environmentLearningSpawnHeightMode,
+                    useGroundHeight: true);
+            }
+            else
+            {
+                MovePlayerToSpawn(null, true, environmentLearningSpawnWorldPosition, environmentLearningSpawnWorldEuler);
+                PlayerGroundSnap.TrySnapToGround(playerRoot);
+            }
+        }
+        else if (environmentLearningUseGateSpawn)
+        {
+            MovePlayerToSpawn(
+                gateSpawnPoint,
+                gateSpawnUseWorldCoordinates,
+                gateSpawnWorldPosition,
+                gateSpawnWorldEuler);
+            PlayerGroundSnap.TrySnapToGround(playerRoot);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "Environment Learning: assign Environment Learning Spawn Point on FlowManager, or enable Environment Learning Use Gate Spawn.");
+        }
+
+        StabilizePlayerAfterEnvironmentLearningSpawn();
+
+        if (physiology != null)
+            physiology.StressorActive = false;
+        StopSiren();
+        SetHudVisible(false);
+        environmentLearningController?.BeginLearning();
+        ApplyPhaseUI();
+    }
+
+    private void ResolvePlayerRoot()
+    {
+        if (playerRoot != null)
+            return;
+
+        if (playerFpsController != null)
+            playerRoot = playerFpsController.transform;
+        else
+        {
+            var fps = FindFirstObjectByType<SimpleFPSController>(FindObjectsInactive.Include);
+            if (fps != null)
+                playerRoot = fps.transform;
+        }
+    }
+
+    private void ResolveEnvironmentLearningSpawn()
+    {
+        if (environmentLearningSpawnPoint == null)
+        {
+            var found = GameObject.Find("EnvironmentLearningSpawn");
+            if (found != null)
+                environmentLearningSpawnPoint = found.transform;
+        }
+
+        if (environmentLearningSpawnPoint == null && environmentLearningFallbackToSim1Spawn && simulation1SpawnPoint != null)
+            environmentLearningSpawnPoint = simulation1SpawnPoint;
+    }
+
+    private void StabilizePlayerAfterEnvironmentLearningSpawn()
+    {
+        if (playerRoot == null)
+            return;
+
+        var stabilizer = environmentLearningController != null
+            ? environmentLearningController.GetComponent<EnvironmentLearningSpawnStabilizer>()
+            : null;
+
+        if (stabilizer == null && environmentLearningController != null)
+            stabilizer = environmentLearningController.gameObject.AddComponent<EnvironmentLearningSpawnStabilizer>();
+
+        stabilizer?.StabilizeNow(playerRoot);
+    }
+
+    private void ScrollLevelSelectToTop()
+    {
+        if (simulationPickPanel == null)
+            return;
+
+        var levelUi = simulationPickPanel.GetComponent<LevelSelectUI>();
+        if (levelUi == null)
+            levelUi = simulationPickPanel.GetComponentInChildren<LevelSelectUI>(true);
+
+        levelUi?.ScrollToTop();
+    }
+
     /// <summary>
     /// Prefer a scene <see cref="Transform"/>; if it is missing and <paramref name="useWorldCoordinates"/> is set, use world position + euler angles.
     /// </summary>
@@ -1061,9 +1232,7 @@ public class TrainingFlowController : MonoBehaviour
         if (fpsController != null)
             fpsController.TeleportTo(pos, rot);
         else
-        {
             playerRoot.SetPositionAndRotation(pos, rot);
-        }
     }
 
     private void StartSimulation2InSameScene()
@@ -1109,6 +1278,12 @@ public class TrainingFlowController : MonoBehaviour
 
     private void HandleSafetyKeys()
     {
+        if (CurrentPhase == Phase.EnvironmentLearning && WasPauseKeyPressed())
+        {
+            UI_EndEnvironmentLearning();
+            return;
+        }
+
         if (WasPauseKeyPressed())
         {
             var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);

@@ -47,6 +47,10 @@ public class ShelterTrigger : MonoBehaviour
 
     void Update()
     {
+        if (TrainingFlowController.Instance != null &&
+            !TrainingFlowController.Instance.AllowsMissionGameplay)
+            return;
+
         if (_triggered) return;
         if (_gameManager == null)
             _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
@@ -77,6 +81,10 @@ public class ShelterTrigger : MonoBehaviour
 
     private void HandleTriggerEnter(Collider other)
     {
+        if (TrainingFlowController.Instance != null &&
+            !TrainingFlowController.Instance.AllowsMissionGameplay)
+            return;
+
         if (_triggered) return;
         if (_gameManager == null)
             _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);

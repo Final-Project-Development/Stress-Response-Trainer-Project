@@ -25,6 +25,8 @@ public class UINavigationManager : MonoBehaviour
         "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, compass, map.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
         "Simulation 2:\n1) First aid kit — E\n2) Wounded — E (go call for help)\n3) Phone — E door once, E coin, E Receiver, dial 1, 0, 1\n4) Wounded — E, then 1, 2, 3 treatment";
+    [TextArea] public string helpEnvironmentLearning =
+        "סיור היכרות:\nהסתובבי בעיר וקראי את השמות על הפריטים.\nBack או Esc — חזרה לבחירת סימולציה.";
 
     [Header("Keys")]
     public KeyCode pauseKey = KeyCode.Escape;
@@ -158,6 +160,16 @@ public class UINavigationManager : MonoBehaviour
         if (flow == null)
             return;
 
+        if (flow.CurrentPhase == TrainingFlowController.Phase.EnvironmentLearning)
+        {
+            _helpOpen = false;
+            SetActiveSafe(helpPanel, false);
+            SetActiveSafe(confirmBackPanel, false);
+            flow.UI_EndEnvironmentLearning();
+            ApplyPlayerCursorMode();
+            return;
+        }
+
         _helpOpen = false;
         SetActiveSafe(helpPanel, false);
         SetActiveSafe(confirmBackPanel, false);
@@ -198,6 +210,9 @@ public class UINavigationManager : MonoBehaviour
         {
             case TrainingFlowController.Phase.SimulationPick:
                 return helpDefault;
+
+            case TrainingFlowController.Phase.EnvironmentLearning:
+                return helpEnvironmentLearning;
 
             case TrainingFlowController.Phase.Simulation1Calibration:
             case TrainingFlowController.Phase.Simulation1MissionBriefing:
@@ -241,6 +256,19 @@ public class UINavigationManager : MonoBehaviour
         bool activeSimulation = flow != null
             && (flow.CurrentPhase == TrainingFlowController.Phase.Simulation1Active
                 || flow.CurrentPhase == TrainingFlowController.Phase.Simulation2Active);
+
+        bool environmentLearning = flow != null
+            && flow.CurrentPhase == TrainingFlowController.Phase.EnvironmentLearning;
+
+        if (environmentLearning)
+        {
+            playerController.SetOverlayUiOpen(false);
+            playerController.SetUiMenuMode(false);
+            playerController.SetSimulationToolbarMode(false);
+            if (topBar != null)
+                playerController.SetToolbarScreenRegion(topBar.GetComponent<RectTransform>());
+            return;
+        }
 
         if (IsOverlayUiOpen)
         {

@@ -49,11 +49,18 @@ public class SimpleFPSController : MonoBehaviour
 
         transform.SetPositionAndRotation(worldPosition, worldRotation);
         xRotation = 0f;
+        verticalVelocity = -2f;
         if (cameraTransform != null)
             cameraTransform.localRotation = Quaternion.identity;
 
         if (controller != null)
             controller.enabled = wasEnabled;
+    }
+
+    /// <summary>Resets fall speed after teleport (called by ground snap).</summary>
+    public void ResetVerticalVelocity()
+    {
+        verticalVelocity = -2f;
     }
 
     /// <summary>Called by <see cref="TrainingFlowController"/> so menu buttons work with the mouse.</summary>

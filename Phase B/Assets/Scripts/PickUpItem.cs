@@ -52,6 +52,10 @@ public class PickUpItem : MonoBehaviour
 
     public void OnPickUp()
     {
+        if (TrainingFlowController.Instance != null &&
+            !TrainingFlowController.Instance.AllowsMissionGameplay)
+            return;
+
         if (pickUpMode == PickUpMode.LiftPhoneReceiver)
         {
             var booth = GetComponentInParent<PublicPhoneBoothMission>(true);
