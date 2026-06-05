@@ -125,13 +125,16 @@ public class SimpleFPSController : MonoBehaviour
             return;
         }
 
-        if (learningTourSidebarMode && learningTourSidebarRegion != null)
+        if (learningTourSidebarMode)
         {
-            bool pointerOverSidebar = IsPointerOverRect(learningTourSidebarRegion);
+            bool pointerOverSidebar = learningTourSidebarRegion != null
+                && IsPointerOverRect(learningTourSidebarRegion);
+            bool pointerOverToolbar = IsPointerOverToolbar();
+            bool pointerOverUi = pointerOverSidebar || pointerOverToolbar;
             Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = pointerOverSidebar;
+            Cursor.visible = pointerOverUi;
             HandleMovement();
-            if (!pointerOverSidebar)
+            if (!pointerOverUi)
                 HandleMouseLook();
             return;
         }
