@@ -175,6 +175,25 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI sim2ResultsMetricsText;
     public TextMeshProUGUI sim2ResultsRecommendationsText;
     public TextMeshProUGUI simulationActiveHudText;
+
+    [Header("Simulation stress timer (Sim 1 & 2 active only)")]
+    [Tooltip("timer_panel on Canvas — shown only during active simulations.")]
+    public GameObject timerPanel;
+    [Tooltip("TimeText TMP under timer_panel.")]
+    public TextMeshProUGUI simulationTimerText;
+    [Tooltip("Optional title TMP (e.g. Timer label on timer_panel).")]
+    public TextMeshProUGUI simulationTimerTitleText;
+    public string simulationTimerTitle = "Timer";
+    [Tooltip("Count down for time pressure, or count up elapsed stress time.")]
+    public bool simulationTimerCountDown = true;
+    public float simulation1TimerSeconds = 300f;
+    public float simulation2TimerSeconds = 600f;
+    [Tooltip("Timer text color when remaining time is at or below urgent threshold.")]
+    public bool simulationTimerUrgentColorEnabled = true;
+    public float simulationTimerUrgentBelowSeconds = 60f;
+    public Color simulationTimerNormalColor = Color.white;
+    public Color simulationTimerUrgentColor = new Color(1f, 0.4f, 0.35f, 1f);
+
     [Header("Results graphs (SCI + HRV per simulation)")]
     [Tooltip("Simulation 1 — Stress Change Index over time (existing).")]
     public SimpleStressLineGraph resultsGraph;
@@ -336,7 +355,12 @@ public class TrainingFlowController : MonoBehaviour
     public Phase CurrentPhase { get; private set; } = Phase.Gate;
     public bool IsPaused => _paused;
 
+    /// <summary>Elapsed seconds in the current Sim 1/2 run (pauses with game pause).</summary>
+    public float SimulationStressElapsedSeconds => _simulationStressTimer;
+
     private float _calibrationTimer;
+    private float _simulationStressTimer;
+    private Phase _simulationStressTimerPhase = Phase.Gate;
     private bool _sim2Subscribed;
     private bool _paused;
     private PendingStart _pendingStart = PendingStart.None;
@@ -381,6 +405,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(highStressWarningRoot, false);
         SetActiveSafe(gatewayDisconnectWarningRoot, false);
         SetHudVisible(false);
+        SetActiveSafe(timerPanel, false);
         SetActiveSafe(pausePanel, false);
         SetSafetyWarningVisible(false);
         SetSimulation2Status(sim2BriefingBody);
@@ -400,6 +425,8 @@ public class TrainingFlowController : MonoBehaviour
             learnBriefingBodyText.text = learnBriefingBody;
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
+        if (simulationTimerTitleText != null)
+            simulationTimerTitleText.text = simulationTimerTitle;
     }
 
     void Update()
@@ -421,6 +448,7 @@ public class TrainingFlowController : MonoBehaviour
 
         UpdateGatewayDisconnectUi();
         UpdateActivePhaseHud();
+        UpdateSimulationStressTimer();
     }
 
     /// <summary>From Hub — opens Login / Register panel.</summary>
@@ -956,6 +984,61 @@ public class TrainingFlowController : MonoBehaviour
             simulationActiveHudText.gameObject.SetActive(on);
     }
 
+    private void UpdateSimulationStressTimer()
+    {
+        bool active = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
+        if (!active)
+        {
+            _simulationStressTimerPhase = CurrentPhase;
+            return;
+        }
+
+        if (CurrentPhase != _simulationStressTimerPhase)
+        {
+            _simulationStressTimer = 0f;
+            _simulationStressTimerPhase = CurrentPhase;
+        }
+
+        if (!_paused)
+            _simulationStressTimer += Time.deltaTime;
+
+        RefreshSimulationStressTimerDisplay();
+    }
+
+    private void RefreshSimulationStressTimerDisplay()
+    {
+        if (simulationTimerText == null)
+            return;
+
+        float limit = CurrentPhase == Phase.Simulation2Active
+            ? simulation2TimerSeconds
+            : simulation1TimerSeconds;
+
+        float displaySeconds = simulationTimerCountDown
+            ? Mathf.Max(0f, limit - _simulationStressTimer)
+            : _simulationStressTimer;
+
+        simulationTimerText.text = FormatMmSs(displaySeconds);
+
+        if (!simulationTimerUrgentColorEnabled || !simulationTimerCountDown)
+        {
+            simulationTimerText.color = simulationTimerNormalColor;
+            return;
+        }
+
+        simulationTimerText.color = displaySeconds <= simulationTimerUrgentBelowSeconds
+            ? simulationTimerUrgentColor
+            : simulationTimerNormalColor;
+    }
+
+    private static string FormatMmSs(float seconds)
+    {
+        int sec = Mathf.Max(0, Mathf.FloorToInt(seconds));
+        int m = sec / 60;
+        int s = sec % 60;
+        return $"{m:00}:{s:00}";
+    }
+
     private void UpdateGatewayDisconnectUi()
     {
         if (gatewayDisconnectWarningRoot == null || udpReceiver == null) return;
@@ -988,6 +1071,10 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(sim1ResultsPanel, CurrentPhase == Phase.Simulation1Results);
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
         SetActiveSafe(sim2ResultsPanel, CurrentPhase == Phase.Simulation2Results);
+        bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
+        SetActiveSafe(timerPanel, showStressTimer);
+        if (showStressTimer)
+            RefreshSimulationStressTimerDisplay();
         ApplyPlayerInteractionMode();
     }
 
