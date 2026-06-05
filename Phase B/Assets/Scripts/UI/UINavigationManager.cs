@@ -163,6 +163,16 @@ public class UINavigationManager : MonoBehaviour
         if (flow == null)
             return;
 
+        if (flow.CurrentPhase == TrainingFlowController.Phase.EnvironmentLearningBriefing)
+        {
+            _helpOpen = false;
+            SetActiveSafe(helpPanel, false);
+            SetActiveSafe(confirmBackPanel, false);
+            flow.UI_CancelLearnBriefing();
+            ApplyPlayerCursorMode();
+            return;
+        }
+
         if (flow.CurrentPhase == TrainingFlowController.Phase.EnvironmentLearning)
         {
             _helpOpen = false;
@@ -214,6 +224,7 @@ public class UINavigationManager : MonoBehaviour
             case TrainingFlowController.Phase.SimulationPick:
                 return helpDefault;
 
+            case TrainingFlowController.Phase.EnvironmentLearningBriefing:
             case TrainingFlowController.Phase.EnvironmentLearning:
                 return helpEnvironmentLearning;
 

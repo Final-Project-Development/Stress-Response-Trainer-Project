@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// After each simulation’s results screen, flow returns to Simulation pick when <see cref="simulationPickPanel"/> is set (otherwise linear Sim 1 → Sim 2 remains).
 /// Assign <see cref="simulationPickPanel"/> (Level_Select_UI) after calibration; buttons:
 /// <see cref="UI_PickSimulation1AfterCalibration"/>, <see cref="UI_PickSimulation2AfterCalibration"/>,
-/// <see cref="UI_PickEnvironmentLearningAfterCalibration"/>.
+/// <see cref="UI_PickEnvironmentLearningAfterCalibration"/> → <see cref="learnBriefingPanel"/> → <see cref="UI_BeginEnvironmentLearning"/>.
 /// Physiology is simulated unless a UDP gateway is enabled later.
 /// </summary>
 [DefaultExecutionOrder(50)]
@@ -48,6 +48,7 @@ public class TrainingFlowController : MonoBehaviour
         IntroNarration,
         Simulation1Calibration,
         SimulationPick,
+        EnvironmentLearningBriefing,
         EnvironmentLearning,
         Simulation1MissionBriefing,
         Simulation1Active,
@@ -76,6 +77,7 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject loginPanel;
     public GameObject introPanel;
     public GameObject sim1MissionBriefingPanel;
+    public GameObject learnBriefingPanel;
     public GameObject sim1CalibrationPanel;
     [Tooltip("Level_Select_UI after calibration. Buttons: UI_PickSimulation1/2/EnvironmentLearning AfterCalibration.")]
     public GameObject simulationPickPanel;
@@ -155,6 +157,7 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI hubConnectionStatusText;
     public TextMeshProUGUI introBodyText;
     public TextMeshProUGUI missionBriefingBodyText;
+    public TextMeshProUGUI learnBriefingBodyText;
     public TextMeshProUGUI calibrationStatusText;
     [Tooltip("Optional: large remaining-time readout (whole seconds or MM:SS). When set, time is not duplicated in Calibration Status Text.")]
     public TextMeshProUGUI calibrationRemainingTimeText;
@@ -247,6 +250,13 @@ public class TrainingFlowController : MonoBehaviour
         "3) Close the entrance door — PFB_DoorDouble\n" +
         "4) Run to the Mamad (shelter) outside\n\n" +
         "When you are ready, press Start mission.";
+
+    [TextArea]
+    public string learnBriefingBody =
+        "Environment Learning — City tour\n\n" +
+        "Explore important locations and objects in the training environment.\n\n" +
+        "Use the left sidebar to jump to each item and read the labels in the world.\n\n" +
+        "When you are ready, press Start learn.";
 
     [TextArea]
     public string sim2BriefingBody =
@@ -386,6 +396,8 @@ public class TrainingFlowController : MonoBehaviour
             introBodyText.text = introNarrationText;
         if (missionBriefingBodyText != null)
             missionBriefingBodyText.text = missionBriefingBody;
+        if (learnBriefingBodyText != null)
+            learnBriefingBodyText.text = learnBriefingBody;
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
     }
@@ -477,11 +489,28 @@ public class TrainingFlowController : MonoBehaviour
         ShowSimulation2BriefingAfterCalibration();
     }
 
-    /// <summary>Level_Select_UI — city tour with labels on important objects.</summary>
+    /// <summary>Level_Select_UI — show learn briefing, then city tour with labels on important objects.</summary>
     public void UI_PickEnvironmentLearningAfterCalibration()
     {
         if (CurrentPhase != Phase.SimulationPick) return;
+        ShowEnvironmentLearningBriefingAfterCalibration();
+    }
+
+    /// <summary>Learn briefing panel — Start learn button.</summary>
+    public void UI_BeginEnvironmentLearning()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearningBriefing) return;
         BeginEnvironmentLearning();
+    }
+
+    /// <summary>Leave learn briefing and return to Level_Select_UI.</summary>
+    public void UI_CancelLearnBriefing()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearningBriefing) return;
+        StopAllNarration();
+        CurrentPhase = Phase.SimulationPick;
+        SetSimulationGameplayState(false, false);
+        ApplyPhaseUI();
     }
 
     /// <summary>Leave the tour and return to Level_Select_UI.</summary>
@@ -626,6 +655,22 @@ public class TrainingFlowController : MonoBehaviour
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
         PlaySim2BriefingNarration();
+    }
+
+    private void ShowEnvironmentLearningBriefingAfterCalibration()
+    {
+        if (learnBriefingPanel == null)
+        {
+            BeginEnvironmentLearning();
+            return;
+        }
+
+        StopAllNarration();
+        CurrentPhase = Phase.EnvironmentLearningBriefing;
+        if (learnBriefingBodyText != null)
+            learnBriefingBodyText.text = learnBriefingBody.TrimEnd();
+        SetSimulationGameplayState(false, false);
+        ApplyPhaseUI();
     }
 
     public void UI_BeginSimulation1()
@@ -935,6 +980,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(simulationPickPanel, showLevelSelect);
         if (showLevelSelect)
             ScrollLevelSelectToTop();
+        SetActiveSafe(learnBriefingPanel, CurrentPhase == Phase.EnvironmentLearningBriefing);
         SetActiveSafe(environmentLearningHudPanel, CurrentPhase == Phase.EnvironmentLearning);
         if (CurrentPhase != Phase.EnvironmentLearning)
             HideEnvironmentLearningTourSidebar();
