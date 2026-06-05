@@ -33,6 +33,8 @@ public static class EnvironmentLearningSceneSetup
         if (flow.environmentLearningController == null)
             flow.environmentLearningController = learning;
 
+        EnsureTourGuide(learning);
+
         if (!TryWireExistingLearningHud(flow, learning))
         {
             Debug.LogWarning(
@@ -51,6 +53,33 @@ public static class EnvironmentLearningSceneSetup
         Debug.Log("Environment Learning setup done. Tour starts at Simulation2SpawnPoint.");
     }
 
+    [MenuItem("Tools/Stress Trainer/Wire Environment Learning Tour Sidebar")]
+    public static void WireTourSidebarMenu()
+    {
+        var learning = Object.FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
+        if (learning == null)
+        {
+            EditorUtility.DisplayDialog("Stress Trainer", "No EnvironmentLearningController in scene.", "OK");
+            return;
+        }
+
+        EnsureTourGuide(learning);
+
+        if (!TryWireTourSidebar(learning.tourGuide))
+        {
+            EditorUtility.DisplayDialog(
+                "Stress Trainer",
+                "Create a panel named EnvironmentLearningTourSidebar under your Canvas, design it manually, " +
+                "add EnvironmentLearningTourNavButton to each Button, then run this menu again.",
+                "OK");
+            return;
+        }
+
+        EditorUtility.SetDirty(learning);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("Wired EnvironmentLearningTourSidebar. Design and button targets stay as you set in the scene.");
+    }
+
     [MenuItem("Tools/Stress Trainer/Wire Environment Learning HUD")]
     public static void WireLearningHudMenu()
     {
@@ -64,6 +93,8 @@ public static class EnvironmentLearningSceneSetup
                 "OK");
             return;
         }
+
+        EnsureTourGuide(learning);
 
         if (!TryWireExistingLearningHud(flow, learning))
         {
@@ -122,6 +153,51 @@ public static class EnvironmentLearningSceneSetup
         spawn.SetPositionAndRotation(
             flow.simulation2SpawnPoint.position,
             flow.simulation2SpawnPoint.rotation);
+    }
+
+    static void EnsureTourGuide(EnvironmentLearningController learning)
+    {
+        if (learning == null)
+            return;
+
+        var guide = learning.GetComponent<EnvironmentLearningTourGuide>();
+        if (guide == null)
+            guide = learning.gameObject.AddComponent<EnvironmentLearningTourGuide>();
+
+        learning.tourGuide = guide;
+        TryWireTourSidebar(guide);
+    }
+
+    static bool TryWireTourSidebar(EnvironmentLearningTourGuide guide)
+    {
+        if (guide == null)
+            return false;
+
+        if (guide.sidebarPanel != null)
+            return true;
+
+        GameObject sidebar = null;
+        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (go != null && go.name.Trim() == "EnvironmentLearningTourSidebar")
+            {
+                sidebar = go;
+                break;
+            }
+        }
+
+        if (sidebar == null)
+            return false;
+
+        guide.sidebarPanel = sidebar;
+        guide.sidebarRoot = sidebar.GetComponent<RectTransform>();
+        if (guide.sidebarRoot == null)
+            guide.sidebarRoot = sidebar.GetComponentInChildren<RectTransform>(true);
+
+        if (!sidebar.activeSelf)
+            sidebar.SetActive(false);
+
+        return true;
     }
 
     static bool TryWireExistingLearningHud(TrainingFlowController flow, EnvironmentLearningController learning)

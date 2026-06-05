@@ -26,7 +26,10 @@ public class UINavigationManager : MonoBehaviour
     [TextArea] public string helpSimulation2 =
         "Simulation 2:\n1) First aid kit — E\n2) Wounded — E (go call for help)\n3) Phone — E door once, E coin, E Receiver, dial 1, 0, 1\n4) Wounded — E, then 1, 2, 3 treatment";
     [TextArea] public string helpEnvironmentLearning =
-        "סיור היכרות:\nהסתובבי בעיר וקראי את השמות על הפריטים.\nBack או Esc — חזרה לבחירת סימולציה.";
+        "Environment Learning:\nWalk around and read item names in the world.\n" +
+        "Use the left sidebar list — click a name to jump to that location.\n" +
+        "Move the mouse over the left panel to click buttons.\n" +
+        "Back or Esc — return to simulation selection.";
 
     [Header("Keys")]
     public KeyCode pauseKey = KeyCode.Escape;

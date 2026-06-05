@@ -46,7 +46,7 @@ public static class WorldLabelPanelPrefabCreator
         textRect.offsetMax = new Vector2(-12f, -8f);
 
         var tmp = textGo.AddComponent<TextMeshProUGUI>();
-        tmp.text = "ממ\"ד";
+        tmp.text = "Mamad";
         tmp.fontSize = 18f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;

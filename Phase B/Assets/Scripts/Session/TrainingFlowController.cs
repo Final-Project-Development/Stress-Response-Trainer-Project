@@ -345,6 +345,8 @@ public class TrainingFlowController : MonoBehaviour
         Instance = this;
         if (environmentLearningController == null)
             environmentLearningController = FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
+
+        HideEnvironmentLearningTourSidebar();
     }
 
     void OnDestroy()
@@ -934,6 +936,8 @@ public class TrainingFlowController : MonoBehaviour
         if (showLevelSelect)
             ScrollLevelSelectToTop();
         SetActiveSafe(environmentLearningHudPanel, CurrentPhase == Phase.EnvironmentLearning);
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            HideEnvironmentLearningTourSidebar();
         SetActiveSafe(sim1MissionBriefingPanel, CurrentPhase == Phase.Simulation1MissionBriefing);
         SetActiveSafe(sim1ResultsPanel, CurrentPhase == Phase.Simulation1Results);
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
@@ -971,6 +975,24 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (go != null && go.activeSelf != on)
             go.SetActive(on);
+    }
+
+    void HideEnvironmentLearningTourSidebar()
+    {
+        if (environmentLearningController != null)
+        {
+            var guide = environmentLearningController.tourGuide;
+            if (guide == null)
+                guide = environmentLearningController.GetComponent<EnvironmentLearningTourGuide>();
+
+            if (guide != null)
+            {
+                guide.EnsureSidebarHidden();
+                return;
+            }
+        }
+
+        EnvironmentLearningTourGuide.HideSidebarInScene();
     }
 
     private bool UseSim1SplitColumns() =>

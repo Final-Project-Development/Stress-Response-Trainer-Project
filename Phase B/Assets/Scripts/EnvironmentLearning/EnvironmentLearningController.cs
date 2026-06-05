@@ -21,10 +21,10 @@ public class EnvironmentLearningController : MonoBehaviour
 
     [TextArea]
     public string learningHudDefaultText =
-        "סיור היכרות עם העיר\n\n" +
-        "הסתובבי והסתכלי על השמות מעל הפריטים החשובים.\n" +
-        "בשלב זה אין משימה, אין איסוף פריטים ואין סירנה.\n\n" +
-        "כשסיימת — לחצי Back או Esc כדי לחזור לבחירת הסימולציות.";
+        "Environment Learning Tour\n\n" +
+        "Walk around and read the names above important items.\n" +
+        "No mission, no pickups, and no siren in this phase.\n\n" +
+        "When finished — press Back or Esc to return to simulation selection.";
 
     [Header("Labels")]
     [Tooltip("Background for world item name panels (inventory-highlight-large 1_0).")]
@@ -44,6 +44,9 @@ public class EnvironmentLearningController : MonoBehaviour
     [Tooltip("Optional parent of all WorldItemLabel objects.")]
     public Transform labelsRoot;
 
+    [Header("Tour guide sidebar")]
+    public EnvironmentLearningTourGuide tourGuide;
+
     readonly List<WorldItemLabel> _labels = new List<WorldItemLabel>();
     bool _active;
 
@@ -56,6 +59,25 @@ public class EnvironmentLearningController : MonoBehaviour
         }
 
         Instance = this;
+        ResolveTourGuide();
+        tourGuide?.EnsureSidebarHidden();
+    }
+
+    void Start()
+    {
+        if (!_active)
+            tourGuide?.EnsureSidebarHidden();
+    }
+
+    void ResolveTourGuide()
+    {
+        if (tourGuide == null)
+            tourGuide = GetComponent<EnvironmentLearningTourGuide>();
+
+        if (tourGuide == null)
+            tourGuide = gameObject.AddComponent<EnvironmentLearningTourGuide>();
+
+        tourGuide.ResolveSidebarReferences();
     }
 
     void OnDestroy()
@@ -88,12 +110,16 @@ public class EnvironmentLearningController : MonoBehaviour
         if (learningHudRoot != null)
             learningHudRoot.SetActive(true);
 
+        ResolveTourGuide();
+        tourGuide?.BeginGuide();
         RefreshAllTourLabels(true);
     }
 
     public void EndLearning()
     {
         _active = false;
+        ResolveTourGuide();
+        tourGuide?.EndGuide();
         if (learningHudRoot != null)
             learningHudRoot.SetActive(false);
         RefreshAllTourLabels(false);

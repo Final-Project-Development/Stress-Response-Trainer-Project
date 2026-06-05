@@ -13,7 +13,7 @@ using UnityEditor;
 public class WorldItemLabel : MonoBehaviour
 {
     [TextArea]
-    public string labelText = "פריט";
+    public string labelText = "Item";
 
     [Tooltip("Optional child Transform — drag in Scene to place the panel exactly (overrides World Offset).")]
     public Transform labelAnchor;

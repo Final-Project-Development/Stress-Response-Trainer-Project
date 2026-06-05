@@ -22,12 +22,15 @@ public class SimpleFPSController : MonoBehaviour
     [SerializeField] bool unlockCursorDuringSimulation = true;
     [Tooltip("Screen rect for the top toolbar — only this area blocks mouse-look for button clicks.")]
     [SerializeField] RectTransform toolbarScreenRegion;
+    [Tooltip("Environment Learning tour sidebar — pointer here unlocks cursor for item navigation.")]
+    [SerializeField] RectTransform learningTourSidebarRegion;
 
     private CharacterController controller;
     private float verticalVelocity;
     private float xRotation;
     private bool overlayUiOpen;
     private bool simulationToolbarMode;
+    private bool learningTourSidebarMode;
 
     void Awake()
     {
@@ -89,6 +92,13 @@ public class SimpleFPSController : MonoBehaviour
         toolbarScreenRegion = region;
     }
 
+    /// <summary>Environment Learning: mouse over the left sidebar unlocks the cursor for navigation clicks.</summary>
+    public void SetLearningTourSidebar(RectTransform sidebarRegion, bool active)
+    {
+        learningTourSidebarRegion = sidebarRegion;
+        learningTourSidebarMode = active;
+    }
+
     void Update()
     {
         if (overlayUiOpen)
@@ -115,6 +125,17 @@ public class SimpleFPSController : MonoBehaviour
             return;
         }
 
+        if (learningTourSidebarMode && learningTourSidebarRegion != null)
+        {
+            bool pointerOverSidebar = IsPointerOverRect(learningTourSidebarRegion);
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = pointerOverSidebar;
+            HandleMovement();
+            if (!pointerOverSidebar)
+                HandleMouseLook();
+            return;
+        }
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         HandleMouseLook();
@@ -123,15 +144,20 @@ public class SimpleFPSController : MonoBehaviour
 
     private bool IsPointerOverToolbar()
     {
-        if (toolbarScreenRegion == null)
+        return IsPointerOverRect(toolbarScreenRegion);
+    }
+
+    private static bool IsPointerOverRect(RectTransform region)
+    {
+        if (region == null)
             return false;
 
-        var canvas = toolbarScreenRegion.GetComponentInParent<Canvas>();
+        var canvas = region.GetComponentInParent<Canvas>();
         var cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
             ? canvas.worldCamera
             : null;
         return RectTransformUtility.RectangleContainsScreenPoint(
-            toolbarScreenRegion,
+            region,
             Input.mousePosition,
             cam);
     }

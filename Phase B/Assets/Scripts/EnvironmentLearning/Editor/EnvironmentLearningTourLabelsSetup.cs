@@ -10,34 +10,18 @@ public static class EnvironmentLearningTourLabelsSetup
 {
     const string LabelPanelPrefabPath = "Assets/Prefabs/EnvironmentLearning/WorldLabelPanel.prefab";
 
-    static readonly (string objectName, string label)[] TourObjects =
-    {
-        ("Home", "Home"),
-        ("mamad", "\u05DE\u05DE\"\u05D3"),
-        ("Map", "Map"),
-        ("Compass", "Compass"),
-        ("firstaid", "First Aid"),
-        ("waterbottle", "Water Bottle"),
-        ("Flashlight", "Flashlight"),
-        ("Radio", "Radio"),
-        ("WoundedCharacter_TPose", "Wounded Character"),
-        ("PhoneBox", "Public Phone"),
-        ("PFB_DoorDouble", "Entrance Door"),
-        ("PFB_Lightswitch (1)", "Light Switch"),
-    };
-
     [MenuItem("Tools/Stress Trainer/Setup Environment Learning Tour Labels")]
     public static void SetupTourLabels()
     {
         var panelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(LabelPanelPrefabPath);
         int updated = 0;
 
-        foreach (var entry in TourObjects)
+        foreach (var entry in EnvironmentLearningTourCatalog.Items)
         {
-            var go = FindByName(entry.objectName);
+            var go = FindByName(entry.ObjectName);
             if (go == null)
             {
-                Debug.LogWarning($"Tour label: GameObject '{entry.objectName}' not found in scene.");
+                Debug.LogWarning($"Tour label: GameObject '{entry.ObjectName}' not found in scene.");
                 continue;
             }
 
@@ -45,11 +29,11 @@ public static class EnvironmentLearningTourLabelsSetup
             if (label == null)
                 label = go.AddComponent<WorldItemLabel>();
 
-            label.labelText = entry.label;
+            label.labelText = entry.DisplayName;
             if (panelPrefab != null)
                 label.labelPanelPrefab = panelPrefab;
 
-            if (entry.objectName == "mamad")
+            if (entry.ObjectName == "mamad")
             {
                 label.labelPanelSizeOverride = new Vector2(96f, 40f);
                 label.useRightToLeftText = true;
