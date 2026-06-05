@@ -463,26 +463,19 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         if (label != null && label.TryGetViewAnchor(out viewAnchor))
             return true;
 
-        viewAnchor = target.Find("ViewAnchor");
+        viewAnchor = target.Find(WorldItemLabel.ViewAnchorName);
         return viewAnchor != null;
     }
 
     static Transform ResolveLabelAnchor(WorldItemLabel label, Transform target)
     {
-        if (label != null && label.labelAnchor != null)
-            return label.labelAnchor;
+        if (label != null && label.TryGetLabelAnchor(out Transform anchor))
+            return anchor;
 
-        if (label != null)
-            label.EnsureLabelBuilt();
+        if (target == null)
+            return null;
 
-        if (label != null && label.labelAnchor != null)
-            return label.labelAnchor;
-
-        Transform namedAnchor = target.Find("LabelAnchor");
-        if (namedAnchor != null)
-            return namedAnchor;
-
-        return null;
+        return target.Find(WorldItemLabel.LabelAnchorName);
     }
 
     static Vector3 GetItemViewOrigin(Transform target)

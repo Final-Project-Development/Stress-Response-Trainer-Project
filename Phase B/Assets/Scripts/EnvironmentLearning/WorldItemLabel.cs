@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,18 +8,22 @@ using UnityEditor;
 
 /// <summary>
 /// Small square panel with text above an important object during Environment Learning.
-/// Assign your own panel prefab (Image + TMP child) or leave empty for a built-in default.
+/// Uses a single scene LabelAnchor (position) and optional ViewAnchor (tour stand/look).
 /// </summary>
 [DisallowMultipleComponent]
 public class WorldItemLabel : MonoBehaviour
 {
+    public const string LabelAnchorName = "LabelAnchor";
+    public const string ViewAnchorName = "ViewAnchor";
+    public const string LabelCanvasName = "LabelCanvas";
+
     [TextArea]
     public string labelText = "Item";
 
-    [Tooltip("Optional child Transform — drag in Scene to place the panel exactly (overrides World Offset).")]
+    [Tooltip("Child Transform for label position. One per object.")]
     public Transform labelAnchor;
 
-    [Tooltip("Optional child Transform — where the player stands during tour navigation. Blue axis = look direction.")]
+    [Tooltip("Child Transform for tour stand position. Blue axis = look direction.")]
     public Transform viewAnchor;
 
     [Tooltip("Offset from this object's pivot when Label Anchor is empty.")]
@@ -30,7 +35,7 @@ public class WorldItemLabel : MonoBehaviour
     [Tooltip("Your designed square panel prefab (Image + TextMeshProUGUI).")]
     public GameObject labelPanelPrefab;
 
-    [Tooltip("Optional per-item size (e.g. Mamad: 96×40). Zero = use EnvironmentLearning global size.")]
+    [Tooltip("Optional per-item size. Zero = use EnvironmentLearning global size.")]
     public Vector2 labelPanelSizeOverride;
 
     public bool useRightToLeftText;
@@ -44,24 +49,38 @@ public class WorldItemLabel : MonoBehaviour
 
     static Transform _sharedLabelsRoot;
 
-    Transform _anchor;
+    GameObject _labelCanvas;
     TextMeshProUGUI _labelTmp;
     bool _visible;
 
     void Awake()
     {
+        ResolveLabelAnchorReference();
         ResolveViewAnchorReference();
+        CleanupLegacyRuntimeLabelObjects();
         EnsureLabelBuilt();
         SetVisible(false);
     }
 
-    /// <summary>
-    /// Returns the manually placed stand/look anchor for tour navigation.
-    /// </summary>
     public bool TryGetViewAnchor(out Transform anchor)
     {
         anchor = ResolveViewAnchorReference();
         return anchor != null;
+    }
+
+    public bool TryGetLabelAnchor(out Transform anchor)
+    {
+        anchor = ResolveLabelAnchorReference();
+        return anchor != null;
+    }
+
+    Transform ResolveLabelAnchorReference()
+    {
+        if (labelAnchor != null)
+            return labelAnchor;
+
+        labelAnchor = FindOwnedAnchorRecursive(transform, LabelAnchorName);
+        return labelAnchor;
     }
 
     Transform ResolveViewAnchorReference()
@@ -69,33 +88,26 @@ public class WorldItemLabel : MonoBehaviour
         if (viewAnchor != null)
             return viewAnchor;
 
-        Transform direct = transform.Find("ViewAnchor");
-        if (direct != null)
-        {
-            viewAnchor = direct;
-            return viewAnchor;
-        }
-
-        viewAnchor = FindOwnedViewAnchorRecursive(transform);
+        viewAnchor = FindOwnedAnchorRecursive(transform, ViewAnchorName);
         return viewAnchor;
     }
 
-    Transform FindOwnedViewAnchorRecursive(Transform root)
+    Transform FindOwnedAnchorRecursive(Transform root, string anchorName)
     {
-        if (root == null)
+        if (root == null || string.IsNullOrWhiteSpace(anchorName))
             return null;
 
         for (int i = 0; i < root.childCount; i++)
         {
             Transform child = root.GetChild(i);
-            if (child.name == "ViewAnchor")
+            if (child.name == anchorName)
                 return child;
 
             var otherLabel = child.GetComponent<WorldItemLabel>();
             if (otherLabel != null && otherLabel != this)
                 continue;
 
-            Transform nested = FindOwnedViewAnchorRecursive(child);
+            Transform nested = FindOwnedAnchorRecursive(child, anchorName);
             if (nested != null)
                 return nested;
         }
@@ -124,42 +136,50 @@ public class WorldItemLabel : MonoBehaviour
     public void SetVisible(bool visible)
     {
         _visible = visible;
-        if (_anchor != null)
-            _anchor.gameObject.SetActive(visible);
+        if (_labelCanvas != null)
+            _labelCanvas.SetActive(visible);
     }
 
     public void EnsureLabelBuilt()
     {
-        if (_anchor == null)
+        if (_labelCanvas == null)
             BuildLabel();
         else
-            SyncAnchorPosition();
+        {
+            SyncLabelCanvasPosition();
+            ApplyAppearanceFromController();
+        }
     }
 
     public void ApplyAppearanceFromController()
     {
-        if (_anchor == null)
+        if (_labelCanvas == null)
             return;
 
-        var panelRoot = _anchor.childCount > 0 ? _anchor.GetChild(0).gameObject : null;
-        if (panelRoot != null)
-            ApplyTourPanelAppearance(panelRoot);
+        SyncLabelCanvasPosition();
+        ApplyTourPanelAppearance(_labelCanvas);
     }
 
     void BuildLabel()
     {
-        if (_anchor != null)
+        if (ResolveLabelAnchorReference() == null)
+            CreateDefaultLabelAnchor();
+
+        CleanupLegacyRuntimeLabelObjects();
+
+        if (TryAdoptExistingLabelCanvas())
             return;
 
-        _anchor = new GameObject($"{name}_LabelAnchor_Runtime").transform;
-        _anchor.SetParent(ResolveLabelsParent(), false);
-        SyncAnchorPosition();
+        Transform labelsRoot = ResolveLabelsParent();
 
         if (labelPanelPrefab != null)
         {
-            var instance = Instantiate(labelPanelPrefab, _anchor);
+            var instance = Instantiate(labelPanelPrefab, labelsRoot);
+            instance.name = GetLabelCanvasObjectName();
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
+            _labelCanvas = instance;
+            SyncLabelCanvasPosition();
             ApplyTourPanelAppearance(instance);
             _labelTmp = instance.GetComponentInChildren<TextMeshProUGUI>(true);
             if (instance.GetComponent<WorldLabelBillboard>() == null)
@@ -168,19 +188,70 @@ public class WorldItemLabel : MonoBehaviour
             return;
         }
 
-        BuildDefaultPanel();
+        BuildDefaultPanel(labelsRoot);
     }
 
-    void BuildDefaultPanel()
+    bool TryAdoptExistingLabelCanvas()
     {
-        var canvasGo = new GameObject("LabelCanvas");
-        canvasGo.transform.SetParent(_anchor, false);
+        Transform labelsRoot = ResolveLabelsParent();
+        Transform existing = labelsRoot.Find(GetLabelCanvasObjectName());
+        if (existing == null)
+            return false;
+
+        _labelCanvas = existing.gameObject;
+        _labelTmp = _labelCanvas.GetComponentInChildren<TextMeshProUGUI>(true);
+        SyncLabelCanvasPosition();
+        ApplyTourPanelAppearance(_labelCanvas);
+        ApplyText();
+        return true;
+    }
+
+    string GetLabelCanvasObjectName() => $"{name}_{LabelCanvasName}";
+
+    void SyncLabelCanvasPosition()
+    {
+        if (_labelCanvas == null)
+            return;
+
+        Transform anchor = ResolveLabelAnchorReference();
+        if (anchor != null)
+            _labelCanvas.transform.position = anchor.position;
+        else
+            _labelCanvas.transform.position = transform.TransformPoint(worldOffset);
+    }
+
+    static Transform ResolveLabelsParent()
+    {
+        var ctrl = EnvironmentLearningController.Instance;
+        if (ctrl != null && ctrl.labelsRoot != null)
+            return ctrl.labelsRoot;
+
+        if (_sharedLabelsRoot == null)
+        {
+            var existing = GameObject.Find("WorldItemLabels_Runtime");
+            if (existing == null)
+            {
+                existing = new GameObject("WorldItemLabels_Runtime");
+                existing.hideFlags = HideFlags.DontSave;
+            }
+
+            _sharedLabelsRoot = existing.transform;
+        }
+
+        return _sharedLabelsRoot;
+    }
+
+    void BuildDefaultPanel(Transform labelsRoot)
+    {
+        var canvasGo = new GameObject(GetLabelCanvasObjectName());
+        canvasGo.transform.SetParent(labelsRoot, false);
 
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         canvasGo.AddComponent<CanvasScaler>().dynamicPixelsPerUnit = 10f;
 
-        var canvasRect = canvasGo.GetComponent<RectTransform>();
+        _labelCanvas = canvasGo;
+        SyncLabelCanvasPosition();
         ApplyTourPanelAppearance(canvasGo);
 
         var panelGo = new GameObject("Panel");
@@ -215,6 +286,73 @@ public class WorldItemLabel : MonoBehaviour
 
         canvasGo.AddComponent<WorldLabelBillboard>();
         ApplyText();
+    }
+
+    Transform CreateDefaultLabelAnchor()
+    {
+        var go = new GameObject(LabelAnchorName);
+        var created = go.transform;
+        created.SetParent(transform, false);
+        created.localPosition = worldOffset.sqrMagnitude > 0.001f ? worldOffset : new Vector3(0f, 2.5f, 0f);
+        labelAnchor = created;
+        return created;
+    }
+
+    void CleanupLegacyRuntimeLabelObjects()
+    {
+        Transform host = ResolveLabelAnchorReference();
+        Transform labelsRoot = ResolveLabelsParent();
+
+        if (host != null)
+        {
+            for (int i = host.childCount - 1; i >= 0; i--)
+            {
+                Transform child = host.GetChild(i);
+                if (child.name.EndsWith("_LabelAnchor_Runtime"))
+                {
+                    DestroyObjectSafe(child.gameObject);
+                    continue;
+                }
+
+                if (child.name == LabelCanvasName || child.name == GetLabelCanvasObjectName())
+                    ReparentLabelCanvas(child, labelsRoot);
+            }
+        }
+
+        var legacyRoot = GameObject.Find("WorldItemLabels_Runtime");
+        if (legacyRoot == null)
+            return;
+
+        for (int i = legacyRoot.transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = legacyRoot.transform.GetChild(i);
+            if (child.name.StartsWith(name + "_LabelAnchor_Runtime"))
+                DestroyObjectSafe(child.gameObject);
+        }
+    }
+
+    void ReparentLabelCanvas(Transform canvas, Transform labelsRoot)
+    {
+        if (canvas == null || labelsRoot == null)
+            return;
+
+        canvas.SetParent(labelsRoot, true);
+        canvas.name = GetLabelCanvasObjectName();
+        _labelCanvas = canvas.gameObject;
+        _labelTmp = _labelCanvas.GetComponentInChildren<TextMeshProUGUI>(true);
+    }
+
+    static void DestroyObjectSafe(Object obj)
+    {
+        if (obj == null)
+            return;
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            Object.DestroyImmediate(obj);
+        else
+#endif
+            Object.Destroy(obj);
     }
 
     void ApplyText()
@@ -291,27 +429,6 @@ public class WorldItemLabel : MonoBehaviour
         }
     }
 
-    static Transform ResolveLabelsParent()
-    {
-        var ctrl = EnvironmentLearningController.Instance;
-        if (ctrl != null && ctrl.labelsRoot != null)
-            return ctrl.labelsRoot;
-
-        if (_sharedLabelsRoot == null)
-        {
-            var existing = GameObject.Find("WorldItemLabels_Runtime");
-            if (existing == null)
-            {
-                existing = new GameObject("WorldItemLabels_Runtime");
-                existing.hideFlags = HideFlags.DontSave;
-            }
-
-            _sharedLabelsRoot = existing.transform;
-        }
-
-        return _sharedLabelsRoot;
-    }
-
     static float ResolveAutoPanelWidth(float minWidth, float fontSize, TextMeshProUGUI tmp)
     {
         if (tmp == null || string.IsNullOrEmpty(tmp.text))
@@ -322,52 +439,81 @@ public class WorldItemLabel : MonoBehaviour
         return Mathf.Max(minWidth, Mathf.Ceil(preferred.x + padding));
     }
 
-    void SyncAnchorPosition()
-    {
-        if (_anchor == null)
-            return;
-
-        if (labelAnchor != null)
-            _anchor.position = labelAnchor.position;
-        else
-            _anchor.localPosition = worldOffset;
-    }
-
 #if UNITY_EDITOR
     public void EnsureLabelAnchor()
     {
-        Transform existing = transform.Find("LabelAnchor");
-        if (existing == null)
-        {
-            var go = new GameObject("LabelAnchor");
-            existing = go.transform;
-            existing.SetParent(transform, false);
-            existing.localPosition = worldOffset.sqrMagnitude > 0.001f ? worldOffset : new Vector3(0f, 2.5f, 0f);
-        }
+        PruneDuplicateAnchors(LabelAnchorName, ref labelAnchor);
+        if (labelAnchor == null)
+            labelAnchor = CreateDefaultLabelAnchor();
 
-        labelAnchor = existing;
-        Selection.activeTransform = existing;
-        EditorGUIUtility.PingObject(existing.gameObject);
+        CleanupLegacyRuntimeLabelObjects();
         EnsureLabelBuilt();
+        Selection.activeTransform = labelAnchor;
+        EditorGUIUtility.PingObject(labelAnchor.gameObject);
         EditorUtility.SetDirty(this);
     }
 
     public void EnsureViewAnchor()
     {
-        Transform existing = transform.Find("ViewAnchor");
-        if (existing == null)
+        PruneDuplicateAnchors(ViewAnchorName, ref viewAnchor);
+        if (viewAnchor == null)
         {
-            var go = new GameObject("ViewAnchor");
-            existing = go.transform;
-            existing.SetParent(transform, false);
-            existing.localPosition = viewOffset.sqrMagnitude > 0.001f ? viewOffset : new Vector3(0f, 0f, -2f);
-            existing.localRotation = Quaternion.identity;
+            var go = new GameObject(ViewAnchorName);
+            viewAnchor = go.transform;
+            viewAnchor.SetParent(transform, false);
+            viewAnchor.localPosition = viewOffset.sqrMagnitude > 0.001f ? viewOffset : new Vector3(0f, 0f, -2f);
+            viewAnchor.localRotation = Quaternion.identity;
         }
 
-        viewAnchor = existing;
-        Selection.activeTransform = existing;
-        EditorGUIUtility.PingObject(existing.gameObject);
+        Selection.activeTransform = viewAnchor;
+        EditorGUIUtility.PingObject(viewAnchor.gameObject);
         EditorUtility.SetDirty(this);
+    }
+
+    public void PruneDuplicateAnchorsForItem()
+    {
+        PruneDuplicateAnchors(LabelAnchorName, ref labelAnchor);
+        PruneDuplicateAnchors(ViewAnchorName, ref viewAnchor);
+        CleanupLegacyRuntimeLabelObjects();
+        EditorUtility.SetDirty(this);
+    }
+
+    void PruneDuplicateAnchors(string anchorName, ref Transform keep)
+    {
+        var matches = new List<Transform>();
+        CollectOwnedAnchors(transform, anchorName, matches);
+        if (matches.Count == 0)
+            return;
+
+        if (keep == null || !matches.Contains(keep))
+            keep = matches[0];
+
+        for (int i = 0; i < matches.Count; i++)
+        {
+            if (matches[i] == keep)
+                continue;
+
+            Undo.DestroyObjectImmediate(matches[i].gameObject);
+        }
+    }
+
+    void CollectOwnedAnchors(Transform root, string anchorName, List<Transform> results)
+    {
+        if (root == null)
+            return;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == anchorName)
+                results.Add(child);
+
+            var otherLabel = child.GetComponent<WorldItemLabel>();
+            if (otherLabel != null && otherLabel != this)
+                continue;
+
+            CollectOwnedAnchors(child, anchorName, results);
+        }
     }
 
     public void DrawSceneHandles()
@@ -392,7 +538,7 @@ public class WorldItemLabel : MonoBehaviour
         else
             worldOffset = transform.InverseTransformPoint(world);
 
-        EnsureLabelBuilt();
+        SyncLabelCanvasPosition();
         EditorUtility.SetDirty(this);
     }
 
@@ -426,13 +572,16 @@ public class WorldItemLabel : MonoBehaviour
 
     void OnValidate()
     {
+        if (labelAnchor == null)
+            ResolveLabelAnchorReference();
         if (viewAnchor == null)
             ResolveViewAnchorReference();
 
+        if (_labelCanvas != null)
+            SyncLabelCanvasPosition();
+
         if (_labelTmp != null)
             ApplyText();
-        if (_anchor != null)
-            SyncAnchorPosition();
     }
 #endif
 }

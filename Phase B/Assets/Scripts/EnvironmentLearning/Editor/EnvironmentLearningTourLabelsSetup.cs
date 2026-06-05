@@ -36,6 +36,7 @@ public static class EnvironmentLearningTourLabelsSetup
             label.labelPanelSizeOverride = Vector2.zero;
             label.useRightToLeftText = false;
 
+            label.PruneDuplicateAnchorsForItem();
             label.EnsureLabelAnchor();
             label.EnsureViewAnchor();
             updated++;
@@ -69,12 +70,31 @@ public static class EnvironmentLearningTourLabelsSetup
             if (label == null)
                 label = go.AddComponent<WorldItemLabel>();
 
+            label.PruneDuplicateAnchorsForItem();
             label.EnsureViewAnchor();
             updated++;
         }
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log($"Environment Learning tour view anchors: updated {updated} objects. Place each ViewAnchor where the player should stand.");
+    }
+
+    [MenuItem("Tools/Stress Trainer/Remove Duplicate Tour Anchors")]
+    public static void RemoveDuplicateTourAnchors()
+    {
+        int updated = 0;
+
+        foreach (var label in Object.FindObjectsByType<WorldItemLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (label == null)
+                continue;
+
+            label.PruneDuplicateAnchorsForItem();
+            updated++;
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"Removed duplicate LabelAnchor/ViewAnchor objects on {updated} WorldItemLabel hosts.");
     }
 
     static GameObject FindByName(string objectName)

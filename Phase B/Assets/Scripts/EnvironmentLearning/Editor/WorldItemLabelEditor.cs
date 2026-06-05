@@ -18,6 +18,9 @@ public class WorldItemLabelEditor : Editor
         if (GUILayout.Button("Create / Select View Anchor (stand here + rotate to face item)"))
             label.EnsureViewAnchor();
 
+        if (GUILayout.Button("Remove duplicate anchors on this item"))
+            label.PruneDuplicateAnchorsForItem();
+
         if (GUILayout.Button("Rebuild label preview"))
             label.EnsureLabelBuilt();
     }
