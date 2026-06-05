@@ -4,7 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
-/// Ensures all tour objects have WorldItemLabel + optional LabelAnchor for manual placement.
+/// Ensures all tour objects have WorldItemLabel + LabelAnchor + ViewAnchor for manual placement.
 /// </summary>
 public static class EnvironmentLearningTourLabelsSetup
 {
@@ -33,13 +33,11 @@ public static class EnvironmentLearningTourLabelsSetup
             if (panelPrefab != null)
                 label.labelPanelPrefab = panelPrefab;
 
-            if (entry.ObjectName == "mamad")
-            {
-                label.labelPanelSizeOverride = new Vector2(96f, 40f);
-                label.useRightToLeftText = true;
-            }
+            label.labelPanelSizeOverride = Vector2.zero;
+            label.useRightToLeftText = false;
 
             label.EnsureLabelAnchor();
+            label.EnsureViewAnchor();
             updated++;
         }
 
@@ -48,7 +46,35 @@ public static class EnvironmentLearningTourLabelsSetup
             EditorUtility.SetDirty(flow);
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log($"Environment Learning tour labels: updated {updated} objects. Move each LabelAnchor in Scene view.");
+        Debug.Log(
+            $"Environment Learning tour labels: updated {updated} objects. " +
+            "Move each LabelAnchor (name tag) and ViewAnchor (stand + look) in Scene view.");
+    }
+
+    [MenuItem("Tools/Stress Trainer/Setup Environment Learning Tour View Anchors")]
+    public static void SetupTourViewAnchors()
+    {
+        int updated = 0;
+
+        foreach (var entry in EnvironmentLearningTourCatalog.Items)
+        {
+            var go = FindByName(entry.ObjectName);
+            if (go == null)
+            {
+                Debug.LogWarning($"Tour view anchor: GameObject '{entry.ObjectName}' not found in scene.");
+                continue;
+            }
+
+            var label = go.GetComponent<WorldItemLabel>();
+            if (label == null)
+                label = go.AddComponent<WorldItemLabel>();
+
+            label.EnsureViewAnchor();
+            updated++;
+        }
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log($"Environment Learning tour view anchors: updated {updated} objects. Place each ViewAnchor where the player should stand.");
     }
 
     static GameObject FindByName(string objectName)

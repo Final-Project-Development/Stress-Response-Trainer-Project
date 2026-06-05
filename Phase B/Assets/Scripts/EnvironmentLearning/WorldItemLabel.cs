@@ -18,8 +18,14 @@ public class WorldItemLabel : MonoBehaviour
     [Tooltip("Optional child Transform — drag in Scene to place the panel exactly (overrides World Offset).")]
     public Transform labelAnchor;
 
+    [Tooltip("Optional child Transform — where the player stands during tour navigation. Blue axis = look direction.")]
+    public Transform viewAnchor;
+
     [Tooltip("Offset from this object's pivot when Label Anchor is empty.")]
     public Vector3 worldOffset = new Vector3(0f, 2.5f, 0f);
+
+    [Tooltip("Stand offset when View Anchor is empty.")]
+    public Vector3 viewOffset = new Vector3(0f, 0f, -2f);
 
     [Tooltip("Your designed square panel prefab (Image + TextMeshProUGUI).")]
     public GameObject labelPanelPrefab;
@@ -36,14 +42,65 @@ public class WorldItemLabel : MonoBehaviour
     public float defaultFontSize = 18f;
     public float worldCanvasScale = 0.006f;
 
+    static Transform _sharedLabelsRoot;
+
     Transform _anchor;
     TextMeshProUGUI _labelTmp;
     bool _visible;
 
     void Awake()
     {
+        ResolveViewAnchorReference();
         EnsureLabelBuilt();
         SetVisible(false);
+    }
+
+    /// <summary>
+    /// Returns the manually placed stand/look anchor for tour navigation.
+    /// </summary>
+    public bool TryGetViewAnchor(out Transform anchor)
+    {
+        anchor = ResolveViewAnchorReference();
+        return anchor != null;
+    }
+
+    Transform ResolveViewAnchorReference()
+    {
+        if (viewAnchor != null)
+            return viewAnchor;
+
+        Transform direct = transform.Find("ViewAnchor");
+        if (direct != null)
+        {
+            viewAnchor = direct;
+            return viewAnchor;
+        }
+
+        viewAnchor = FindOwnedViewAnchorRecursive(transform);
+        return viewAnchor;
+    }
+
+    Transform FindOwnedViewAnchorRecursive(Transform root)
+    {
+        if (root == null)
+            return null;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child.name == "ViewAnchor")
+                return child;
+
+            var otherLabel = child.GetComponent<WorldItemLabel>();
+            if (otherLabel != null && otherLabel != this)
+                continue;
+
+            Transform nested = FindOwnedViewAnchorRecursive(child);
+            if (nested != null)
+                return nested;
+        }
+
+        return null;
     }
 
     void OnEnable()
@@ -95,7 +152,7 @@ public class WorldItemLabel : MonoBehaviour
             return;
 
         _anchor = new GameObject($"{name}_LabelAnchor_Runtime").transform;
-        _anchor.SetParent(transform, false);
+        _anchor.SetParent(ResolveLabelsParent(), false);
         SyncAnchorPosition();
 
         if (labelPanelPrefab != null)
@@ -165,7 +222,7 @@ public class WorldItemLabel : MonoBehaviour
         if (_labelTmp == null)
             return;
 
-        _labelTmp.isRightToLeftText = useRightToLeftText;
+        _labelTmp.isRightToLeftText = false;
         _labelTmp.text = labelText;
     }
 
@@ -205,7 +262,7 @@ public class WorldItemLabel : MonoBehaviour
         {
             if (fontSize > 0f)
                 tmp.fontSize = fontSize;
-            tmp.isRightToLeftText = useRightToLeftText;
+            tmp.isRightToLeftText = false;
             if (TMP_Settings.defaultFontAsset != null)
                 tmp.font = TMP_Settings.defaultFontAsset;
             tmp.enableWordWrapping = false;
@@ -218,6 +275,13 @@ public class WorldItemLabel : MonoBehaviour
                 size.x = ResolveAutoPanelWidth(size.x, fontSize, tmp);
         }
 
+        var image = panelRoot.GetComponentInChildren<Image>(true);
+        if (image != null)
+        {
+            image.sprite = ResolvePanelSprite();
+            image.color = ResolvePanelColor();
+        }
+
         var rect = panelRoot.GetComponent<RectTransform>();
         if (rect != null)
         {
@@ -225,6 +289,27 @@ public class WorldItemLabel : MonoBehaviour
                 rect.sizeDelta = size;
             rect.localScale = Vector3.one * Mathf.Max(0.0001f, scale);
         }
+    }
+
+    static Transform ResolveLabelsParent()
+    {
+        var ctrl = EnvironmentLearningController.Instance;
+        if (ctrl != null && ctrl.labelsRoot != null)
+            return ctrl.labelsRoot;
+
+        if (_sharedLabelsRoot == null)
+        {
+            var existing = GameObject.Find("WorldItemLabels_Runtime");
+            if (existing == null)
+            {
+                existing = new GameObject("WorldItemLabels_Runtime");
+                existing.hideFlags = HideFlags.DontSave;
+            }
+
+            _sharedLabelsRoot = existing.transform;
+        }
+
+        return _sharedLabelsRoot;
     }
 
     static float ResolveAutoPanelWidth(float minWidth, float fontSize, TextMeshProUGUI tmp)
@@ -267,9 +352,35 @@ public class WorldItemLabel : MonoBehaviour
         EditorUtility.SetDirty(this);
     }
 
+    public void EnsureViewAnchor()
+    {
+        Transform existing = transform.Find("ViewAnchor");
+        if (existing == null)
+        {
+            var go = new GameObject("ViewAnchor");
+            existing = go.transform;
+            existing.SetParent(transform, false);
+            existing.localPosition = viewOffset.sqrMagnitude > 0.001f ? viewOffset : new Vector3(0f, 0f, -2f);
+            existing.localRotation = Quaternion.identity;
+        }
+
+        viewAnchor = existing;
+        Selection.activeTransform = existing;
+        EditorGUIUtility.PingObject(existing.gameObject);
+        EditorUtility.SetDirty(this);
+    }
+
     public void DrawSceneHandles()
     {
+        DrawLabelAnchorSceneHandles();
+        DrawViewAnchorSceneHandles();
+    }
+
+    void DrawLabelAnchorSceneHandles()
+    {
         Transform handle = labelAnchor != null ? labelAnchor : transform;
+        Handles.color = new Color(0.35f, 0.85f, 1f, 1f);
+
         EditorGUI.BeginChangeCheck();
         Vector3 world = Handles.PositionHandle(handle.position, Quaternion.identity);
         if (!EditorGUI.EndChangeCheck())
@@ -285,8 +396,39 @@ public class WorldItemLabel : MonoBehaviour
         EditorUtility.SetDirty(this);
     }
 
+    void DrawViewAnchorSceneHandles()
+    {
+        if (viewAnchor == null)
+            return;
+
+        Handles.color = new Color(0.3f, 1f, 0.45f, 1f);
+
+        EditorGUI.BeginChangeCheck();
+        Vector3 worldPos = Handles.PositionHandle(viewAnchor.position, viewAnchor.rotation);
+        Quaternion worldRot = Handles.RotationHandle(viewAnchor.rotation, viewAnchor.position);
+        if (!EditorGUI.EndChangeCheck())
+            return;
+
+        Undo.RecordObject(viewAnchor, "Move View Anchor");
+        viewAnchor.SetPositionAndRotation(worldPos, worldRot);
+        EditorUtility.SetDirty(this);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (viewAnchor == null)
+            return;
+
+        Gizmos.color = new Color(0.3f, 1f, 0.45f, 0.9f);
+        Gizmos.DrawSphere(viewAnchor.position, 0.12f);
+        Gizmos.DrawRay(viewAnchor.position, viewAnchor.forward * 0.9f);
+    }
+
     void OnValidate()
     {
+        if (viewAnchor == null)
+            ResolveViewAnchorReference();
+
         if (_labelTmp != null)
             ApplyText();
         if (_anchor != null)

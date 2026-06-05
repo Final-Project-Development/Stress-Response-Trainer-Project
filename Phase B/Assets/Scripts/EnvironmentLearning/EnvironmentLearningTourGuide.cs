@@ -266,17 +266,34 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         if (_playerRoot == null)
             return;
 
-        GameObject target = FindSceneObject(objectName);
-        if (target == null)
+        if (!TryFindTourTarget(objectName, out GameObject target, out WorldItemLabel label))
         {
             Debug.LogWarning($"Tour guide: object '{objectName}' not found.");
             return;
         }
 
+        if (label != null && label.TryGetViewAnchor(out Transform viewAnchor))
+        {
+            PlayerGroundSnap.PlacePlayerAtViewAnchor(_playerRoot, viewAnchor);
+            return;
+        }
+
+        if (TryResolveViewAnchor(target.transform, out viewAnchor))
+        {
+            PlayerGroundSnap.PlacePlayerAtViewAnchor(_playerRoot, viewAnchor);
+            return;
+        }
+
         float standoff = standoffMeters > 0.1f ? standoffMeters : defaultStandoffMeters;
-        Vector3 focus = GetFocusWorldPoint(target);
-        Vector3 stand = ComputeStandPosition(focus, standoff);
-        Quaternion look = ComputeLookRotation(stand, focus);
+        if (!TryComputeStandFacingLabelAnchor(target.transform, label, standoff, out Vector3 stand, out Vector3 lookTarget))
+        {
+            Debug.LogWarning(
+                $"Tour guide: '{target.name}' has no ViewAnchor or LabelAnchor. " +
+                "Add a ViewAnchor (recommended) or LabelAnchor on the WorldItemLabel object.");
+            return;
+        }
+
+        Quaternion look = ComputeLookRotation(stand, lookTarget);
 
         var fps = _playerRoot.GetComponent<SimpleFPSController>();
         if (fps != null)
@@ -284,50 +301,70 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         else
             _playerRoot.SetPositionAndRotation(stand, look);
 
-        PlayerGroundSnap.TrySnapToGround(_playerRoot);
+        if (!PlayerGroundSnap.TrySnapNearReferenceHeight(_playerRoot, lookTarget.y))
+            PlayerGroundSnap.TrySnapToGround(_playerRoot, rayHeight: 6f, maxRayDistance: 12f);
     }
 
-    static GameObject FindSceneObject(string objectName)
+    static bool TryFindTourTarget(string objectName, out GameObject target, out WorldItemLabel label)
     {
+        target = null;
+        label = null;
         if (string.IsNullOrWhiteSpace(objectName))
-            return null;
-
-        GameObject exact = FindByExactName(objectName);
-        if (exact != null)
-            return exact;
+            return false;
 
         string normalizedSearch = EnvironmentLearningTourObjectNames.Normalize(objectName);
-        if (string.IsNullOrEmpty(normalizedSearch))
-            return null;
 
-        foreach (var label in FindObjectsByType<WorldItemLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var worldLabel in FindObjectsByType<WorldItemLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (label == null)
+            if (worldLabel == null || IsTourSidebarUi(worldLabel.gameObject))
                 continue;
 
-            if (MatchesTourTarget(label.gameObject.name, label.labelText, objectName, normalizedSearch))
-                return label.gameObject;
+            if (!MatchesTourTarget(
+                    worldLabel.gameObject.name,
+                    worldLabel.labelText,
+                    objectName,
+                    normalizedSearch))
+                continue;
+
+            target = worldLabel.gameObject;
+            label = worldLabel;
+            return true;
         }
+
+        GameObject exact = FindWorldObjectByExactName(objectName);
+        if (exact != null)
+        {
+            target = exact;
+            label = exact.GetComponent<WorldItemLabel>();
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(normalizedSearch))
+            return false;
 
         foreach (var go in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (go == null)
+            if (go == null || IsTourSidebarUi(go))
                 continue;
 
             if (EnvironmentLearningTourObjectNames.Normalize(go.name) == normalizedSearch)
-                return go;
+            {
+                target = go;
+                label = go.GetComponent<WorldItemLabel>();
+                return true;
+            }
         }
 
-        return null;
+        return false;
     }
 
-    static GameObject FindByExactName(string objectName)
+    static GameObject FindWorldObjectByExactName(string objectName)
     {
         GameObject inactiveMatch = null;
 
         foreach (var go in FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
-            if (go == null || go.name != objectName)
+            if (go == null || go.name != objectName || IsTourSidebarUi(go))
                 continue;
 
             if (go.activeInHierarchy)
@@ -338,6 +375,23 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         }
 
         return inactiveMatch;
+    }
+
+    static bool IsTourSidebarUi(GameObject go)
+    {
+        if (go == null)
+            return false;
+
+        Transform current = go.transform;
+        while (current != null)
+        {
+            if (current.name.Trim() == SidebarObjectName.Trim())
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     static bool MatchesTourTarget(string hostName, string labelText, string objectName, string normalizedSearch)
@@ -369,19 +423,92 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         return false;
     }
 
-    static Vector3 GetFocusWorldPoint(GameObject target)
+    static bool TryComputeStandFacingLabelAnchor(
+        Transform target,
+        WorldItemLabel label,
+        float standoff,
+        out Vector3 stand,
+        out Vector3 lookTarget)
     {
+        stand = default;
+        lookTarget = default;
+        if (target == null)
+            return false;
+
+        Transform anchor = ResolveLabelAnchor(label, target);
+        if (anchor == null)
+            return false;
+
+        lookTarget = anchor.position;
+        Vector3 itemOrigin = GetItemViewOrigin(target);
+        Vector3 viewDir = FlattenXZ(lookTarget - itemOrigin);
+        if (viewDir.sqrMagnitude < 0.04f)
+            viewDir = GetObjectForwardXZ(target);
+        else
+            viewDir.Normalize();
+
+        float backOff = Mathf.Max(standoff, 0.75f);
+        stand = lookTarget - viewDir * backOff;
+        stand.y = lookTarget.y;
+        return true;
+    }
+
+    static bool TryResolveViewAnchor(Transform target, out Transform viewAnchor)
+    {
+        viewAnchor = null;
+        if (target == null)
+            return false;
+
         var label = target.GetComponent<WorldItemLabel>();
+        if (label != null && label.TryGetViewAnchor(out viewAnchor))
+            return true;
+
+        viewAnchor = target.Find("ViewAnchor");
+        return viewAnchor != null;
+    }
+
+    static Transform ResolveLabelAnchor(WorldItemLabel label, Transform target)
+    {
         if (label != null && label.labelAnchor != null)
-            return label.labelAnchor.position;
+            return label.labelAnchor;
 
-        if (label != null && label.worldOffset.sqrMagnitude > 0.001f)
-            return target.transform.TransformPoint(label.worldOffset);
+        if (label != null)
+            label.EnsureLabelBuilt();
 
-        if (TryGetRendererBoundsCenter(target.transform, out Vector3 center))
-            return center + Vector3.up * 0.8f;
+        if (label != null && label.labelAnchor != null)
+            return label.labelAnchor;
 
-        return target.transform.position + Vector3.up * 1.2f;
+        Transform namedAnchor = target.Find("LabelAnchor");
+        if (namedAnchor != null)
+            return namedAnchor;
+
+        return null;
+    }
+
+    static Vector3 GetItemViewOrigin(Transform target)
+    {
+        if (TryGetRendererBoundsCenter(target, out Vector3 center))
+            return new Vector3(center.x, target.position.y, center.z);
+
+        return target.position;
+    }
+
+    static Vector3 FlattenXZ(Vector3 value)
+    {
+        value.y = 0f;
+        return value;
+    }
+
+    static Vector3 GetObjectForwardXZ(Transform target)
+    {
+        Vector3 forward = FlattenXZ(target.forward);
+        if (forward.sqrMagnitude < 0.01f)
+            forward = FlattenXZ(target.rotation * Vector3.forward);
+
+        if (forward.sqrMagnitude < 0.01f)
+            forward = Vector3.forward;
+
+        return forward.normalized;
     }
 
     static bool TryGetRendererBoundsCenter(Transform root, out Vector3 center)
@@ -399,19 +526,6 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
 
         center = bounds.center;
         return true;
-    }
-
-    Vector3 ComputeStandPosition(Vector3 focus, float standoff)
-    {
-        Vector3 flatOffset = focus - _playerRoot.position;
-        flatOffset.y = 0f;
-        if (flatOffset.sqrMagnitude < 0.25f)
-            flatOffset = _playerRoot.forward;
-
-        flatOffset.Normalize();
-        Vector3 stand = focus - flatOffset * standoff;
-        stand.y = focus.y - 0.8f + eyeHeightMeters;
-        return stand;
     }
 
     static Quaternion ComputeLookRotation(Vector3 stand, Vector3 focus)

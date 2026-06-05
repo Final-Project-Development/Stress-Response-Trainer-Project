@@ -51,24 +51,92 @@ public static class PlayerGroundSnap
                 playerRoot.position.z,
                 playerRoot.position.y + rayHeight,
                 playerRoot,
-                out float centerY))
+                out float centerY,
+                maxRayDistance))
         {
             Debug.LogWarning(
                 $"PlayerGroundSnap: no ground under {playerRoot.position}. Move spawn onto pavement/terrain.");
             return false;
         }
 
+        ApplyGroundedPosition(playerRoot, centerY);
+        return true;
+    }
+
+    /// <summary>
+    /// Raycast a short distance below a reference height so indoor tour teleports land on the floor, not the roof.
+    /// </summary>
+    /// <summary>
+    /// Teleport to the exact world position and yaw of a manually placed ViewAnchor.
+    /// </summary>
+    public static bool PlacePlayerAtViewAnchor(Transform playerRoot, Transform viewAnchor)
+    {
+        if (playerRoot == null || viewAnchor == null)
+            return false;
+
+        Quaternion look = ComputeYawRotation(viewAnchor.forward);
+        Vector3 pos = viewAnchor.position;
+
+        var fps = playerRoot.GetComponent<SimpleFPSController>();
+        if (fps != null)
+            fps.TeleportTo(pos, look);
+        else
+            playerRoot.SetPositionAndRotation(pos, look);
+
+        return true;
+    }
+
+    static Quaternion ComputeYawRotation(Vector3 forward)
+    {
+        forward.y = 0f;
+        if (forward.sqrMagnitude < 0.01f)
+            return Quaternion.identity;
+
+        return Quaternion.LookRotation(forward.normalized, Vector3.up);
+    }
+
+    public static bool TrySnapNearReferenceHeight(
+        Transform playerRoot,
+        float referenceY,
+        float rayUp = 2f,
+        float rayDown = 5f)
+    {
+        if (playerRoot == null)
+            return false;
+
+        float rayStartY = referenceY + rayUp;
+        float maxDistance = rayUp + rayDown;
+
+        if (!TryGetGroundCenterY(
+                playerRoot.position.x,
+                playerRoot.position.z,
+                rayStartY,
+                playerRoot,
+                out float centerY,
+                maxDistance))
+            return false;
+
+        ApplyGroundedPosition(playerRoot, centerY);
+        return true;
+    }
+
+    static void ApplyGroundedPosition(Transform playerRoot, float centerY)
+    {
         Vector3 grounded = new Vector3(playerRoot.position.x, centerY, playerRoot.position.z);
         var fps = playerRoot.GetComponent<SimpleFPSController>();
         if (fps != null)
             fps.TeleportTo(grounded, playerRoot.rotation);
         else
             playerRoot.SetPositionAndRotation(grounded, playerRoot.rotation);
-
-        return true;
     }
 
-    static bool TryGetGroundCenterY(float x, float z, float rayStartY, Transform playerRoot, out float centerY)
+    static bool TryGetGroundCenterY(
+        float x,
+        float z,
+        float rayStartY,
+        Transform playerRoot,
+        out float centerY,
+        float maxRayDistance = 120f)
     {
         centerY = 0f;
         Vector3 origin = new Vector3(x, rayStartY, z);
@@ -77,7 +145,7 @@ public static class PlayerGroundSnap
                 origin,
                 Vector3.down,
                 out RaycastHit hit,
-                120f,
+                maxRayDistance,
                 Physics.DefaultRaycastLayers,
                 QueryTriggerInteraction.Ignore))
         {
@@ -85,7 +153,7 @@ public static class PlayerGroundSnap
                     origin,
                     Vector3.down,
                     out hit,
-                    120f,
+                    maxRayDistance,
                     ~0,
                     QueryTriggerInteraction.Ignore))
                 return false;

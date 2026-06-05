@@ -15,6 +15,9 @@ public class WorldItemLabelEditor : Editor
         if (GUILayout.Button("Create / Select Label Anchor (move in Scene for exact position)"))
             label.EnsureLabelAnchor();
 
+        if (GUILayout.Button("Create / Select View Anchor (stand here + rotate to face item)"))
+            label.EnsureViewAnchor();
+
         if (GUILayout.Button("Rebuild label preview"))
             label.EnsureLabelBuilt();
     }
