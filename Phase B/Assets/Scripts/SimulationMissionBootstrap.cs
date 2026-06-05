@@ -287,6 +287,24 @@ public class SimulationMissionBootstrap : MonoBehaviour
         }
     }
 
+    public void ApplyEnvironmentLearningDoorLayout()
+    {
+        Door door = _exitDoor ?? ResolveExitDoorRoot();
+        if (door == null)
+            return;
+
+        _exitDoor = door;
+        AssignDoorLeaves(door);
+        door.CacheDoorLeafPoses();
+        door.ApplyLeafStates(leftOpen: false, rightOpen: true, immediate: true);
+    }
+
+    public void RestoreExitDoorAfterEnvironmentLearning()
+    {
+        Door door = _exitDoor ?? ResolveExitDoorRoot();
+        door?.ResetToOpen();
+    }
+
     private void ResetSimulation1WorldState()
     {
         ReactivateSimulation1Pickups();

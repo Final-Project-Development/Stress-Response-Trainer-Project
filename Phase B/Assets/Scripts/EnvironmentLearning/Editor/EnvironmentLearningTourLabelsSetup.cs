@@ -13,7 +13,7 @@ public static class EnvironmentLearningTourLabelsSetup
     static readonly (string objectName, string label)[] TourObjects =
     {
         ("Home", "Home"),
-        ("mamad", "Mamad"),
+        ("mamad", "\u05DE\u05DE\"\u05D3"),
         ("Map", "Map"),
         ("Compass", "Compass"),
         ("firstaid", "First Aid"),
@@ -21,6 +21,9 @@ public static class EnvironmentLearningTourLabelsSetup
         ("Flashlight", "Flashlight"),
         ("Radio", "Radio"),
         ("WoundedCharacter_TPose", "Wounded Character"),
+        ("PhoneBox", "Public Phone"),
+        ("PFB_DoorDouble", "Entrance Door"),
+        ("PFB_Lightswitch (1)", "Light Switch"),
     };
 
     [MenuItem("Tools/Stress Trainer/Setup Environment Learning Tour Labels")]
@@ -45,6 +48,12 @@ public static class EnvironmentLearningTourLabelsSetup
             label.labelText = entry.label;
             if (panelPrefab != null)
                 label.labelPanelPrefab = panelPrefab;
+
+            if (entry.objectName == "mamad")
+            {
+                label.labelPanelSizeOverride = new Vector2(96f, 40f);
+                label.useRightToLeftText = true;
+            }
 
             label.EnsureLabelAnchor();
             updated++;

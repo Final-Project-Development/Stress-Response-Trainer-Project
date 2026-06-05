@@ -487,6 +487,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (CurrentPhase != Phase.EnvironmentLearning) return;
         environmentLearningController?.EndLearning();
+        gameManager?.RestoreExitDoorAfterEnvironmentLearning();
         CurrentPhase = Phase.SimulationPick;
         SetEnvironmentLearningTourPropsVisible(false);
         SetSimulationGameplayState(false, false);
@@ -1103,6 +1104,7 @@ public class TrainingFlowController : MonoBehaviour
         StopAllNarration();
         CurrentPhase = Phase.EnvironmentLearning;
         SetEnvironmentLearningTourPropsVisible(true);
+        gameManager?.ApplyEnvironmentLearningDoorLayout();
 
         // Teleport before ApplyPhaseUI (movement/gravity off) — same timing as Simulation 2 briefing → start.
         PlacePlayerAtEnvironmentLearningSpawn();

@@ -1227,9 +1227,9 @@ MonoBehaviour:
   learningHudDefaultText: 
   worldLabelPanelSprite: {fileID: 0}
   worldLabelPanelColor: {r: 1, g: 1, b: 1, a: 1}
-  worldLabelWorldScale: 0.006
-  worldLabelPanelSize: {x: 140, y: 44}
-  worldLabelFontSize: 18
+  worldLabelWorldScale: 0.005
+  worldLabelPanelSize: {x: 125, y: 36}
+  worldLabelFontSize: 16
   labelsRoot: {fileID: 0}
 --- !u!4 &26590991
 Transform:
@@ -1855,6 +1855,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 1084136738}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &41818062
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 41818063}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &41818063
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 41818062}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.01, y: 2.04, z: 0.04}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1637539128}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &42303213
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3467,9 +3498,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Map
+  labelText: map
+  labelAnchor: {fileID: 1545286052}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -5858,6 +5892,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 190140091}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &190628652
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 190628653}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &190628653
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190628652}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.54, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 438912575}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &191956246
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7460,7 +7525,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 455992422}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 489937548842179602, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       insertIndex: -1
@@ -8443,7 +8511,10 @@ PrefabInstance:
       objectReference: {fileID: 9100000, guid: 28176a07b8341534fa9cf45280ef7a6b, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 41818063}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       insertIndex: -1
@@ -8858,6 +8929,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4e3d2c1b0a9787698fedcba543210ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrainingFlowMissingUiBootstrap
+--- !u!1 &287333648
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 287333649}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &287333649
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287333648}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.28, y: 3.314, z: 6.54}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1426506262}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &291074155
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9062,6 +9164,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
+--- !u!1 &299104890
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 299104891}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &299104891
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 299104890}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: 0.183, z: 0.037}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1250405380}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &299120317
 GameObject:
   m_ObjectHideFlags: 0
@@ -14334,9 +14467,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: First Aid
+  labelText: first aid
+  labelAnchor: {fileID: 190628653}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -14915,6 +15051,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 1923829150}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &455992421
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 455992422}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &455992422
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 455992421}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.33, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1115426891}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &457853173
 GameObject:
   m_ObjectHideFlags: 0
@@ -16017,7 +16184,7 @@ MonoBehaviour:
 
     You
     can pause at any time with Esc.'
-  simulation1GameplayRoot: {fileID: 438912567}
+  simulation1GameplayRoot: {fileID: 0}
   simulation2GameplayRoot: {fileID: 1637539122}
   playerFpsController: {fileID: 2111572959}
   playerRoot: {fileID: 2111572958}
@@ -18591,6 +18758,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8f352fc1555608546b47a1dd0630ba96, type: 3}
+--- !u!1 &546683815
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 546683816}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &546683816
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 546683815}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 6.13, y: 1.36, z: -17.61}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1951179520}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &553403988 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4000014020937924, guid: 16cf0b07a33e1b64783881738c2af316, type: 3}
@@ -27462,7 +27660,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 5592070709032241197, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1545286052}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 5592070709032277005, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
       insertIndex: -1
@@ -27982,7 +28183,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 395724061595525604, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1153919681}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 395724061595827652, guid: 5992b97f7c81a1b4a9ef3bc108225998, type: 3}
       insertIndex: -1
@@ -33533,9 +33737,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Radio
+  labelText: radio
+  labelAnchor: {fileID: 1957285011}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -34998,9 +35205,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Flashlight
+  labelText: flash light
+  labelAnchor: {fileID: 1153919681}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -36564,7 +36774,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1643042184}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1923807695599562, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       insertIndex: -1
@@ -36627,8 +36840,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
   labelText: phone box
+  labelAnchor: {fileID: 1643042184}
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -37330,9 +37546,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Water Bottle
+  labelText: water bottle
+  labelAnchor: {fileID: 455992422}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -38469,6 +38688,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 1866522270}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1153919680
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1153919681}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1153919681
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1153919680}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.349, z: -0.155}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1039600644}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1155161708
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -39208,7 +39458,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4792054580643688, guid: b55df95fa6211964e8ad561501250fac, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 190628653}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1987713744733760, guid: b55df95fa6211964e8ad561501250fac, type: 3}
       insertIndex: -1
@@ -39567,6 +39820,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 1899352738}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1186300958
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1186300959}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1186300959
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1186300958}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.06, y: 0.23, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1600712714}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1192691383
 GameObject:
   m_ObjectHideFlags: 0
@@ -40709,37 +40993,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 10, y: 2.220446e-16, z: 10}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &1208897044
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1208897045}
-  m_Layer: 0
-  m_Name: EnvironmentLearningSpawn
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1208897045
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1208897044}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.000000008234608, y: -0.096500926, z: -0.000000036449403, w: 0.9953329}
-  m_LocalPosition: {x: -1.85, y: 0.56, z: 6.64}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1426506262}
-  m_LocalEulerAnglesHint: {x: 0, y: -11.075, z: 0}
 --- !u!1001 &1210163510
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -41879,6 +42132,34 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1000011952006634, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
   m_PrefabInstance: {fileID: 1678824947}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &1250405380 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4000012197371874, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+  m_PrefabInstance: {fileID: 1678824947}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1250405383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1250405379}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
+  labelText: light switch
+  labelAnchor: {fileID: 299104891}
+  worldOffset: {x: 0, y: 2.5, z: 0}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
+  defaultPanelSize: {x: 140, y: 44}
+  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultFontSize: 18
+  worldCanvasScale: 0.006
 --- !u!1001 &1251913885
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -45207,7 +45488,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 6252425786264669093, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1186300959}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6252425786264639365, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
       insertIndex: -1
@@ -47055,9 +47339,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Home
+  labelText: home
+  labelAnchor: {fileID: 287333649}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -50232,6 +50519,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3232699976469291583, guid: 9a2cc7ad1a225a5419653f6000df779b, type: 3}
   m_PrefabInstance: {fileID: 52647042}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1545286051
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1545286052}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1545286052
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1545286051}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.139, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 96765444}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1546752820
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -52465,9 +52783,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Compass
+  labelText: compass
+  labelAnchor: {fileID: 1186300959}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -53863,13 +54184,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
   labelText: Wounded Character
+  labelAnchor: {fileID: 41818063}
   worldOffset: {x: 0, y: 2.5, z: 0}
   labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
-  defaultPanelSize: {x: 200, y: 64}
-  defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
+  defaultPanelSize: {x: 140, y: 44}
+  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
-  defaultFontSize: 24
-  worldCanvasScale: 0.01
+  defaultFontSize: 18
+  worldCanvasScale: 0.006
+--- !u!4 &1637539128 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
+  m_PrefabInstance: {fileID: 265743909}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1641313304
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -53997,6 +54326,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
+--- !u!1 &1643042183
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1643042184}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1643042184
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643042183}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 2.85, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1085725019}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1643251786 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1000010707776372, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
@@ -55555,6 +55915,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 451208, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 438912575}
+    - targetCorrespondingSourceObject: {fileID: 451208, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 287333649}
+    - targetCorrespondingSourceObject: {fileID: 4000012047744974, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1833490995}
+    - targetCorrespondingSourceObject: {fileID: 4000012197371874, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 299104891}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 175876, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
       insertIndex: -1
@@ -55565,9 +55934,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1000010728641318, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1798020999}
+    - targetCorrespondingSourceObject: {fileID: 1000010728641318, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1798021005}
     - targetCorrespondingSourceObject: {fileID: 1000010943916374, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1274761777}
+    - targetCorrespondingSourceObject: {fileID: 1000011952006634, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1250405383}
     - targetCorrespondingSourceObject: {fileID: 1000010707776372, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1643251788}
@@ -56146,7 +56521,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: -24}
-  m_SizeDelta: {x: 720, y: 120}
+  m_SizeDelta: {x: 400, y: 90}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1704750774
 MonoBehaviour:
@@ -56161,7 +56536,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.07, g: 0.1, b: 0.15, a: 0.88}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -58893,6 +59268,34 @@ MonoBehaviour:
   openAngleY: 128
   closeAngleY: 0
   rotateSpeed: 360
+--- !u!4 &1798021000 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4000012047744974, guid: 23d25b2e2d4364dd4b92c52ef40cd36e, type: 3}
+  m_PrefabInstance: {fileID: 1678824947}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1798021005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1798020994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
+  labelText: door
+  labelAnchor: {fileID: 1833490995}
+  worldOffset: {x: 0, y: 2.5, z: 0}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
+  defaultPanelSize: {x: 140, y: 44}
+  defaultPanelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultFontSize: 18
+  worldCanvasScale: 0.006
 --- !u!1001 &1799128248
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -59558,6 +59961,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
+--- !u!1 &1833490994
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1833490995}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1833490995
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1833490994}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.09, z: 0.03}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1798021000}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1839423406 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5317444133248045765, guid: f14800a72eef93b4b8f9e5abc3844f0d, type: 3}
@@ -62743,6 +63177,7 @@ Transform:
   - {fileID: 986364018}
   - {fileID: 32356813}
   - {fileID: 1659312322}
+  - {fileID: 546683816}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!114 &1951179521
@@ -62777,9 +63212,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: Mamad
+  labelText: mamad
+  labelAnchor: {fileID: 546683816}
   worldOffset: {x: 0, y: 2.5, z: 0}
-  labelPanelPrefab: {fileID: 6711388325756573043, guid: c9056d83bc71c9d47ab5a7195073155e, type: 3}
+  labelPanelPrefab: {fileID: 0}
+  labelPanelSizeOverride: {x: 0, y: 0}
+  useRightToLeftText: 0
   defaultPanelSize: {x: 200, y: 64}
   defaultPanelColor: {r: 0.08, g: 0.12, b: 0.18, a: 0.92}
   defaultTextColor: {r: 1, g: 1, b: 1, a: 1}
@@ -62856,6 +63294,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 1982098627}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1957285010
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1957285011}
+  m_Layer: 0
+  m_Name: LabelAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1957285011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957285010}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.396, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 994839989}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1959937873
 GameObject:
   m_ObjectHideFlags: 0
@@ -68166,7 +68635,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 2068541145896866084, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1957285011}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 2068541145896570116, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
       insertIndex: -1
@@ -73272,4 +73744,3 @@ SceneRoots:
   - {fileID: 1951179520}
   - {fileID: 575828025}
   - {fileID: 26590991}
-  - {fileID: 1208897045}

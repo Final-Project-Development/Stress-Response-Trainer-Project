@@ -24,6 +24,11 @@ public class WorldItemLabel : MonoBehaviour
     [Tooltip("Your designed square panel prefab (Image + TextMeshProUGUI).")]
     public GameObject labelPanelPrefab;
 
+    [Tooltip("Optional per-item size (e.g. Mamad: 96×40). Zero = use EnvironmentLearning global size.")]
+    public Vector2 labelPanelSizeOverride;
+
+    public bool useRightToLeftText;
+
     [Header("Default panel (when prefab is empty)")]
     public Vector2 defaultPanelSize = new Vector2(140f, 44f);
     public Color defaultPanelColor = Color.white;
@@ -143,11 +148,13 @@ public class WorldItemLabel : MonoBehaviour
         textRect.offsetMax = new Vector2(-10f, -6f);
 
         _labelTmp = textGo.AddComponent<TextMeshProUGUI>();
+        if (TMP_Settings.defaultFontAsset != null)
+            _labelTmp.font = TMP_Settings.defaultFontAsset;
         _labelTmp.alignment = TextAlignmentOptions.Center;
         _labelTmp.fontSize = defaultFontSize;
         _labelTmp.color = defaultTextColor;
         _labelTmp.raycastTarget = false;
-        _labelTmp.enableWordWrapping = true;
+        _labelTmp.enableWordWrapping = false;
 
         canvasGo.AddComponent<WorldLabelBillboard>();
         ApplyText();
@@ -155,8 +162,11 @@ public class WorldItemLabel : MonoBehaviour
 
     void ApplyText()
     {
-        if (_labelTmp != null)
-            _labelTmp.text = labelText;
+        if (_labelTmp == null)
+            return;
+
+        _labelTmp.isRightToLeftText = useRightToLeftText;
+        _labelTmp.text = labelText;
     }
 
     static Sprite ResolvePanelSprite()
@@ -181,10 +191,32 @@ public class WorldItemLabel : MonoBehaviour
     {
         var ctrl = EnvironmentLearningController.Instance;
         float scale = ctrl != null ? ctrl.worldLabelWorldScale : worldCanvasScale;
-        Vector2 size = ctrl != null ? ctrl.worldLabelPanelSize : defaultPanelSize;
+        Vector2 size = labelPanelSizeOverride.sqrMagnitude > 0.01f
+            ? labelPanelSizeOverride
+            : ctrl != null
+                ? ctrl.worldLabelPanelSize
+                : defaultPanelSize;
         float fontSize = ctrl != null && ctrl.worldLabelFontSize > 0f
             ? ctrl.worldLabelFontSize
             : defaultFontSize;
+
+        var tmp = panelRoot.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (tmp != null)
+        {
+            if (fontSize > 0f)
+                tmp.fontSize = fontSize;
+            tmp.isRightToLeftText = useRightToLeftText;
+            if (TMP_Settings.defaultFontAsset != null)
+                tmp.font = TMP_Settings.defaultFontAsset;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Overflow;
+
+            if (!string.IsNullOrEmpty(labelText))
+                tmp.text = labelText;
+
+            if (labelPanelSizeOverride.sqrMagnitude <= 0.01f)
+                size.x = ResolveAutoPanelWidth(size.x, fontSize, tmp);
+        }
 
         var rect = panelRoot.GetComponent<RectTransform>();
         if (rect != null)
@@ -193,10 +225,16 @@ public class WorldItemLabel : MonoBehaviour
                 rect.sizeDelta = size;
             rect.localScale = Vector3.one * Mathf.Max(0.0001f, scale);
         }
+    }
 
-        var tmp = panelRoot.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (tmp != null && fontSize > 0f)
-            tmp.fontSize = fontSize;
+    static float ResolveAutoPanelWidth(float minWidth, float fontSize, TextMeshProUGUI tmp)
+    {
+        if (tmp == null || string.IsNullOrEmpty(tmp.text))
+            return minWidth;
+
+        Vector2 preferred = tmp.GetPreferredValues(tmp.text);
+        float padding = 24f;
+        return Mathf.Max(minWidth, Mathf.Ceil(preferred.x + padding));
     }
 
     void SyncAnchorPosition()

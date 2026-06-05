@@ -159,6 +159,52 @@ public class Door : MonoBehaviour
             doorLeaves = new[] { right };
     }
 
+    /// <summary>Independent leaf states (e.g. tour: right closed, left open for light-switch visibility).</summary>
+    public void ApplyLeafStates(bool leftOpen, bool rightOpen, bool immediate = true)
+    {
+        EnsureDoorLeavesCached();
+        CacheDoorLeafPoses();
+
+        if (TryResolveDoorAnimator(out Animator resolvedAnimator) && resolvedAnimator != null)
+            resolvedAnimator.enabled = false;
+
+        _useManualRotation = false;
+
+        if (_leafPoses != null && _leafPoses.Length > 0)
+        {
+            for (int i = 0; i < _leafPoses.Length; i++)
+            {
+                var pose = _leafPoses[i];
+                if (pose.transform == null)
+                    continue;
+
+                bool open = IsLeftLeaf(pose.transform) ? leftOpen : rightOpen;
+                pose.transform.localRotation = open
+                    ? pose.closedLocalRotation * Quaternion.Euler(0f, pose.openSign * openAngleY, 0f)
+                    : pose.closedLocalRotation;
+            }
+        }
+        else if (doorLeaves != null)
+        {
+            for (int i = 0; i < doorLeaves.Length; i++)
+            {
+                var leaf = doorLeaves[i];
+                if (leaf == null)
+                    continue;
+
+                bool open = IsLeftLeaf(leaf) ? leftOpen : rightOpen;
+                float sign = GetLeafOpenSign(leaf.name, doorLeaves.Length);
+                leaf.localRotation = open
+                    ? Quaternion.Euler(0f, sign * openAngleY, 0f)
+                    : Quaternion.identity;
+            }
+        }
+
+        isOpen = leftOpen || rightOpen;
+        _currentAngleY = isOpen ? openAngleY : closeAngleY;
+        _targetAngleY = _currentAngleY;
+    }
+
     public void ResetToOpen()
     {
         isOpen = true;
@@ -344,7 +390,18 @@ public class Door : MonoBehaviour
         if (leafCount == 1)
             return 1f;
 
-        return leafName.ToLowerInvariant().Contains("left") ? 1f : -1f;
+        return IsLeftLeafName(leafName) ? 1f : -1f;
+    }
+
+    private static bool IsLeftLeaf(Transform leaf)
+    {
+        return leaf != null && IsLeftLeafName(leaf.name);
+    }
+
+    private static bool IsLeftLeafName(string leafName)
+    {
+        return !string.IsNullOrEmpty(leafName)
+            && leafName.ToLowerInvariant().Contains("left");
     }
 
     private bool HasState(string stateName)

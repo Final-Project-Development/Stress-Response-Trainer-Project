@@ -86,6 +86,16 @@ public class GameManager : MonoBehaviour
             objectiveText.raycastTarget = false;
     }
 
+    public void ApplyEnvironmentLearningDoorLayout()
+    {
+        _missionBootstrap?.ApplyEnvironmentLearningDoorLayout();
+    }
+
+    public void RestoreExitDoorAfterEnvironmentLearning()
+    {
+        _missionBootstrap?.RestoreExitDoorAfterEnvironmentLearning();
+    }
+
     public void PrepareSimulation1Mission()
     {
         if (_flow == null)
