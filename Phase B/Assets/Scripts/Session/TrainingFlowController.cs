@@ -194,6 +194,10 @@ public class TrainingFlowController : MonoBehaviour
     public Color simulationTimerNormalColor = Color.white;
     public Color simulationTimerUrgentColor = new Color(1f, 0.4f, 0.35f, 1f);
 
+    [Header("Live watch HR chart (Samsung / Fit3 bridge)")]
+    [Tooltip("WorkoutHeartRateChartReceiver on BioMetrics. Active during Sim 1 & 2 when watch sends UDP timeline on port 5055.")]
+    public WorkoutHeartRateChartReceiver workoutHeartRateChart;
+
     [Header("Results graphs (SCI + HRV per simulation)")]
     [Tooltip("Simulation 1 — Stress Change Index over time (existing).")]
     public SimpleStressLineGraph resultsGraph;
@@ -380,6 +384,9 @@ public class TrainingFlowController : MonoBehaviour
         if (environmentLearningController == null)
             environmentLearningController = FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
 
+        if (workoutHeartRateChart == null)
+            workoutHeartRateChart = FindFirstObjectByType<WorkoutHeartRateChartReceiver>(FindObjectsInactive.Include);
+
         HideEnvironmentLearningTourSidebar();
     }
 
@@ -406,6 +413,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(gatewayDisconnectWarningRoot, false);
         SetHudVisible(false);
         SetActiveSafe(timerPanel, false);
+        SetWorkoutHeartRateChartActive(false);
         SetActiveSafe(pausePanel, false);
         SetSafetyWarningVisible(false);
         SetSimulation2Status(sim2BriefingBody);
@@ -1075,6 +1083,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(timerPanel, showStressTimer);
         if (showStressTimer)
             RefreshSimulationStressTimerDisplay();
+        SetWorkoutHeartRateChartActive(showStressTimer);
         ApplyPlayerInteractionMode();
     }
 
@@ -1108,6 +1117,15 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (go != null && go.activeSelf != on)
             go.SetActive(on);
+    }
+
+    private void SetWorkoutHeartRateChartActive(bool on)
+    {
+        if (workoutHeartRateChart == null)
+            return;
+
+        if (workoutHeartRateChart.enabled != on)
+            workoutHeartRateChart.enabled = on;
     }
 
     void HideEnvironmentLearningTourSidebar()

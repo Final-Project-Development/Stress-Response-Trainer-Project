@@ -17272,6 +17272,7 @@ MonoBehaviour:
   simulationTimerUrgentBelowSeconds: 60
   simulationTimerNormalColor: {r: 1, g: 1, b: 1, a: 1}
   simulationTimerUrgentColor: {r: 1, g: 0.4, b: 0.35, a: 1}
+  workoutHeartRateChart: {fileID: 1583832696}
   resultsGraph: {fileID: 740979082}
   sim1HrvResultsGraph: {fileID: 740979082}
   sim1HrvGraphMaxDisplay: 120
@@ -56431,6 +56432,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1583832695}
   - component: {fileID: 1583832694}
+  - component: {fileID: 1583832696}
   m_Layer: 0
   m_Name: BioMetrics
   m_TagString: Untagged
@@ -56471,6 +56473,24 @@ MonoBehaviour:
   zoneName: '-'
   kcalPerMin: 0
   totalCalories: 0
+--- !u!114 &1583832696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1583832693}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7af47e6a1c847341b10532798ca550f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorkoutHeartRateChartReceiver
+  unityListenPort: 5055
+  chartWidth: 900
+  chartHeight: 420
+  createChartInFrontOfCamera: 1
+  distanceFromCamera: 2
+  verticalOffset: -0.15
 --- !u!4 &1583832695
 Transform:
   m_ObjectHideFlags: 0
