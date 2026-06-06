@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -35,13 +37,58 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     [Header("Network")]
     public int unityListenPort = 5055;
 
-    [Header("Chart")]
+    [Header("Fallback (when watch timeline is unavailable)")]
+    [Tooltip("Simulated/live HR from MockPhysiologySource — used when no UDP timeline on unityListenPort.")]
+    public MockPhysiologySource physiologyFallback;
+    public bool usePhysiologyFallbackWhenIdle = true;
+    public float fallbackSampleIntervalSeconds = 1f;
+    public float watchTimelineIdleSeconds = 5f;
+
+    [Header("Designer UI (assign your Canvas panel)")]
+    [Tooltip("WatchHrChart_Panel root — shown/hidden by TrainingFlowController during Sim 1/2.")]
+    public GameObject chartPanelRoot;
+    [Tooltip("RawImage inside the panel where the HR line chart is drawn.")]
+    public RawImage chartImage;
+    [Tooltip("ChartTitle TMP — assign for automatic title text.")]
+    public TextMeshProUGUI titleTextTmp;
+    [Tooltip("Title shown on ChartTitle when Update Title At Runtime is on.")]
+    public string chartTitleText = "heart rate";
+    [Tooltip("ChartInfoText TMP — assign for automatic status updates.")]
+    public TextMeshProUGUI infoTextTmp;
+
+    [Header("Info text (ChartInfoText)")]
+    [Tooltip("Overwrite ChartInfoText at runtime (layout/style stay manual).")]
+    public bool updateInfoAtRuntime = true;
+    public float infoRefreshInterval = 0.5f;
+    [TextArea] public string noWatchConnectedText = "No smartwatch connected";
+    [TextArea] public string simulatedHrInfoText = "No smartwatch connected — simulated HR: {0:0} bpm";
+    [TextArea] public string watchReceivingText = "Smartwatch connected — receiving data...";
+    [TextArea] public string watchConnectedStatsText =
+        "Smartwatch connected | Samples: {0} | HR: {1:0} bpm (avg {2:0.0})";
+
+    [Header("Manual design")]
+    [Tooltip("On = script only updates Chart Image texture. Design all labels/layout on WatchHrChart_Panel yourself.")]
+    public bool manualDesignMode = true;
+    [Tooltip("When Manual Design Mode is on, chart texture size follows ChartGraph RectTransform (WYSIWYG in editor).")]
+    public bool useChartImageRectSize = true;
+    [Tooltip("Overwrite ChartTitle TMP at runtime (layout/style stay manual).")]
+    public bool updateTitleAtRuntime = true;
+
+    [Header("Chart render")]
     public int chartWidth = 900;
     public int chartHeight = 420;
+    [Tooltip("How often to redraw the chart while HR samples are arriving.")]
+    public float chartRefreshInterval = 0.25f;
+    [Tooltip("When using a designed panel background, keep the plot area transparent.")]
+    public bool useTransparentChartBackground = true;
+    public Color lineColor = new Color(0.3f, 0.75f, 0.95f, 1f);
+    public Color gridColor = new Color(0.42f, 0.5f, 0.58f, 0.45f);
+    public Color axisColor = new Color(0.75f, 0.82f, 0.9f, 0.9f);
+    public Color pointColor = Color.white;
 
-    [Header("World-space position")]
+    [Header("Runtime fallback (only if chartImage is not assigned)")]
     public bool createChartInFrontOfCamera = true;
-    public float distanceFromCamera = 2.0f;
+    public float distanceFromCamera = 2f;
     public float verticalOffset = -0.15f;
 
     private UdpClient udpClient;
@@ -55,12 +102,18 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     private float lastPacketUnityTime;
     private bool chartDirty;
 
-    private Canvas canvas;
-    private RawImage chartImage;
-    private Text titleText;
-    private Text infoText;
+    private Canvas runtimeCanvas;
+    private Text runtimeTitleText;
+    private Text runtimeInfoText;
 
     private Texture2D chartTexture;
+    private bool usingDesignerPanel;
+    private float nextChartRefreshTime;
+    private float nextFallbackSampleTime;
+    private float nextInfoRefreshTime;
+    private string lastDisplayedInfo;
+    private Coroutine layoutRefreshRoutine;
+    private const string FallbackSessionId = "simulated-hr";
 
     private class HrSample
     {
@@ -85,12 +138,15 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     {
         Application.runInBackground = true;
 
-        CreateChartUi();
+        if (physiologyFallback == null)
+            physiologyFallback = FindFirstObjectByType<MockPhysiologySource>();
+
+        InitializeChartUi();
         StartUdpReceiver();
 
-        SetTitle("Workout HR Timeline");
-        SetInfo($"Waiting for HR timeline on UDP {unityListenPort}...");
-        DrawEmptyChart("Waiting for workout timeline");
+        ApplyChartTitle();
+        ScheduleChartLayoutRefresh();
+        RefreshInfoDisplay(true);
     }
 
     void Update()
@@ -103,21 +159,37 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             HandleJson(json);
         }
 
-        // Safety: if hr_session_end is missed, still draw after packets stop arriving.
-        if (chartDirty && Time.realtimeSinceStartup - lastPacketUnityTime > 1.0f)
+        TryAppendPhysiologyFallbackSample();
+        RefreshInfoDisplay();
+
+        if (chartDirty && Time.realtimeSinceStartup >= nextChartRefreshTime)
         {
             RenderCurrentSession();
-            chartDirty = false;
+            nextChartRefreshTime = Time.realtimeSinceStartup + chartRefreshInterval;
         }
     }
 
     void LateUpdate()
     {
-        UpdateChartTransform();
+        if (!usingDesignerPanel)
+            UpdateRuntimeChartTransform();
+    }
+
+    private void InitializeChartUi()
+    {
+        usingDesignerPanel = chartImage != null;
+
+        if (usingDesignerPanel)
+            return;
+
+        CreateRuntimeChartUi();
     }
 
     private void StartUdpReceiver()
     {
+        if (running)
+            return;
+
         udpClient = new UdpClient(unityListenPort);
         running = true;
 
@@ -140,9 +212,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
                 string json = Encoding.UTF8.GetString(data).Trim();
 
                 if (!string.IsNullOrWhiteSpace(json))
-                {
                     packetQueue.Enqueue(json);
-                }
             }
             catch
             {
@@ -166,34 +236,70 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         }
 
         if (message == null || string.IsNullOrWhiteSpace(message.type))
-        {
             return;
-        }
 
         lastPacketUnityTime = Time.realtimeSinceStartup;
+        nextInfoRefreshTime = 0f;
 
         switch (message.type)
         {
             case "hr_session_start":
                 HandleSessionStart(message);
                 break;
-
             case "hr":
                 HandleHrSample(message);
                 break;
-
             case "hr_session_end":
                 HandleSessionEnd(message);
                 break;
         }
     }
 
+    private void TryAppendPhysiologyFallbackSample()
+    {
+        if (!usePhysiologyFallbackWhenIdle || physiologyFallback == null)
+            return;
+
+        bool watchTimelineActive = lastPacketUnityTime > 0f &&
+            Time.realtimeSinceStartup - lastPacketUnityTime < watchTimelineIdleSeconds;
+        if (watchTimelineActive)
+            return;
+
+        if (Time.realtimeSinceStartup < nextFallbackSampleTime)
+            return;
+
+        nextFallbackSampleTime = Time.realtimeSinceStartup + fallbackSampleIntervalSeconds;
+
+        float bpm = physiologyFallback.CurrentHeartRate;
+        if (bpm <= 0f)
+            return;
+
+        currentSessionId = FallbackSessionId;
+        var session = GetOrCreateSession(FallbackSessionId);
+
+        DateTimeOffset measuredAt = DateTimeOffset.UtcNow;
+        string key = $"{measuredAt.ToUnixTimeMilliseconds()}|{bpm:0.0}";
+        if (session.sampleKeys.Contains(key))
+            return;
+
+        session.sampleKeys.Add(key);
+        session.samples.Add(new HrSample
+        {
+            bpm = bpm,
+            measuredAt = measuredAt,
+            source = "simulated",
+            sampleIndex = session.samples.Count
+        });
+
+        chartDirty = true;
+        nextChartRefreshTime = 0f;
+        nextInfoRefreshTime = 0f;
+    }
+
     private void HandleSessionStart(HrTimelineMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.sessionId))
-        {
             return;
-        }
 
         currentSessionId = message.sessionId;
 
@@ -201,29 +307,20 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         session.expectedSampleCount = message.sampleCount;
         session.startedAtRaw = message.startedAt;
         session.endedAtRaw = message.endedAt;
-
         session.samples.Clear();
         session.sampleKeys.Clear();
 
-        SetTitle("Receiving workout HR timeline...");
-        SetInfo($"Session started. Expected samples: {message.sampleCount}");
-
         chartDirty = true;
+        nextChartRefreshTime = 0f;
+        nextInfoRefreshTime = 0f;
 
         Debug.Log($"HR session started: {message.sessionId}, expected samples: {message.sampleCount}");
     }
 
     private void HandleHrSample(HrTimelineMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.sessionId))
-        {
+        if (string.IsNullOrWhiteSpace(message.sessionId) || message.bpm <= 0f)
             return;
-        }
-
-        if (message.bpm <= 0f)
-        {
-            return;
-        }
 
         if (!DateTimeOffset.TryParse(message.measuredAt, out DateTimeOffset measuredAt))
         {
@@ -232,16 +329,12 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         }
 
         var session = GetOrCreateSession(message.sessionId);
-
         string key = $"{measuredAt.ToUnixTimeMilliseconds()}|{message.bpm:0.0}";
 
         if (session.sampleKeys.Contains(key))
-        {
             return;
-        }
 
         session.sampleKeys.Add(key);
-
         session.samples.Add(new HrSample
         {
             bpm = message.bpm,
@@ -252,19 +345,16 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
         currentSessionId = message.sessionId;
         chartDirty = true;
+        nextChartRefreshTime = 0f;
 
         if (session.samples.Count % 25 == 0)
-        {
-            SetInfo($"Receiving samples: {session.samples.Count}/{message.sampleCount}");
-        }
+            nextInfoRefreshTime = 0f;
     }
 
     private void HandleSessionEnd(HrTimelineMessage message)
     {
         if (!string.IsNullOrWhiteSpace(message.sessionId))
-        {
             currentSessionId = message.sessionId;
-        }
 
         RenderCurrentSession();
         chartDirty = false;
@@ -276,11 +366,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     {
         if (!sessions.TryGetValue(sessionId, out HrSessionData session))
         {
-            session = new HrSessionData
-            {
-                sessionId = sessionId
-            };
-
+            session = new HrSessionData { sessionId = sessionId };
             sessions[sessionId] = session;
         }
 
@@ -290,46 +376,39 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     private void RenderCurrentSession()
     {
         if (string.IsNullOrWhiteSpace(currentSessionId))
-        {
             return;
-        }
 
         if (!sessions.TryGetValue(currentSessionId, out HrSessionData session))
-        {
             return;
-        }
 
         RenderSession(session);
     }
 
     private void RenderSession(HrSessionData session)
     {
-        List<HrSample> samples = session.samples
-            .OrderBy(s => s.measuredAt)
-            .ToList();
+        if (chartImage == null)
+            return;
+
+        List<HrSample> samples = session.samples.OrderBy(s => s.measuredAt).ToList();
 
         if (samples.Count < 2)
         {
-            DrawEmptyChart("Not enough HR samples yet");
-            SetInfo($"Samples received: {samples.Count}");
+            DrawEmptyChart();
+            nextInfoRefreshTime = 0f;
             return;
         }
 
         DateTimeOffset start = samples.First().measuredAt;
         DateTimeOffset end = samples.Last().measuredAt;
-
         double durationSeconds = Math.Max(1.0, (end - start).TotalSeconds);
 
         float minBpm = samples.Min(s => s.bpm);
         float maxBpm = samples.Max(s => s.bpm);
-        float avgBpm = samples.Average(s => s.bpm);
 
         float yMin = minBpm;
         float yMax = maxBpm;
-
         float range = yMax - yMin;
         float padding = Mathf.Max(5f, range * 0.15f);
-
         yMin = Mathf.Max(0f, yMin - padding);
         yMax = yMax + padding;
 
@@ -339,14 +418,18 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             yMax += 5f;
         }
 
-        chartTexture = new Texture2D(chartWidth, chartHeight, TextureFormat.RGBA32, false);
-        chartTexture.filterMode = FilterMode.Point;
+        GetChartDimensions(out int renderWidth, out int renderHeight);
 
-        Color32 background = new Color32(18, 18, 18, 255);
-        Color32 grid = new Color32(55, 55, 55, 255);
-        Color32 axis = new Color32(210, 210, 210, 255);
-        Color32 line = new Color32(0, 220, 130, 255);
-        Color32 pointColor = new Color32(255, 255, 255, 255);
+        chartTexture = new Texture2D(renderWidth, renderHeight, TextureFormat.RGBA32, false);
+        chartTexture.filterMode = FilterMode.Bilinear;
+
+        Color32 background = useTransparentChartBackground
+            ? new Color32(0, 0, 0, 0)
+            : new Color32(18, 18, 18, 255);
+        Color32 grid = gridColor;
+        Color32 axis = axisColor;
+        Color32 line = lineColor;
+        Color32 point = pointColor;
 
         FillTexture(chartTexture, background);
 
@@ -354,16 +437,13 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         int right = 20;
         int top = 20;
         int bottom = 50;
-
         int plotLeft = left;
-        int plotRight = chartWidth - right;
+        int plotRight = renderWidth - right;
         int plotBottom = bottom;
-        int plotTop = chartHeight - top;
-
+        int plotTop = renderHeight - top;
         int plotWidth = plotRight - plotLeft;
         int plotHeight = plotTop - plotBottom;
 
-        // Grid.
         for (int i = 0; i <= 5; i++)
         {
             int x = plotLeft + Mathf.RoundToInt(plotWidth * (i / 5f));
@@ -376,7 +456,6 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             DrawLine(chartTexture, plotLeft, y, plotRight, y, grid);
         }
 
-        // Axes.
         DrawLine(chartTexture, plotLeft, plotBottom, plotRight, plotBottom, axis);
         DrawLine(chartTexture, plotLeft, plotBottom, plotLeft, plotTop, axis);
 
@@ -390,46 +469,29 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
             int x = plotLeft + Mathf.RoundToInt(xNorm * plotWidth);
             int y = plotBottom + Mathf.RoundToInt(yNorm * plotHeight);
-
             var current = new Vector2Int(x, y);
 
             if (previous.HasValue)
-            {
                 DrawLine(chartTexture, previous.Value.x, previous.Value.y, current.x, current.y, line);
-            }
 
-            DrawSmallPoint(chartTexture, x, y, pointColor);
-
+            DrawSmallPoint(chartTexture, x, y, point);
             previous = current;
         }
 
         chartTexture.Apply();
-
         chartImage.texture = chartTexture;
 
-        string localStart = start.ToLocalTime().ToString("HH:mm:ss");
-        string localEnd = end.ToLocalTime().ToString("HH:mm:ss");
-
-        TimeSpan duration = end - start;
-
-        SetTitle("Workout HR Timeline");
-
-        SetInfo(
-            $"Samples: {samples.Count}/{session.expectedSampleCount} | " +
-            $"Time: {localStart} - {localEnd} | " +
-            $"Duration: {duration:mm\\:ss} | " +
-            $"BPM min/avg/max: {minBpm:0}/{avgBpm:0.0}/{maxBpm:0}"
-        );
+        ApplyChartTitle();
+        nextInfoRefreshTime = 0f;
     }
 
-    private void CreateChartUi()
+    private void CreateRuntimeChartUi()
     {
         GameObject canvasObject = new GameObject("Workout HR Chart Canvas");
         canvasObject.transform.SetParent(transform, false);
 
-        canvas = canvasObject.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-
+        runtimeCanvas = canvasObject.AddComponent<Canvas>();
+        runtimeCanvas.renderMode = RenderMode.WorldSpace;
         canvasObject.AddComponent<CanvasScaler>();
         canvasObject.AddComponent<GraphicRaycaster>();
 
@@ -437,81 +499,110 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         canvasRect.sizeDelta = new Vector2(1000, 620);
         canvasObject.transform.localScale = Vector3.one * 0.0018f;
 
-        UpdateChartTransform(canvasObject.transform);
+        UpdateRuntimeChartTransform(canvasObject.transform);
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         GameObject titleObject = new GameObject("Title");
         titleObject.transform.SetParent(canvasObject.transform, false);
-
-        titleText = titleObject.AddComponent<Text>();
-        titleText.font = font;
-        titleText.fontSize = 34;
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.color = Color.white;
+        runtimeTitleText = titleObject.AddComponent<Text>();
+        runtimeTitleText.font = font;
+        runtimeTitleText.fontSize = 34;
+        runtimeTitleText.alignment = TextAnchor.MiddleCenter;
+        runtimeTitleText.color = Color.white;
 
         RectTransform titleRect = titleObject.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.5f, 0.5f);
-        titleRect.anchorMax = new Vector2(0.5f, 0.5f);
-        titleRect.pivot = new Vector2(0.5f, 0.5f);
         titleRect.sizeDelta = new Vector2(950, 60);
         titleRect.anchoredPosition = new Vector2(0, 270);
 
         GameObject chartObject = new GameObject("Chart Image");
         chartObject.transform.SetParent(canvasObject.transform, false);
-
         chartImage = chartObject.AddComponent<RawImage>();
 
         RectTransform chartRect = chartObject.GetComponent<RectTransform>();
-        chartRect.anchorMin = new Vector2(0.5f, 0.5f);
-        chartRect.anchorMax = new Vector2(0.5f, 0.5f);
-        chartRect.pivot = new Vector2(0.5f, 0.5f);
         chartRect.sizeDelta = new Vector2(chartWidth, chartHeight);
         chartRect.anchoredPosition = new Vector2(0, 15);
 
         GameObject infoObject = new GameObject("Info");
         infoObject.transform.SetParent(canvasObject.transform, false);
-
-        infoText = infoObject.AddComponent<Text>();
-        infoText.font = font;
-        infoText.fontSize = 24;
-        infoText.alignment = TextAnchor.MiddleCenter;
-        infoText.color = Color.white;
+        runtimeInfoText = infoObject.AddComponent<Text>();
+        runtimeInfoText.font = font;
+        runtimeInfoText.fontSize = 24;
+        runtimeInfoText.alignment = TextAnchor.MiddleCenter;
+        runtimeInfoText.color = Color.white;
 
         RectTransform infoRect = infoObject.GetComponent<RectTransform>();
-        infoRect.anchorMin = new Vector2(0.5f, 0.5f);
-        infoRect.anchorMax = new Vector2(0.5f, 0.5f);
-        infoRect.pivot = new Vector2(0.5f, 0.5f);
         infoRect.sizeDelta = new Vector2(950, 80);
         infoRect.anchoredPosition = new Vector2(0, -270);
     }
 
-    private void DrawEmptyChart(string message)
+    private void DrawEmptyChart()
     {
-        chartTexture = new Texture2D(chartWidth, chartHeight, TextureFormat.RGBA32, false);
-        chartTexture.filterMode = FilterMode.Point;
+        if (chartImage == null)
+            return;
 
-        FillTexture(chartTexture, new Color32(18, 18, 18, 255));
+        GetChartDimensions(out int renderWidth, out int renderHeight);
 
-        Color32 axis = new Color32(210, 210, 210, 255);
-        DrawLine(chartTexture, 60, 50, chartWidth - 20, 50, axis);
-        DrawLine(chartTexture, 60, 50, 60, chartHeight - 20, axis);
+        chartTexture = new Texture2D(renderWidth, renderHeight, TextureFormat.RGBA32, false);
+        chartTexture.filterMode = FilterMode.Bilinear;
+
+        Color32 background = useTransparentChartBackground
+            ? new Color32(0, 0, 0, 0)
+            : new Color32(18, 18, 18, 255);
+        FillTexture(chartTexture, background);
+
+        Color32 grid = gridColor;
+        Color32 axis = axisColor;
+
+        int left = 60;
+        int right = 20;
+        int top = 20;
+        int bottom = 50;
+        int plotLeft = left;
+        int plotRight = renderWidth - right;
+        int plotBottom = bottom;
+        int plotTop = renderHeight - top;
+        int plotWidth = plotRight - plotLeft;
+        int plotHeight = plotTop - plotBottom;
+
+        for (int i = 0; i <= 5; i++)
+        {
+            int x = plotLeft + Mathf.RoundToInt(plotWidth * (i / 5f));
+            DrawLine(chartTexture, x, plotBottom, x, plotTop, grid);
+        }
+
+        for (int i = 0; i <= 5; i++)
+        {
+            int y = plotBottom + Mathf.RoundToInt(plotHeight * (i / 5f));
+            DrawLine(chartTexture, plotLeft, y, plotRight, y, grid);
+        }
+
+        DrawLine(chartTexture, plotLeft, plotBottom, plotRight, plotBottom, axis);
+        DrawLine(chartTexture, plotLeft, plotBottom, plotLeft, plotTop, axis);
 
         chartTexture.Apply();
         chartImage.texture = chartTexture;
+    }
 
-        SetInfo(message);
+    private void GetChartDimensions(out int width, out int height)
+    {
+        if (manualDesignMode && useChartImageRectSize && chartImage != null)
+        {
+            Rect rect = chartImage.rectTransform.rect;
+            width = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.width)), 64, 4096);
+            height = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.height)), 64, 4096);
+            return;
+        }
+
+        width = chartWidth;
+        height = chartHeight;
     }
 
     private void FillTexture(Texture2D texture, Color32 color)
     {
         Color32[] pixels = new Color32[texture.width * texture.height];
-
         for (int i = 0; i < pixels.Length; i++)
-        {
             pixels[i] = color;
-        }
-
         texture.SetPixels32(pixels);
     }
 
@@ -520,9 +611,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         for (int y = centerY - 1; y <= centerY + 1; y++)
         {
             for (int x = centerX - 1; x <= centerX + 1; x++)
-            {
                 SetPixelSafe(texture, x, y, color);
-            }
         }
     }
 
@@ -530,66 +619,112 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     {
         int dx = Mathf.Abs(x1 - x0);
         int dy = Mathf.Abs(y1 - y0);
-
         int sx = x0 < x1 ? 1 : -1;
         int sy = y0 < y1 ? 1 : -1;
-
         int err = dx - dy;
 
         while (true)
         {
             SetPixelSafe(texture, x0, y0, color);
-
             if (x0 == x1 && y0 == y1)
-            {
                 break;
-            }
 
             int e2 = 2 * err;
-
-            if (e2 > -dy)
-            {
-                err -= dy;
-                x0 += sx;
-            }
-
-            if (e2 < dx)
-            {
-                err += dx;
-                y0 += sy;
-            }
+            if (e2 > -dy) { err -= dy; x0 += sx; }
+            if (e2 < dx) { err += dx; y0 += sy; }
         }
     }
 
     private void SetPixelSafe(Texture2D texture, int x, int y, Color32 color)
     {
         if (x < 0 || x >= texture.width || y < 0 || y >= texture.height)
-        {
             return;
-        }
-
         texture.SetPixel(x, y, color);
     }
 
-    private void SetTitle(string text)
+    private void ApplyChartTitle()
     {
-        if (titleText != null)
-        {
-            titleText.text = text;
-        }
+        if (!updateTitleAtRuntime)
+            return;
+
+        if (titleTextTmp != null)
+            titleTextTmp.text = chartTitleText;
+        else if (runtimeTitleText != null)
+            runtimeTitleText.text = chartTitleText;
     }
 
-    private void SetInfo(string text)
+    private bool IsWatchTimelineActive()
     {
-        if (infoText != null)
-        {
-            infoText.text = text;
-        }
+        return lastPacketUnityTime > 0f &&
+            Time.realtimeSinceStartup - lastPacketUnityTime < watchTimelineIdleSeconds;
     }
 
-    private void UpdateChartTransform(Transform chartTransform = null)
+    private string BuildInfoStatus()
     {
-        Transform target = chartTransform != null ? chartTransform : canvas != null ? canvas.transform : null;
+        if (IsWatchTimelineActive() &&
+            !string.IsNullOrWhiteSpace(currentSessionId) &&
+            currentSessionId != FallbackSessionId &&
+            sessions.TryGetValue(currentSessionId, out HrSessionData watchSession))
+        {
+            int count = watchSession.samples.Count;
+            if (count >= 2)
+            {
+                List<HrSample> ordered = watchSession.samples.OrderBy(s => s.measuredAt).ToList();
+                float current = ordered[ordered.Count - 1].bpm;
+                float avg = ordered.Average(s => s.bpm);
+                return string.Format(watchConnectedStatsText, count, current, avg);
+            }
+
+            if (count > 0)
+                return $"{watchReceivingText} ({count})";
+
+            return watchReceivingText;
+        }
+
+        if (usePhysiologyFallbackWhenIdle && physiologyFallback != null)
+        {
+            float hr = physiologyFallback.CurrentHeartRate;
+            if (hr > 0f)
+                return string.Format(simulatedHrInfoText, hr);
+        }
+
+        return noWatchConnectedText;
+    }
+
+    private void RefreshInfoDisplay(bool force = false)
+    {
+        if (!updateInfoAtRuntime)
+            return;
+
+        if (!force && Time.realtimeSinceStartup < nextInfoRefreshTime)
+            return;
+
+        nextInfoRefreshTime = Time.realtimeSinceStartup + infoRefreshInterval;
+
+        string text = BuildInfoStatus();
+        if (!force && text == lastDisplayedInfo)
+            return;
+
+        lastDisplayedInfo = text;
+        ApplyInfo(text);
+    }
+
+    private void ApplyInfo(string text)
+    {
+        if (infoTextTmp != null)
+            infoTextTmp.text = text;
+        else if (runtimeInfoText != null)
+            runtimeInfoText.text = text;
+    }
+
+    private void UpdateRuntimeChartTransform(Transform chartTransform = null)
+    {
+        if (usingDesignerPanel)
+            return;
+
+        Transform target = chartTransform != null
+            ? chartTransform
+            : runtimeCanvas != null ? runtimeCanvas.transform : null;
         if (target == null)
             return;
 
@@ -604,8 +739,8 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         if (cam == null)
             return;
 
-        if (canvas != null)
-            canvas.worldCamera = cam;
+        if (runtimeCanvas != null)
+            runtimeCanvas.worldCamera = cam;
 
         target.position =
             cam.transform.position +
@@ -632,27 +767,51 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     void OnEnable()
     {
-        if (canvas != null)
-            canvas.gameObject.SetActive(true);
+        if (!usingDesignerPanel && runtimeCanvas != null)
+            runtimeCanvas.gameObject.SetActive(true);
+        else if (usingDesignerPanel)
+            ScheduleChartLayoutRefresh();
     }
 
     void OnDisable()
     {
-        if (canvas != null)
-            canvas.gameObject.SetActive(false);
+        if (layoutRefreshRoutine != null)
+        {
+            StopCoroutine(layoutRefreshRoutine);
+            layoutRefreshRoutine = null;
+        }
+
+        if (!usingDesignerPanel && runtimeCanvas != null)
+            runtimeCanvas.gameObject.SetActive(false);
+    }
+
+    private void ScheduleChartLayoutRefresh()
+    {
+        if (!isActiveAndEnabled || chartImage == null)
+            return;
+
+        if (layoutRefreshRoutine != null)
+            StopCoroutine(layoutRefreshRoutine);
+
+        layoutRefreshRoutine = StartCoroutine(RefreshChartAfterLayout());
+    }
+
+    private IEnumerator RefreshChartAfterLayout()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        ApplyChartTitle();
+        DrawEmptyChart();
+        RefreshInfoDisplay(true);
+        layoutRefreshRoutine = null;
     }
 
     void OnDestroy()
     {
         running = false;
 
-        try
-        {
-            udpClient?.Close();
-        }
-        catch
-        {
-            // Ignore shutdown errors.
-        }
+        try { udpClient?.Close(); }
+        catch { /* Ignore shutdown errors. */ }
     }
 }

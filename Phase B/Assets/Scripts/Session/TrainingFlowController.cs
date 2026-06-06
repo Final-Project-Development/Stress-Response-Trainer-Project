@@ -195,6 +195,8 @@ public class TrainingFlowController : MonoBehaviour
     public Color simulationTimerUrgentColor = new Color(1f, 0.4f, 0.35f, 1f);
 
     [Header("Live watch HR chart (Samsung / Fit3 bridge)")]
+    [Tooltip("WatchHrChart_Panel on Canvas — shown during Sim 1 & 2.")]
+    public GameObject watchHrChartPanel;
     [Tooltip("WorkoutHeartRateChartReceiver on BioMetrics. Active during Sim 1 & 2 when watch sends UDP timeline on port 5055.")]
     public WorkoutHeartRateChartReceiver workoutHeartRateChart;
 
@@ -387,6 +389,9 @@ public class TrainingFlowController : MonoBehaviour
         if (workoutHeartRateChart == null)
             workoutHeartRateChart = FindFirstObjectByType<WorkoutHeartRateChartReceiver>(FindObjectsInactive.Include);
 
+        if (watchHrChartPanel == null && workoutHeartRateChart != null)
+            watchHrChartPanel = workoutHeartRateChart.chartPanelRoot;
+
         HideEnvironmentLearningTourSidebar();
     }
 
@@ -413,6 +418,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(gatewayDisconnectWarningRoot, false);
         SetHudVisible(false);
         SetActiveSafe(timerPanel, false);
+        SetActiveSafe(watchHrChartPanel, false);
         SetWorkoutHeartRateChartActive(false);
         SetActiveSafe(pausePanel, false);
         SetSafetyWarningVisible(false);
@@ -1081,6 +1087,7 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(sim2ResultsPanel, CurrentPhase == Phase.Simulation2Results);
         bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
         SetActiveSafe(timerPanel, showStressTimer);
+        SetActiveSafe(watchHrChartPanel, showStressTimer);
         if (showStressTimer)
             RefreshSimulationStressTimerDisplay();
         SetWorkoutHeartRateChartActive(showStressTimer);
