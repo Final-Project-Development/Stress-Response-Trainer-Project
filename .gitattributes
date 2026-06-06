@@ -1,0 +1,25 @@
+# Unity — keep YAML merges predictable for scenes/prefabs
+*.mat merge=unityyamlmerge eol=lf
+*.anim merge=unityyamlmerge eol=lf
+*.unity merge=unityyamlmerge eol=lf
+*.prefab merge=unityyamlmerge eol=lf
+*.asset merge=unityyamlmerge eol=lf
+*.meta text eol=lf
+*.cs text diff=csharp
+*.shader text
+*.cginc text
+*.hlsl text
+
+# Binary assets (regular Git — no file here is over GitHub's 100MB limit)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.fbx binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.exr binary
+*.dll binary
+*.so binary
+*.a binary
+*.aar binary
