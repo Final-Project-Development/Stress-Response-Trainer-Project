@@ -67,7 +67,7 @@ public class EmergencyDispatchUI : MonoBehaviour
             string msg = flow != null
                 ? flow.sim2NeedKitHint
                 : "Collect the first aid kit first.";
-            _gameManager.ShowMissionMessage(msg, 4f);
+            _gameManager.ShowTransientMissionNote(msg, 4f);
             return;
         }
 
@@ -76,7 +76,7 @@ public class EmergencyDispatchUI : MonoBehaviour
             string msg = flow != null
                 ? flow.sim2NeedContactCasualtyBeforePhoneHint
                 : "Find the wounded person first and press E on the casualty.";
-            _gameManager.ShowMissionMessage(msg, 4f);
+            _gameManager.ShowTransientMissionNote(msg, 4f);
             return;
         }
 
@@ -85,7 +85,7 @@ public class EmergencyDispatchUI : MonoBehaviour
             string msg = flow != null
                 ? flow.sim2AlreadyReportedHint
                 : "You already called dispatch. Return to the wounded person.";
-            _gameManager.ShowMissionMessage(msg, 3f);
+            _gameManager.ShowTransientMissionNote(msg, 3f);
             return;
         }
 

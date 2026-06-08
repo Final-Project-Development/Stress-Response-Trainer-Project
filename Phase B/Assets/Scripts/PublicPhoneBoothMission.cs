@@ -186,7 +186,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
+                _gameManager?.ShowTransientMissionNote(blockMessage, Sim2BoothHintDuration);
             return false;
         }
 
@@ -421,7 +421,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
+                _gameManager?.ShowTransientMissionNote(blockMessage, Sim2BoothHintDuration);
             return false;
         }
 
@@ -452,7 +452,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         if (!CanUseBooth(out string blockMessage))
         {
             if (!string.IsNullOrEmpty(blockMessage))
-                _gameManager?.ShowMissionMessage(blockMessage, Sim2BoothHintDuration);
+                _gameManager?.ShowTransientMissionNote(blockMessage, Sim2BoothHintDuration);
             return true;
         }
 
@@ -673,7 +673,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
                 ShowFlowMessage(_flow != null ? _flow.sim2PhoneInsertCoinHint : "Press E on the coin slot.");
                 break;
             case BoothStep.TakeHandset:
-                ShowFlowMessage(_flow != null ? _flow.sim2PhoneTakeHandsetHint : "Press E on the receiver to pick it up.");
+                ShowFlowMessage(_flow != null ? _flow.sim2PhoneCoinInsertedObjective : "Press E on the receiver.");
                 break;
             case BoothStep.Dial101:
                 ShowDialHint();
@@ -741,7 +741,13 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
     private void ShowFlowMessage(string msg)
     {
-        _gameManager?.ShowMissionMessage(msg, Sim2BoothHintDuration);
+        if (_gameManager == null || string.IsNullOrWhiteSpace(msg))
+            return;
+
+        if (_gameManager.HasMissionStatusPanel())
+            _gameManager.SetMissionObjectiveLine(msg);
+        else
+            _gameManager.ShowMissionMessage(msg, Sim2BoothHintDuration);
     }
 
     private void ShowBoothStep(string completedLine, string objectiveLine)
@@ -932,6 +938,5 @@ public class PublicPhoneBoothMission : MonoBehaviour
             return;
 
         _hintShown = true;
-        ShowFlowMessage(_flow != null ? _flow.sim2ObjectiveCallDispatch : "Use the public telephone to call for first aid help.");
     }
 }

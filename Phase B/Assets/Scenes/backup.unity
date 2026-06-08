@@ -7955,7 +7955,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Result
+  m_text: Hint
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
@@ -17735,46 +17735,28 @@ MonoBehaviour:
     telephone:\n    press E to open the door \u2192 \n    E insert coin \u2192 \n   
     E lift the phone \u2192 \n    dial 1, 0, 1\n4) Return to the wounded person:\n   
     Press E to start treatment, then press 1, then 2, then 3"
-  sim1MissionStartHint: "Enter the home and collect 5 items (press E): \nwater bottle,
-    flash light, radio, compass, map."
   sim1AllItemsCollectedCompleted: All supplies collected.
-  sim1AllItemsCollectedHint: Turn off the lights inside the home (press E).
   sim1LightsOffCompleted: Lights turned off.
-  sim1LightsOffHint: Close the entrance door (press E).
   sim1DoorClosedCompleted: Door closed.
-  sim1DoorClosedHint: Run to the Mamad (shelter) outside!
   sim1ShelterDoorOpenHint: "The entrance door is still open. \nClose the door before
     entering the Mamad."
   sim1ObjectiveTurnOffLights: Turn off the lights using inside the home.
   sim1ObjectiveCloseDoor: Close the entrance door before leaving - press E.
   sim1ObjectiveRunToShelter: Run to the Mamad (shelter) outside.
-  sim1ItemsList: water bottle, flash light, radio, compass, map
-  sim2MissionStartHint: Find the first aid kit in the city and press E to collect
-    it.
   sim2ObjectiveFindKit: Search the city for the first aid kit.
-  sim2KitCollectedHint: Find the wounded person and press E.
   sim2ObjectiveFindWounded: Find the wounded person in the city and press E.
   sim2CasualtyContactedCompleted: Wounded person found.
-  sim2ObjectiveGoToPhone: Go to the public telephone and call for first aid help.
-  sim2ObjectiveCallDispatch: 'At the phone booth: press E on the door, then the coin
-    slot, then the receiver. Dial 1, 0, 1.'
+  sim2ObjectiveGoToPhone: Go to the public telephone and open the door.
   sim2EmergencyReportedCompleted: Emergency call placed.
-  sim2ReportCompletedHint: Return to the wounded person and start treatment.
-  sim2TreatmentStartHint: 'Treatment: press 1, then 2, then 3.'
   sim2PhoneOpenDoorHint: Press E on the booth door to open it.
   sim2PhoneDoorOpenedCompleted: Door opened.
   sim2PhoneDoorOpenedObjective: Press E on the coin slot, then E on the receiver.
-  sim2PhoneDoorOpenedHint: Press E on the coin slot, then E on the phone.
   sim2PhoneCoinInsertedCompleted: Coin inserted.
   sim2PhoneCoinInsertedObjective: Press E on the receiver.
   sim2PhoneDoorAlreadyOpenHint: "The door is already open. \nPress E on the coin
     slot."
   sim2PhoneInsertCoinHint: Press E on the coin slot to insert a coin.
-  sim2PhoneCoinInsertedHint: "Coin inserted. \n"
-  sim2PhoneTakeHandsetHint: Press E on the phone to lift it, then dial 1, 0, 1.
   sim2PhoneReceiverLiftedCompleted: Phone lifted.
-  sim2PhoneDialStartHint: Dial 1, then 0, then 1 to call for help.
-  sim2PhoneDialProgressHint: "Keep dialing 101\u2026"
   sim2TreatmentStartedCompleted: Treatment started.
   sim2TreatmentCompleteCompleted: 'Treatment complete: 1, 2, 3.'
   sim2NeedContactCasualtyBeforePhoneHint: Find the wounded person first and press
@@ -40433,7 +40415,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0
+      value: -0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalRotation.x
@@ -40441,11 +40423,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 1
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -40453,7 +40435,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 180
+      value: 270
       objectReference: {fileID: 0}
     - target: {fileID: 4545222230360270, guid: 18eda4fabd0c44e45931cb3effe7d5ea, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z

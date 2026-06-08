@@ -29,7 +29,7 @@ public class LightSwitch : MonoBehaviour
 
         if (_gameManager != null && !_gameManager.CanTurnOffLights())
         {
-            _gameManager.ShowMissionMessage("Collect all supplies first, then turn off the lights.", 3.5f);
+            _gameManager.ShowTransientMissionNote("Collect all supplies first, then turn off the lights.", 3.5f);
             return;
         }
 

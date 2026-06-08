@@ -70,7 +70,7 @@ public class MissionStatusPanelController : MonoBehaviour
         _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
         _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
 
-        if (hintButtonLabel != null && string.IsNullOrWhiteSpace(hintButtonLabel.text))
+        if (hintButtonLabel != null)
             hintButtonLabel.text = hintButtonDefaultLabel;
 
         WirePlayerCursorRegion();

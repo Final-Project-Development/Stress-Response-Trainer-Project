@@ -75,7 +75,7 @@ public class WoundedMan : MonoBehaviour
         {
             var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
             string msg = flow != null ? flow.sim2NeedKitHint : "Find the first aid kit in the city before treating the wounded.";
-            gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
+            gameManager.ShowTransientMissionNote(msg, Sim2WoundedHintDuration);
             return;
         }
 
@@ -83,13 +83,19 @@ public class WoundedMan : MonoBehaviour
         {
             var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
             if (!gameManager.HasContactedCasualty())
+            {
                 gameManager.OnCasualtyApproached();
-            else
+            }
+            else if (!gameManager.HasMissionStatusPanel())
             {
                 string msg = flow != null
                     ? flow.sim2ObjectiveGoToPhone
                     : "Go to the public telephone and open the door.";
                 gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
+            }
+            else
+            {
+                gameManager.RefreshSimulation2MissionObjective();
             }
 
             return;

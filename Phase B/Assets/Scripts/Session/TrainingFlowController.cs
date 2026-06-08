@@ -297,21 +297,13 @@ public class TrainingFlowController : MonoBehaviour
         "4) Return to the wounded person: press E on the casualty, then press 1, then 2, then 3 for treatment\n\n" +
         "Press Start Mission when you are ready.";
 
-    [Header("Simulation 1 — in-game mission hints")]
-    [TextArea] public string sim1MissionStartHint =
-        "Collect 5 supplies inside the home (press E): water bottle, flashlight, radio, compass, map.";
+    [Header("Simulation 1 — mission panel copy")]
     [TextArea] public string sim1AllItemsCollectedCompleted =
         "All supplies collected.";
-    [TextArea] public string sim1AllItemsCollectedHint =
-        "Next: turn off the lights using the light switch inside the home.";
     [TextArea] public string sim1LightsOffCompleted =
         "Lights turned off.";
-    [TextArea] public string sim1LightsOffHint =
-        "Next: close the entrance door (press E on the door).";
     [TextArea] public string sim1DoorClosedCompleted =
         "Door closed.";
-    [TextArea] public string sim1DoorClosedHint =
-        "Next: run to the Mamad shelter outside.";
     [TextArea] public string sim1ShelterDoorOpenHint =
         "The entrance door is still open. Close PFB_DoorDouble before entering the Mamad.";
     [TextArea] public string sim1ObjectiveTurnOffLights =
@@ -320,47 +312,28 @@ public class TrainingFlowController : MonoBehaviour
         "Close the entrance door before going to the Mamad shelter.";
     [TextArea] public string sim1ObjectiveRunToShelter =
         "Run to the Mamad shelter outside.";
-    [TextArea] public string sim1ItemsList =
-        "water bottle, flashlight, radio, compass, map";
 
-    [Header("Simulation 2 — in-game mission hints")]
-    [TextArea] public string sim2MissionStartHint =
-        "Find the first aid kit in the city and press E to collect it.";
+    [Header("Simulation 2 — mission panel copy")]
     [TextArea] public string sim2ObjectiveFindKit =
         "Step 1: Find the first aid kit and press E to collect it.";
-    [TextArea] public string sim2KitCollectedHint =
-        "First aid kit collected. Find the wounded person and press E.";
     [TextArea] public string sim2ObjectiveFindWounded =
         "Find the wounded person in the city and press E.";
     [TextArea] public string sim2CasualtyContactedCompleted =
         "Wounded person found.";
     [TextArea] public string sim2ObjectiveGoToPhone =
         "Go to the public telephone and open the door.";
-    [TextArea] public string sim2ObjectiveCallDispatch =
-        "At the phone booth: press E on the door, then the coin slot, then the receiver. Dial 1, 0, 1.";
     [TextArea] public string sim2EmergencyReportedCompleted =
         "Emergency call placed.";
-    [TextArea] public string sim2ReportCompletedHint =
-        "Return to the wounded person and start treatment.";
-    [TextArea] public string sim2TreatmentStartHint =
-        "Treatment: press 1, then 2, then 3.";
     [TextArea] public string sim2PhoneOpenDoorHint = "Press E on the booth door to open it (one time only).";
     [TextArea] public string sim2PhoneDoorOpenedCompleted = "Door opened.";
     [TextArea] public string sim2PhoneDoorOpenedObjective =
         "Press E on the coin slot, then E on the receiver.";
-    [TextArea] public string sim2PhoneDoorOpenedHint =
-        "Door open (one time only). Press E on the coin slot, then E on the Receiver.";
     [TextArea] public string sim2PhoneCoinInsertedCompleted = "Coin inserted.";
     [TextArea] public string sim2PhoneCoinInsertedObjective = "Press E on the receiver.";
     [TextArea] public string sim2PhoneDoorAlreadyOpenHint =
         "The door is already open. Press E on the coin slot.";
     [TextArea] public string sim2PhoneInsertCoinHint = "Press E on the coin slot to insert a coin.";
-    [TextArea] public string sim2PhoneCoinInsertedHint = "Coin inserted. Press E on the Receiver.";
-    [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the Receiver to lift it.";
     [TextArea] public string sim2PhoneReceiverLiftedCompleted = "Receiver lifted.";
-    [TextArea] public string sim2PhoneDialStartHint =
-        "Dial 1, then 0, then 1 to call for first aid help (number keys only — not E).";
-    [TextArea] public string sim2PhoneDialProgressHint = "Correct. Keep dialing 101…";
     [TextArea] public string sim2TreatmentStartedCompleted = "Treatment started.";
     [TextArea] public string sim2TreatmentCompleteCompleted = "Treatment complete: 1, 2, 3.";
     [TextArea] public string sim2NeedContactCasualtyBeforePhoneHint =
@@ -1481,7 +1454,7 @@ public class TrainingFlowController : MonoBehaviour
             physiology.StressorActive = true;
         PlaySiren();
         SetHudVisible(true);
-        SetSimulation2Status(sim2MissionStartHint);
+        SetSimulation2Status(sim2ObjectiveFindKit);
         gameManager?.PrepareSimulation2Mission();
         SubscribeSimulation2IfNeeded();
         ApplyPhaseUI();
