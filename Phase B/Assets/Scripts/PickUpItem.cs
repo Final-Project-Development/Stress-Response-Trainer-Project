@@ -32,6 +32,13 @@ public class PickUpItem : MonoBehaviour
         _pickedUp = false;
     }
 
+    public void ResetForMission()
+    {
+        _pickedUp = false;
+        if (pickUpMode == PickUpMode.HideAfterPickup)
+            gameObject.SetActive(true);
+    }
+
     void Awake()
     {
         if (pickUpMode != PickUpMode.HideAfterPickup)
@@ -80,9 +87,10 @@ public class PickUpItem : MonoBehaviour
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
 
+        _pickedUp = true;
+        gameObject.SetActive(false);
+
         if (gameManager != null)
             gameManager.AddItem(itemDisplayName);
-
-        gameObject.SetActive(false);
     }
 }

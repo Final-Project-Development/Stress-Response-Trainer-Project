@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -82,10 +83,95 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private void SyncItemCount()
     {
+        EnsureSimulation1Pickups();
         if (_gameManager == null || simulation1Pickups == null || simulation1Pickups.Length == 0)
             return;
 
         _gameManager.itemToCollect = simulation1Pickups.Length;
+    }
+
+    void EnsureSimulation1Pickups()
+    {
+        if (HasValidSimulation1PickupRefs())
+            return;
+
+        var found = new List<PickUpItem>();
+        var home = FindSceneObjectByName("Home");
+        if (home != null)
+            CollectSimulation1PickupsUnder(home.transform, found);
+
+        if (found.Count == 0)
+        {
+            var allPickups = FindObjectsByType<PickUpItem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < allPickups.Length; i++)
+            {
+                var pickup = allPickups[i];
+                if (IsSimulation1Pickup(pickup))
+                    found.Add(pickup);
+            }
+        }
+
+        simulation1Pickups = found.ToArray();
+    }
+
+    bool HasValidSimulation1PickupRefs()
+    {
+        if (simulation1Pickups == null || simulation1Pickups.Length == 0)
+            return false;
+
+        for (int i = 0; i < simulation1Pickups.Length; i++)
+        {
+            if (simulation1Pickups[i] != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    static void CollectSimulation1PickupsUnder(Transform root, List<PickUpItem> found)
+    {
+        if (root == null || found == null)
+            return;
+
+        var pickups = root.GetComponentsInChildren<PickUpItem>(true);
+        for (int i = 0; i < pickups.Length; i++)
+        {
+            if (IsSimulation1Pickup(pickups[i]))
+                found.Add(pickups[i]);
+        }
+    }
+
+    static bool IsSimulation1Pickup(PickUpItem pickup)
+    {
+        if (pickup == null || pickup.IsPhoneReceiverPickup)
+            return false;
+
+        if (pickup.GetComponentInParent<PublicPhoneBoothMission>(true) != null)
+            return false;
+
+        if (pickup.GetComponentInParent<FirstAidKitPickup>(true) != null)
+            return false;
+
+        return pickup.gameObject.GetComponent<RectTransform>() == null;
+    }
+
+    PickUpItem[] GetActiveSimulation1Pickups()
+    {
+        EnsureSimulation1Pickups();
+        if (simulation1Pickups == null || simulation1Pickups.Length == 0)
+            return System.Array.Empty<PickUpItem>();
+
+        var active = new List<PickUpItem>();
+        for (int i = 0; i < simulation1Pickups.Length; i++)
+        {
+            var pickup = simulation1Pickups[i];
+            if (pickup != null
+                && !pickup.WasPickedUp
+                && pickup.gameObject.activeInHierarchy)
+                active.Add(pickup);
+        }
+
+        return active.ToArray();
     }
 
     private void EnsureLightSwitch()
@@ -315,13 +401,14 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private void ReactivateSimulation1Pickups()
     {
+        EnsureSimulation1Pickups();
         if (simulation1Pickups == null || simulation1Pickups.Length == 0)
             return;
 
         for (int i = 0; i < simulation1Pickups.Length; i++)
         {
             if (simulation1Pickups[i] != null)
-                simulation1Pickups[i].gameObject.SetActive(true);
+                simulation1Pickups[i].ResetForMission();
         }
     }
 
@@ -359,6 +446,41 @@ public class SimulationMissionBootstrap : MonoBehaviour
         if (woundedRoot != null)
             woundedRoot.SetActive(true);
     }
+
+    /// <summary>All Sim 1 pickups still in the scene (not yet collected).</summary>
+    public string[] GetRemainingSim1PickupObjectNames()
+    {
+        var pickups = GetActiveSimulation1Pickups();
+        if (pickups.Length == 0)
+            return new[] { "Home" };
+
+        var names = new List<string>(pickups.Length);
+        for (int i = 0; i < pickups.Length; i++)
+            names.Add(pickups[i].gameObject.name);
+
+        return names.ToArray();
+    }
+
+    /// <summary>Display names for supplies still waiting to be collected.</summary>
+    public string[] GetRemainingSim1PickupDisplayNames()
+    {
+        var pickups = GetActiveSimulation1Pickups();
+        if (pickups.Length == 0)
+            return System.Array.Empty<string>();
+
+        var names = new List<string>(pickups.Length);
+        for (int i = 0; i < pickups.Length; i++)
+        {
+            string displayName = pickups[i].ItemDisplayName;
+            if (!string.IsNullOrWhiteSpace(displayName))
+                names.Add(displayName.Trim());
+        }
+
+        return names.ToArray();
+    }
+
+    /// <summary>Active pickup components for Hint labels.</summary>
+    public PickUpItem[] GetRemainingSimulation1Pickups() => GetActiveSimulation1Pickups();
 
     private void ResolveSimulation2FirstAidKit()
     {

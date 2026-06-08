@@ -86,7 +86,9 @@ public class WoundedMan : MonoBehaviour
                 gameManager.OnCasualtyApproached();
             else
             {
-                string msg = "Go to the public telephone and call first aid help. Dial 1, then 0, then 1 (101).";
+                string msg = flow != null
+                    ? flow.sim2ObjectiveGoToPhone
+                    : "Go to the public telephone and open the door.";
                 gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
             }
 
@@ -98,11 +100,6 @@ public class WoundedMan : MonoBehaviour
             treatmentStarted = true;
             currentStep = 0;
             PlayAnimationTrigger(startAidTrigger);
-            var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
-            string startMsg = flow != null
-                ? flow.sim2TreatmentStartHint
-                : "Treatment: press 1, then 2, then 3.";
-            gameManager?.ShowMissionMessage(startMsg, Sim2WoundedHintDuration);
             ShowStepInstruction();
             return;
         }
@@ -120,20 +117,66 @@ public class WoundedMan : MonoBehaviour
 
     private void ShowStepInstruction()
     {
-        KeyCode expected = GetExpectedKey();
-        string stepName = currentStep == 0 ? "Step 1/3" : currentStep == 1 ? "Step 2/3" : "Step 3/3";
-        string msg = $"Treatment {stepName}: press [{FormatKey(expected)}].";
+        var flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+        string completed = BuildTreatmentCompletedLine(flow);
+        string objective = BuildTreatmentObjectiveLine();
         if (gameManager != null)
-            gameManager.ShowMissionMessage(msg, Sim2WoundedHintDuration);
-        Debug.Log(msg);
+            gameManager.SetMissionPanelProgress(completed, objective);
+
+        Debug.Log($"{completed} | {objective}");
+    }
+
+    private string BuildTreatmentCompletedLine(TrainingFlowController flow)
+    {
+        if (currentStep <= 0)
+            return flow != null ? flow.sim2TreatmentStartedCompleted : "Treatment started.";
+
+        return $"Entered: {GetTreatmentEntered(currentStep)}";
+    }
+
+    private string BuildTreatmentObjectiveLine()
+    {
+        KeyCode expected = GetExpectedKey();
+        string remaining = GetTreatmentRemaining(currentStep);
+        if (string.IsNullOrEmpty(remaining))
+            return $"Press {FormatKey(expected)}.";
+
+        return $"Press {FormatKey(expected)}. Remaining: {remaining}";
+    }
+
+    private static string GetTreatmentEntered(int completedSteps)
+    {
+        if (completedSteps >= 3)
+            return "1, 2, 3";
+        if (completedSteps == 2)
+            return "1, 2";
+        if (completedSteps == 1)
+            return "1";
+        return "—";
+    }
+
+    private static string GetTreatmentRemaining(int stepIndex)
+    {
+        if (stepIndex == 0)
+            return "2, 3";
+        if (stepIndex == 1)
+            return "3";
+        return string.Empty;
     }
 
     private void ShowWrongKeyMessage(KeyCode expected)
     {
-        string msg = $"Wrong key. Press [{FormatKey(expected)}] for this step.";
+        string remaining = GetTreatmentRemaining(currentStep);
+        string objective = string.IsNullOrEmpty(remaining)
+            ? $"Wrong key. Press {FormatKey(expected)}."
+            : $"Wrong key. Press {FormatKey(expected)}. Remaining: {remaining}";
+
         if (gameManager != null)
-            gameManager.ShowMissionMessage(msg, 3f);
-        Debug.Log(msg);
+            gameManager.SetMissionPanelProgress(null, objective);
+        else
+            gameManager?.ShowMissionMessage(objective, 3f);
+
+        Debug.Log(objective);
     }
 
     private void CompleteTreatment()

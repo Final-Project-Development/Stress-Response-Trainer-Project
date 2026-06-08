@@ -121,10 +121,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
             return;
         }
 
-        int progress = CountDialProgressToward101();
-        ShowFlowMessage(_flow != null
-            ? $"{_flow.sim2PhoneDialProgressHint} ({progress}/3)"
-            : $"Dial 101… ({progress}/3)");
+        UpdateDialPanelProgress();
     }
 
     private int CountDialProgressToward101()
@@ -224,7 +221,9 @@ public class PublicPhoneBoothMission : MonoBehaviour
         _receiverLifted = true;
         _step = BoothStep.Dial101;
         _dialedDigits = "";
-        ShowDialHint();
+        ShowBoothStep(
+            _flow != null ? _flow.sim2PhoneReceiverLiftedCompleted : "Receiver lifted.",
+            FormatPhoneDialRemaining(0));
         return true;
     }
 
@@ -559,7 +558,9 @@ public class PublicPhoneBoothMission : MonoBehaviour
                 }
 
                 _step = BoothStep.TakeHandset;
-                ShowFlowMessage(_flow != null ? _flow.sim2PhoneCoinInsertedHint : "Coin inserted. Press E on the receiver.");
+                ShowBoothStep(
+                    _flow != null ? _flow.sim2PhoneCoinInsertedCompleted : "Coin inserted.",
+                    _flow != null ? _flow.sim2PhoneCoinInsertedObjective : "Press E on the receiver.");
                 break;
 
             case BoothAction.TakeHandset:
@@ -583,7 +584,9 @@ public class PublicPhoneBoothMission : MonoBehaviour
         _step = BoothStep.InsertCoin;
         SetPassageAllowsWalk(true);
         StartCoroutine(EnablePassageAfterDoorOpens());
-        ShowFlowMessage(_flow != null ? _flow.sim2PhoneDoorOpenedHint : "Door open (one time only). Press E on the coin slot, then the receiver.");
+        ShowBoothStep(
+            _flow != null ? _flow.sim2PhoneDoorOpenedCompleted : "Door opened.",
+            _flow != null ? _flow.sim2PhoneDoorOpenedObjective : "Press E on the coin slot, then E on the receiver.");
     }
 
     private void CompleteEmergencyCall()
@@ -680,9 +683,55 @@ public class PublicPhoneBoothMission : MonoBehaviour
 
     private void ShowDialHint()
     {
-        ShowFlowMessage(_flow != null
-            ? _flow.sim2PhoneDialStartHint
-            : "Dial 1, then 0, then 1 to call for help (number keys only — not E).");
+        UpdateDialPanelProgress();
+    }
+
+    private void UpdateDialPanelProgress()
+    {
+        int progress = CountDialProgressToward101();
+        string completed = FormatPhoneDialCompleted(progress);
+        string objective = FormatPhoneDialRemaining(progress);
+
+        if (progress <= 0 && string.IsNullOrEmpty(completed))
+        {
+            ShowBoothStep(
+                _flow != null ? _flow.sim2PhoneReceiverLiftedCompleted : "Receiver lifted.",
+                objective);
+            return;
+        }
+
+        ShowBoothStep(completed, objective);
+    }
+
+    private static string FormatPhoneDialCompleted(int progress)
+    {
+        if (progress <= 0)
+            return string.Empty;
+
+        return $"Entered: {GetPhoneDialEntered(progress)}";
+    }
+
+    private static string GetPhoneDialEntered(int progress)
+    {
+        if (progress >= 3)
+            return "1, 0, 1";
+        if (progress == 2)
+            return "1, 0";
+        if (progress == 1)
+            return "1";
+        return "—";
+    }
+
+    private static string FormatPhoneDialRemaining(int progress)
+    {
+        if (progress >= 3)
+            return string.Empty;
+
+        if (progress == 2)
+            return "Remaining: 1 (number keys only)";
+        if (progress == 1)
+            return "Remaining: 0, 1 (number keys only)";
+        return "Remaining: 1, 0, 1 (number keys only)";
     }
 
     private void ShowWrongStepHint()
@@ -693,6 +742,14 @@ public class PublicPhoneBoothMission : MonoBehaviour
     private void ShowFlowMessage(string msg)
     {
         _gameManager?.ShowMissionMessage(msg, Sim2BoothHintDuration);
+    }
+
+    private void ShowBoothStep(string completedLine, string objectiveLine)
+    {
+        if (_gameManager != null)
+            _gameManager.SetMissionPanelProgress(completedLine, objectiveLine);
+        else if (!string.IsNullOrWhiteSpace(objectiveLine))
+            ShowFlowMessage(objectiveLine);
     }
 
     private PhoneBoothInteractPoint ResolvePointFromTransform(Transform t)

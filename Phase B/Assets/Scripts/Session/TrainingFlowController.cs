@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -200,6 +201,10 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("WorkoutHeartRateChartReceiver on BioMetrics. Active during Sim 1 & 2 when watch sends UDP timeline on port 5055.")]
     public WorkoutHeartRateChartReceiver workoutHeartRateChart;
 
+    [Header("Mission status HUD (Sim 1 & 2)")]
+    [Tooltip("MissionStatus_Panel — completed step, next objective, hint button.")]
+    public MissionStatusPanelController missionStatusPanel;
+
     [Header("Results graphs (SCI + HRV per simulation)")]
     [Tooltip("Simulation 1 — Stress Change Index over time (existing).")]
     public SimpleStressLineGraph resultsGraph;
@@ -294,50 +299,70 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("Simulation 1 — in-game mission hints")]
     [TextArea] public string sim1MissionStartHint =
-        "Enter the home and collect 5 items (press E): water bottle, flash light, radio, compass, map.";
+        "Collect 5 supplies inside the home (press E): water bottle, flashlight, radio, compass, map.";
+    [TextArea] public string sim1AllItemsCollectedCompleted =
+        "All supplies collected.";
     [TextArea] public string sim1AllItemsCollectedHint =
-        "All items collected. Turn off the lights using PFB_Lightswitch (1) inside the home.";
+        "Next: turn off the lights using the light switch inside the home.";
+    [TextArea] public string sim1LightsOffCompleted =
+        "Lights turned off.";
     [TextArea] public string sim1LightsOffHint =
-        "Lights off. Run to the Mamad — you can open and close the entrance door anytime, but it must be closed when you enter the Mamad.";
+        "Next: close the entrance door (press E on the door).";
+    [TextArea] public string sim1DoorClosedCompleted =
+        "Door closed.";
     [TextArea] public string sim1DoorClosedHint =
-        "Door closed. Run to the Mamad (shelter) outside!";
+        "Next: run to the Mamad shelter outside.";
     [TextArea] public string sim1ShelterDoorOpenHint =
         "The entrance door is still open. Close PFB_DoorDouble before entering the Mamad.";
     [TextArea] public string sim1ObjectiveTurnOffLights =
-        "Turn off the lights using PFB_Lightswitch (1) inside the home.";
+        "Turn off the lights using the light switch inside the home.";
     [TextArea] public string sim1ObjectiveCloseDoor =
-        "You can use the entrance door anytime. Close it before entering the Mamad.";
+        "Close the entrance door before going to the Mamad shelter.";
     [TextArea] public string sim1ObjectiveRunToShelter =
-        "Run to the Mamad — make sure the entrance door is closed when you arrive.";
+        "Run to the Mamad shelter outside.";
     [TextArea] public string sim1ItemsList =
-        "water bottle, flash light, radio, compass, map";
+        "water bottle, flashlight, radio, compass, map";
 
     [Header("Simulation 2 — in-game mission hints")]
     [TextArea] public string sim2MissionStartHint =
-        "Simulation 2: (1) First aid kit E → (2) Wounded E → (3) Phone E,E,E + dial 1,0,1 → (4) Treat 1,2,3.";
+        "Find the first aid kit in the city and press E to collect it.";
     [TextArea] public string sim2ObjectiveFindKit =
         "Step 1: Find the first aid kit and press E to collect it.";
     [TextArea] public string sim2KitCollectedHint =
         "First aid kit collected. Find the wounded person and press E.";
     [TextArea] public string sim2ObjectiveFindWounded =
-        "Step 2: Find the wounded person and press E.";
+        "Find the wounded person in the city and press E.";
+    [TextArea] public string sim2CasualtyContactedCompleted =
+        "Wounded person found.";
+    [TextArea] public string sim2ObjectiveGoToPhone =
+        "Go to the public telephone and open the door.";
     [TextArea] public string sim2ObjectiveCallDispatch =
-        "Public telephone: E open door (once) → E coin → E receiver → dial 1, 0, 1.";
+        "At the phone booth: press E on the door, then the coin slot, then the receiver. Dial 1, 0, 1.";
+    [TextArea] public string sim2EmergencyReportedCompleted =
+        "Emergency call placed.";
     [TextArea] public string sim2ReportCompletedHint =
-        "Call complete. Return to the wounded person for treatment.";
+        "Return to the wounded person and start treatment.";
     [TextArea] public string sim2TreatmentStartHint =
         "Treatment: press 1, then 2, then 3.";
     [TextArea] public string sim2PhoneOpenDoorHint = "Press E on the booth door to open it (one time only).";
+    [TextArea] public string sim2PhoneDoorOpenedCompleted = "Door opened.";
+    [TextArea] public string sim2PhoneDoorOpenedObjective =
+        "Press E on the coin slot, then E on the receiver.";
     [TextArea] public string sim2PhoneDoorOpenedHint =
         "Door open (one time only). Press E on the coin slot, then E on the Receiver.";
+    [TextArea] public string sim2PhoneCoinInsertedCompleted = "Coin inserted.";
+    [TextArea] public string sim2PhoneCoinInsertedObjective = "Press E on the receiver.";
     [TextArea] public string sim2PhoneDoorAlreadyOpenHint =
         "The door is already open. Press E on the coin slot.";
     [TextArea] public string sim2PhoneInsertCoinHint = "Press E on the coin slot to insert a coin.";
     [TextArea] public string sim2PhoneCoinInsertedHint = "Coin inserted. Press E on the Receiver.";
     [TextArea] public string sim2PhoneTakeHandsetHint = "Press E on the Receiver to lift it.";
+    [TextArea] public string sim2PhoneReceiverLiftedCompleted = "Receiver lifted.";
     [TextArea] public string sim2PhoneDialStartHint =
         "Dial 1, then 0, then 1 to call for first aid help (number keys only — not E).";
     [TextArea] public string sim2PhoneDialProgressHint = "Correct. Keep dialing 101…";
+    [TextArea] public string sim2TreatmentStartedCompleted = "Treatment started.";
+    [TextArea] public string sim2TreatmentCompleteCompleted = "Treatment complete: 1, 2, 3.";
     [TextArea] public string sim2NeedContactCasualtyBeforePhoneHint =
         "Find the wounded person first and press E on the casualty.";
     [TextArea] public string sim2AlreadyReportedHint =
@@ -349,9 +374,16 @@ public class TrainingFlowController : MonoBehaviour
     [TextArea] public string sim2NeedKitHint =
         "Find the first aid kit in the city before treating the wounded.";
 
-    public string BuildSim1CollectObjective(int collected, int total)
+    public string BuildSim1CollectObjective(IReadOnlyList<string> remainingDisplayNames, int collected, int total)
     {
-        return $"Enter the home and collect supplies: {collected}/{total} — {sim1ItemsList}.";
+        if (remainingDisplayNames == null || remainingDisplayNames.Count == 0)
+            return sim1ObjectiveTurnOffLights;
+
+        string remaining = string.Join(", ", remainingDisplayNames);
+        if (collected <= 0)
+            return $"Collect {total} supplies inside the home (press E). Remaining: {remaining}.";
+
+        return $"Collect supplies inside the home (press E). Remaining: {remaining}. Progress: {collected}/{total}.";
     }
 
     public float calibrationDurationSeconds = 60f;
@@ -392,6 +424,12 @@ public class TrainingFlowController : MonoBehaviour
         if (watchHrChartPanel == null && workoutHeartRateChart != null)
             watchHrChartPanel = workoutHeartRateChart.chartPanelRoot;
 
+        if (missionStatusPanel == null)
+            missionStatusPanel = FindFirstObjectByType<MissionStatusPanelController>(FindObjectsInactive.Include);
+
+        if (gameManager != null && missionStatusPanel != null)
+            gameManager.missionStatusPanel = missionStatusPanel;
+
         HideEnvironmentLearningTourSidebar();
     }
 
@@ -420,6 +458,8 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(timerPanel, false);
         SetActiveSafe(watchHrChartPanel, false);
         SetWorkoutHeartRateChartActive(false);
+        if (missionStatusPanel != null)
+            missionStatusPanel.SetPanelVisible(false);
         SetActiveSafe(pausePanel, false);
         SetSafetyWarningVisible(false);
         SetSimulation2Status(sim2BriefingBody);
@@ -1088,6 +1128,8 @@ public class TrainingFlowController : MonoBehaviour
         bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
         SetActiveSafe(timerPanel, showStressTimer);
         SetActiveSafe(watchHrChartPanel, showStressTimer);
+        if (missionStatusPanel != null)
+            missionStatusPanel.SetPanelVisible(showStressTimer);
         if (showStressTimer)
             RefreshSimulationStressTimerDisplay();
         SetWorkoutHeartRateChartActive(showStressTimer);
@@ -1118,6 +1160,13 @@ public class TrainingFlowController : MonoBehaviour
         playerFpsController.SetOverlayUiOpen(false);
         playerFpsController.SetUiMenuMode(menuPhase);
         playerFpsController.SetSimulationToolbarMode(activeSimulation);
+
+        if (missionStatusPanel != null)
+        {
+            var region = missionStatusPanel.GetPanelScreenRegion();
+            if (region != null)
+                playerFpsController.SetMissionStatusPanelRegion(region);
+        }
     }
 
     private static void SetActiveSafe(GameObject go, bool on)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
@@ -14,8 +15,12 @@ public class GameManager : MonoBehaviour
     }
 
     public int itemToCollect = 5;
+    [Tooltip("Legacy full-screen objective. Prefer Mission Status Panel.")]
     public TextMeshProUGUI objectiveText;
+    [Tooltip("Legacy center popup. Prefer Mission Status Panel → Completed Text.")]
     public TextMeshProUGUI pickupFeedbackText;
+    [Tooltip("Persistent mission panel (Sim 1 & 2) — completed line + next objective + hint.")]
+    public MissionStatusPanelController missionStatusPanel;
     public float pickupFeedbackDuration = 1.4f;
 
     [Header("Shelter target (Simulation 1)")]
@@ -55,8 +60,8 @@ public class GameManager : MonoBehaviour
     private TrainingFlowController _flow;
     private Door _missionExitDoor;
     private const float Sim2HintDuration = 8f;
-    private const string Sim2CallDispatchInstruction =
-        "Go to the public telephone and call first aid help. Dial 1, then 0, then 1 (101).";
+    private const string Sim2GoToPhoneObjective =
+        "Go to the public telephone and open the door.";
 
     void Awake()
     {
@@ -68,6 +73,8 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+        if (missionStatusPanel == null)
+            missionStatusPanel = FindFirstObjectByType<MissionStatusPanelController>(FindObjectsInactive.Include);
         ConfigureShelterTargets();
         ConfigureNonBlockingMissionHud();
         _allItemsCollectedRaised = false;
@@ -103,8 +110,15 @@ public class GameManager : MonoBehaviour
 
         ResetSimulation1State();
         _missionBootstrap?.PrepareSimulation1();
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.ClearLines();
+            missionStatusPanel.SetSimulation1Title();
+        }
         UpdateObjectiveText();
-        ShowMissionMessage(_flow != null ? _flow.sim1MissionStartHint : "Enter the home and collect all emergency supplies.", 4f);
+        ShowLegacyMissionHintIfNoPanel(
+            _flow != null ? _flow.sim1MissionStartHint : "Collect 5 supplies inside the home (press E).",
+            4f);
     }
 
     public void PrepareSimulation2Mission()
@@ -118,8 +132,15 @@ public class GameManager : MonoBehaviour
         _emergencyReported = false;
         _missionBootstrap?.PrepareSimulation2();
         ResetWoundedTreatment();
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.ClearLines();
+            missionStatusPanel.SetSimulation2Title();
+        }
         UpdateSimulation2ObjectiveText();
-        ShowMissionMessage(_flow != null ? _flow.sim2MissionStartHint : "Search the city for the first aid kit.", Sim2HintDuration);
+        ShowLegacyMissionHintIfNoPanel(
+            _flow != null ? _flow.sim2MissionStartHint : "Find the first aid kit and press E to collect it.",
+            Sim2HintDuration);
     }
 
     private void ResetWoundedTreatment()
@@ -144,6 +165,30 @@ public class GameManager : MonoBehaviour
     public void SyncExitDoorState(bool isClosed)
     {
         _exitDoorClosed = isClosed;
+
+        if (isClosed)
+            TryAdvanceAfterExitDoorClosed();
+    }
+
+    private void TryAdvanceAfterExitDoorClosed()
+    {
+        if (_sim1Phase != Sim1MissionPhase.CloseDoor)
+            return;
+
+        _sim1Phase = Sim1MissionPhase.RunToShelter;
+        PlayAllItemsCollectedVoice();
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetCompletedLine(
+                _flow != null ? _flow.sim1DoorClosedCompleted : "Door closed.");
+            UpdateObjectiveText();
+            return;
+        }
+
+        ShowLegacyMissionHintIfNoPanel(
+            _flow != null ? _flow.sim1DoorClosedHint : "Door closed. Run to the Mamad shelter outside.",
+            6f);
+        UpdateObjectiveText();
     }
 
     public bool IsMissionExitDoorClosed()
@@ -180,9 +225,21 @@ public class GameManager : MonoBehaviour
 
     public bool HasReportedEmergency() => _emergencyReported;
 
+    public bool IsSim2TreatmentComplete() => firstAidDone;
+
+    public int GetSim1ItemsCollected() => itemCollected;
+
+    private bool UsesMissionStatusPanel() =>
+        missionStatusPanel != null && missionStatusPanel.IsConfigured;
+
     /// <summary>Current in-mission objective line for Help overlay and HUD.</summary>
     public string GetCurrentObjectiveText()
     {
+        if (UsesMissionStatusPanel() &&
+            missionStatusPanel.objectiveText != null &&
+            !string.IsNullOrWhiteSpace(missionStatusPanel.objectiveText.text))
+            return missionStatusPanel.objectiveText.text;
+
         if (objectiveText != null && !string.IsNullOrWhiteSpace(objectiveText.text))
             return objectiveText.text;
 
@@ -198,7 +255,7 @@ public class GameManager : MonoBehaviour
             switch (_sim1Phase)
             {
                 case Sim1MissionPhase.CollectItems:
-                    return _flow.BuildSim1CollectObjective(itemCollected, itemToCollect);
+                    return BuildSim1CollectObjectiveText();
                 case Sim1MissionPhase.TurnOffLights:
                     return _flow.sim1ObjectiveTurnOffLights;
                 case Sim1MissionPhase.CloseDoor:
@@ -215,7 +272,7 @@ public class GameManager : MonoBehaviour
             if (!_casualtyContacted)
                 return _flow.sim2ObjectiveFindWounded;
             if (!_emergencyReported)
-                return _flow.sim2ObjectiveCallDispatch;
+                return _flow.sim2ObjectiveGoToPhone;
             if (!firstAidDone)
                 return _flow.sim2TreatWoundedHint;
             return "First aid complete.";
@@ -230,12 +287,23 @@ public class GameManager : MonoBehaviour
             return;
 
         _lightsTurnedOff = true;
-        _sim1Phase = Sim1MissionPhase.RunToShelter;
-        PlayAllItemsCollectedVoice();
-        ShowMissionMessage(
-            _flow != null ? _flow.sim1LightsOffHint : "Lights off. Run to the Mamad — close the entrance door before you enter.",
-            6f);
-        UpdateObjectiveText();
+        _sim1Phase = Sim1MissionPhase.CloseDoor;
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetCompletedLine(
+                _flow != null ? _flow.sim1LightsOffCompleted : "Lights turned off.");
+            UpdateObjectiveText();
+        }
+        else
+        {
+            ShowLegacyMissionHintIfNoPanel(
+                _flow != null ? _flow.sim1LightsOffHint : "Next: close the entrance door (press E on the door).",
+                6f);
+            UpdateObjectiveText();
+        }
+
+        if (IsMissionExitDoorClosed())
+            TryAdvanceAfterExitDoorClosed();
     }
 
     public void OnFirstAidKitCollected(string itemName)
@@ -246,7 +314,6 @@ public class GameManager : MonoBehaviour
         _firstAidKitCollected = true;
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
-        ShowMissionMessage(_flow != null ? _flow.sim2KitCollectedHint : "First aid kit collected. Search the city and find the wounded person.", Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 
@@ -257,7 +324,15 @@ public class GameManager : MonoBehaviour
             return;
 
         _casualtyContacted = true;
-        ShowMissionMessage(Sim2CallDispatchInstruction, Sim2HintDuration);
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetCompletedLine(
+                _flow != null ? _flow.sim2CasualtyContactedCompleted : "Wounded person found.");
+            UpdateSimulation2ObjectiveText();
+            return;
+        }
+
+        ShowMissionMessage(Sim2GoToPhoneObjective, Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
 
@@ -267,8 +342,16 @@ public class GameManager : MonoBehaviour
             return;
 
         _emergencyReported = true;
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetCompletedLine(
+                _flow != null ? _flow.sim2EmergencyReportedCompleted : "Emergency call placed.");
+            UpdateSimulation2ObjectiveText();
+            return;
+        }
+
         ShowMissionMessage(
-            _flow != null ? _flow.sim2ReportCompletedHint : "First aid help is on the way. Return to the wounded person for treatment.",
+            _flow != null ? _flow.sim2ReportCompletedHint : "Return to the wounded person and start treatment.",
             Sim2HintDuration);
         UpdateSimulation2ObjectiveText();
     }
@@ -346,26 +429,51 @@ public class GameManager : MonoBehaviour
         {
             _itemsCollectionComplete = true;
             _sim1Phase = Sim1MissionPhase.TurnOffLights;
-            ShowMissionMessage(_flow != null ? _flow.sim1AllItemsCollectedHint : "All supplies collected. Turn off the lights using the switch inside the home.", 6f);
-            OnItemsCollectionComplete?.Invoke();
-            UpdateObjectiveText();
+            if (UsesMissionStatusPanel())
+            {
+                missionStatusPanel.SetCompletedLine(
+                    _flow != null ? _flow.sim1AllItemsCollectedCompleted : $"All {itemToCollect} supplies collected.");
+                OnItemsCollectionComplete?.Invoke();
+                UpdateObjectiveText();
+            }
+            else
+            {
+                ShowLegacyMissionHintIfNoPanel(
+                    _flow != null ? _flow.sim1AllItemsCollectedHint : "Turn off the lights using the light switch inside the home.",
+                    6f);
+                OnItemsCollectionComplete?.Invoke();
+                UpdateObjectiveText();
+            }
         }
     }
 
     private void ShowPickupFeedback(string itemName)
     {
+        string line = $"{itemName} collected.";
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetCompletedLine(line);
+            return;
+        }
+
         if (pickupFeedbackText == null)
             return;
 
         if (_pickupFeedbackRoutine != null)
             StopCoroutine(_pickupFeedbackRoutine);
 
-        pickupFeedbackText.text = $"{itemName} collected.";
+        pickupFeedbackText.text = line;
         _pickupFeedbackRoutine = StartCoroutine(HidePickupFeedbackAfterDelay());
     }
 
     private void ShowFeedbackMessage(string message, float durationSeconds)
     {
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.SetObjectiveLine(message);
+            return;
+        }
+
         if (pickupFeedbackText == null)
             return;
 
@@ -374,6 +482,33 @@ public class GameManager : MonoBehaviour
 
         pickupFeedbackText.text = message;
         _pickupFeedbackRoutine = StartCoroutine(HideFeedbackAfterDelay(durationSeconds));
+    }
+
+    /// <summary>Short toast when mission panel has no hint target (does not replace objective line).</summary>
+    public void ShowTransientMissionNote(string message, float durationSeconds = 3f)
+    {
+        if (!UsesMissionStatusPanel())
+        {
+            ShowMissionMessage(message, durationSeconds);
+            return;
+        }
+
+        if (_pickupFeedbackRoutine != null)
+            StopCoroutine(_pickupFeedbackRoutine);
+
+        string previous = missionStatusPanel.completedText != null
+            ? missionStatusPanel.completedText.text
+            : string.Empty;
+        missionStatusPanel.SetCompletedLine(message);
+        _pickupFeedbackRoutine = StartCoroutine(RestoreCompletedLineAfterDelay(previous, durationSeconds));
+    }
+
+    private IEnumerator RestoreCompletedLineAfterDelay(string previous, float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        if (UsesMissionStatusPanel())
+            missionStatusPanel.SetCompletedLine(previous);
+        _pickupFeedbackRoutine = null;
     }
 
     private IEnumerator HidePickupFeedbackAfterDelay()
@@ -396,8 +531,48 @@ public class GameManager : MonoBehaviour
         _pickupFeedbackRoutine = null;
     }
 
+    /// <summary>Updates mission panel completed + objective lines (phone booth steps, etc.).</summary>
+    public void SetMissionPanelProgress(string completedLine, string objectiveLine)
+    {
+        if (!UsesMissionStatusPanel())
+        {
+            string message = !string.IsNullOrWhiteSpace(objectiveLine)
+                ? objectiveLine
+                : completedLine;
+            if (!string.IsNullOrWhiteSpace(message))
+                ShowMissionMessage(message, Sim2HintDuration);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(completedLine))
+            missionStatusPanel.SetCompletedLine(completedLine);
+        if (!string.IsNullOrWhiteSpace(objectiveLine))
+            missionStatusPanel.SetObjectiveLine(objectiveLine);
+    }
+
+    /// <summary>Old single-line HUD when mission status panel is not used.</summary>
+    void ShowLegacyMissionHintIfNoPanel(string message, float durationSeconds = 2.5f)
+    {
+        if (UsesMissionStatusPanel() || string.IsNullOrWhiteSpace(message))
+            return;
+
+        if (objectiveText != null)
+        {
+            objectiveText.text = message;
+            return;
+        }
+
+        ShowFeedbackMessage(message, durationSeconds);
+    }
+
     public void ShowMissionMessage(string message, float durationSeconds = 2.5f)
     {
+        if (UsesMissionStatusPanel())
+        {
+            ShowTransientMissionNote(message, durationSeconds);
+            return;
+        }
+
         if (objectiveText != null)
         {
             objectiveText.text = message;
@@ -415,6 +590,12 @@ public class GameManager : MonoBehaviour
             _pickupFeedbackRoutine = null;
         }
 
+        if (UsesMissionStatusPanel())
+        {
+            missionStatusPanel.ClearLines();
+            return;
+        }
+
         if (objectiveText != null)
             objectiveText.text = string.Empty;
 
@@ -425,82 +606,118 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void PushObjectiveToMissionPanel(string text)
+    {
+        if (!UsesMissionStatusPanel())
+            return;
+
+        missionStatusPanel.SetObjectiveLine(text);
+    }
+
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
-        ShowMissionMessage(_flow != null ? _flow.sim2CompletedHint : "First aid complete. Simulation 2 mission finished.", 3f);
+        if (UsesMissionStatusPanel())
+        {
+            SetMissionPanelProgress(
+                _flow != null ? _flow.sim2TreatmentCompleteCompleted : "Treatment complete: 1, 2, 3.",
+                _flow != null ? _flow.sim2CompletedHint : "First aid complete. Simulation 2 mission finished.");
+        }
+        else
+        {
+            ShowMissionMessage(
+                _flow != null ? _flow.sim2CompletedHint : "First aid complete. Simulation 2 mission finished.",
+                3f);
+        }
+
         OnFirstAidComplete?.Invoke();
         Debug.Log("First aid Completed");
     }
 
+    public SimulationMissionBootstrap GetMissionBootstrap() => _missionBootstrap;
+
+    string BuildSim1CollectObjectiveText()
+    {
+        IReadOnlyList<string> remaining = _missionBootstrap != null
+            ? _missionBootstrap.GetRemainingSim1PickupDisplayNames()
+            : System.Array.Empty<string>();
+
+        if (_flow != null)
+            return _flow.BuildSim1CollectObjective(remaining, itemCollected, itemToCollect);
+
+        if (remaining.Count == 0)
+            return "Turn off the lights using the light switch inside the home.";
+
+        return $"Collect supplies inside the home (press E). Remaining: {string.Join(", ", remaining)}. Progress: {itemCollected}/{itemToCollect}.";
+    }
+
     public void UpdateObjectiveText()
     {
-        if (objectiveText == null)
-            return;
-
+        string text;
         switch (_sim1Phase)
         {
             case Sim1MissionPhase.CollectItems:
-                objectiveText.text = _flow != null
-                    ? _flow.BuildSim1CollectObjective(itemCollected, itemToCollect)
-                    : $"Enter the home and collect supplies: {itemCollected}/{itemToCollect} — water bottle, flash light, radio, compass, map.";
+                text = BuildSim1CollectObjectiveText();
                 break;
             case Sim1MissionPhase.TurnOffLights:
-                objectiveText.text = _flow != null
+                text = _flow != null
                     ? _flow.sim1ObjectiveTurnOffLights
                     : "Turn off the lights using PFB_Lightswitch (1) inside the home.";
                 break;
             case Sim1MissionPhase.CloseDoor:
-                objectiveText.text = _flow != null
+                text = _flow != null
                     ? _flow.sim1ObjectiveCloseDoor
                     : "Close the entrance door before going to the Mamad (press E anytime).";
                 break;
             case Sim1MissionPhase.RunToShelter:
-                objectiveText.text = _flow != null
+                text = _flow != null
                     ? _flow.sim1ObjectiveRunToShelter
                     : "Run to the Mamad — the entrance door must be closed when you arrive.";
                 break;
+            default:
+                return;
         }
+
+        if (objectiveText != null)
+            objectiveText.text = text;
+        PushObjectiveToMissionPanel(text);
     }
 
     private void UpdateSimulation2ObjectiveText()
     {
-        if (objectiveText == null)
-            return;
-
+        string text;
         if (!_firstAidKitCollected)
         {
-            objectiveText.text = _flow != null
+            text = _flow != null
                 ? _flow.sim2ObjectiveFindKit
                 : "Search the city for the first aid kit.";
-            return;
         }
-
-        if (!_casualtyContacted)
+        else if (!_casualtyContacted)
         {
-            objectiveText.text = _flow != null
+            text = _flow != null
                 ? _flow.sim2ObjectiveFindWounded
                 : "Find the wounded person in the city. Press E when you reach them.";
-            return;
         }
-
-        if (!_emergencyReported)
+        else if (!_emergencyReported)
         {
-            objectiveText.text = _flow != null
-                ? _flow.sim2ObjectiveCallDispatch
-                : "Public telephone: E door (once), E coin, E receiver, dial 1, 0, 1.";
-            return;
+            text = _flow != null
+                ? _flow.sim2ObjectiveGoToPhone
+                : Sim2GoToPhoneObjective;
         }
-
-        if (!firstAidDone)
+        else if (!firstAidDone)
         {
-            objectiveText.text = _flow != null
+            text = _flow != null
                 ? _flow.sim2TreatWoundedHint
                 : "Return to the wounded. Press E, then 1, then 2, then 3.";
-            return;
+        }
+        else
+        {
+            text = "First aid complete.";
         }
 
-        objectiveText.text = "First aid complete.";
+        if (objectiveText != null)
+            objectiveText.text = text;
+        PushObjectiveToMissionPanel(text);
     }
 
     /// <returns>True if the shelter objective was completed now; false if prerequisites are not met yet.</returns>
@@ -512,7 +729,11 @@ public class GameManager : MonoBehaviour
 
         if (!IsMissionExitDoorClosed())
         {
-            ShowMissionMessage(GetShelterDoorOpenHint(), 4f);
+            string hint = GetShelterDoorOpenHint();
+            if (UsesMissionStatusPanel())
+                missionStatusPanel.SetObjectiveLine(hint);
+            else
+                ShowLegacyMissionHintIfNoPanel(hint, 4f);
             return false;
         }
 

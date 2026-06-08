@@ -22,6 +22,8 @@ public class SimpleFPSController : MonoBehaviour
     [SerializeField] bool unlockCursorDuringSimulation = true;
     [Tooltip("Screen rect for the top toolbar — only this area blocks mouse-look for button clicks.")]
     [SerializeField] RectTransform toolbarScreenRegion;
+    [Tooltip("Mission status panel (center) — pointer here unlocks cursor for the Hint button.")]
+    [SerializeField] RectTransform missionStatusPanelRegion;
     [Tooltip("Environment Learning tour sidebar — pointer here unlocks cursor for item navigation.")]
     [SerializeField] RectTransform learningTourSidebarRegion;
 
@@ -92,6 +94,11 @@ public class SimpleFPSController : MonoBehaviour
         toolbarScreenRegion = region;
     }
 
+    public void SetMissionStatusPanelRegion(RectTransform region)
+    {
+        missionStatusPanelRegion = region;
+    }
+
     /// <summary>Environment Learning: mouse over the left sidebar unlocks the cursor for navigation clicks.</summary>
     public void SetLearningTourSidebar(RectTransform sidebarRegion, bool active)
     {
@@ -116,11 +123,11 @@ public class SimpleFPSController : MonoBehaviour
 
         if (unlockCursorDuringSimulation && simulationToolbarMode)
         {
-            bool pointerOverToolbar = IsPointerOverToolbar();
+            bool pointerOverUi = IsPointerOverSimulationUi();
             Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = pointerOverToolbar;
+            Cursor.visible = pointerOverUi;
             HandleMovement();
-            if (!pointerOverToolbar)
+            if (!pointerOverUi)
                 HandleMouseLook();
             return;
         }
@@ -145,9 +152,19 @@ public class SimpleFPSController : MonoBehaviour
         HandleMovement();
     }
 
+    private bool IsPointerOverSimulationUi()
+    {
+        return IsPointerOverToolbar() || IsPointerOverMissionPanel();
+    }
+
     private bool IsPointerOverToolbar()
     {
         return IsPointerOverRect(toolbarScreenRegion);
+    }
+
+    private bool IsPointerOverMissionPanel()
+    {
+        return IsPointerOverRect(missionStatusPanelRegion);
     }
 
     private static bool IsPointerOverRect(RectTransform region)

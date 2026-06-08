@@ -297,6 +297,22 @@ public class UINavigationManager : MonoBehaviour
 
         if (topBar != null)
             playerController.SetToolbarScreenRegion(topBar.GetComponent<RectTransform>());
+
+        WireMissionStatusPanelRegion();
+    }
+
+    void WireMissionStatusPanelRegion()
+    {
+        if (playerController == null)
+            return;
+
+        MissionStatusPanelController panel = flow != null ? flow.missionStatusPanel : null;
+        if (panel == null)
+            panel = FindFirstObjectByType<MissionStatusPanelController>(FindObjectsInactive.Include);
+
+        var region = panel != null ? panel.GetPanelScreenRegion() : null;
+        if (region != null)
+            playerController.SetMissionStatusPanelRegion(region);
     }
 
     private static void SetActiveSafe(GameObject go, bool on)
