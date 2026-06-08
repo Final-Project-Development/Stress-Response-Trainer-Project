@@ -47,6 +47,15 @@ public class PlayerInteract : MonoBehaviour
 
         Ray ray = new Ray(cam.transform.position, cam.transform.forward);
 
+        var gm = GetGameManager();
+        if (gm == null || !gm.HasFirstAidKit())
+        {
+            if (TryPickFirstAidAlongRay(ray))
+                return;
+            if (TryFirstAidKitFallbackWhenFacing(cam))
+                return;
+        }
+
         if (TryGetInteractHit(ray, out RaycastHit hit))
         {
             if (ProcessHit(hit))
@@ -54,6 +63,35 @@ public class PlayerInteract : MonoBehaviour
         }
 
         TryPhoneBoothFallbackWhenFacing(cam);
+    }
+
+    private bool TryPickFirstAidAlongRay(Ray ray)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(
+            ray,
+            interactDistance + 1f,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide);
+
+        if (hits == null || hits.Length == 0)
+            return false;
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (hits[i].distance > interactDistance + 1f)
+                continue;
+
+            var kit = hits[i].collider.GetComponentInParent<FirstAidKitPickup>(true);
+            if (kit != null && kit.isActiveAndEnabled)
+            {
+                kit.OnPickUp();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool ProcessHit(RaycastHit hit)
@@ -72,8 +110,14 @@ public class PlayerInteract : MonoBehaviour
             wounded = hit.collider.GetComponentInParent<WoundedMan>();
         if (wounded != null)
         {
-            wounded.OnFirstAid();
-            return true;
+            var gm = GetGameManager();
+            if (gm == null || gm.HasFirstAidKit())
+            {
+                wounded.OnFirstAid();
+                return true;
+            }
+
+            return false;
         }
 
         PickUpItem item = hit.collider.GetComponent<PickUpItem>();
@@ -176,7 +220,7 @@ public class PlayerInteract : MonoBehaviour
             return reported ? 40 : 1;
 
         if (col.GetComponentInParent<FirstAidKitPickup>(true) != null)
-            return 1;
+            return gm != null && !gm.HasFirstAidKit() ? 0 : 1;
         if (col.GetComponentInParent<PickUpItem>(true) != null)
             return 3;
         if (FindEnabledDoor(col) != null && col.GetComponentInParent<PublicPhoneBoothMission>(true) == null)
@@ -188,11 +232,64 @@ public class PlayerInteract : MonoBehaviour
         return 50;
     }
 
+    private static Vector3 GetFirstAidInteractPoint(FirstAidKitPickup kit)
+    {
+        if (kit == null)
+            return Vector3.zero;
+
+        var renderer = kit.GetComponentInChildren<Renderer>(true);
+        return renderer != null ? renderer.bounds.center : kit.transform.position;
+    }
+
     private GameManager GetGameManager()
     {
         if (_gameManager == null)
             _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
         return _gameManager;
+    }
+
+    private bool TryFirstAidKitFallbackWhenFacing(Camera cam)
+    {
+        var gm = GetGameManager();
+        if (gm != null && gm.HasFirstAidKit())
+            return false;
+
+        var kits = FindObjectsByType<FirstAidKitPickup>(FindObjectsSortMode.None);
+        if (kits == null || kits.Length == 0)
+            return false;
+
+        FirstAidKitPickup best = null;
+        float bestScore = float.MaxValue;
+
+        for (int i = 0; i < kits.Length; i++)
+        {
+            var kit = kits[i];
+            if (kit == null || !kit.isActiveAndEnabled)
+                continue;
+
+            Vector3 kitPoint = GetFirstAidInteractPoint(kit);
+            Vector3 toKit = kitPoint - cam.transform.position;
+            float dist = toKit.magnitude;
+            if (dist > interactDistance + 1.5f)
+                continue;
+
+            float facing = Vector3.Dot(cam.transform.forward, toKit.normalized);
+            if (facing < 0.35f)
+                continue;
+
+            float score = dist - facing * 2f;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = kit;
+            }
+        }
+
+        if (best == null)
+            return false;
+
+        best.OnPickUp();
+        return true;
     }
 
     private void TryPhoneBoothFallbackWhenFacing(Camera cam)

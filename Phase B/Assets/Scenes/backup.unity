@@ -4374,17 +4374,17 @@ RectTransform:
   - {fileID: 176877172}
   - {fileID: 488113955}
   - {fileID: 701210599}
+  - {fileID: 1704750773}
   - {fileID: 1087024513}
+  - {fileID: 732645534}
   - {fileID: 1125850553}
-  - {fileID: 153975443}
   - {fileID: 2144469385}
+  - {fileID: 153975443}
   - {fileID: 904525129}
   - {fileID: 844526165}
   - {fileID: 134477996}
   - {fileID: 1636362891}
   - {fileID: 591536215}
-  - {fileID: 1704750773}
-  - {fileID: 732645534}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -9394,11 +9394,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 16.65
+      value: 16.650024
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.8
+      value: -0.7999878
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       propertyPath: m_LocalPosition.z
@@ -44084,8 +44084,8 @@ MonoBehaviour:
   lightSwitchObject: {fileID: 1250405379}
   exitDoorObject: {fileID: 1798020994}
   simulation2FirstAidKitObject: {fileID: 438912567}
-  simulation2FirstAidKit: {fileID: 0}
-  woundedRoot: {fileID: 816215553}
+  simulation2FirstAidKit: {fileID: 438912574}
+  woundedRoot: {fileID: 1637539122}
   simulation2EmergencyDispatchObject: {fileID: 1085725015}
   lightSwitchObjectName: PFB_Lightswitch (1)
   exitDoorRootName: PFB_DoorDouble
@@ -69977,7 +69977,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 763364929}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.4862028
+  m_Size: 0.20930186
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -79700,8 +79700,8 @@ SceneRoots:
   - {fileID: 862452213}
   - {fileID: 106029138}
   - {fileID: 1678824947}
-  - {fileID: 1196935696}
   - {fileID: 265743909}
+  - {fileID: 1196935696}
   - {fileID: 465741201}
   - {fileID: 606523039}
   - {fileID: 2061476698}

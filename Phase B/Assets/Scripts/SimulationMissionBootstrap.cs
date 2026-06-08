@@ -75,6 +75,7 @@ public class SimulationMissionBootstrap : MonoBehaviour
         HideWounded();
         ResolveSimulation2FirstAidKit();
         ResetFirstAidKitForMission();
+        HideDuplicateFirstAidKits();
         ShowFirstAidKit();
         EnsurePublicPhoneBooth();
     }
@@ -326,8 +327,23 @@ public class SimulationMissionBootstrap : MonoBehaviour
 
     private void ResolveWoundedRoot()
     {
+        if (woundedRoot != null && woundedRoot.GetComponentInChildren<WoundedMan>(true) == null)
+        {
+            Debug.LogWarning(
+                $"SimulationMissionBootstrap: woundedRoot is assigned to '{woundedRoot.name}', which has no WoundedMan. " +
+                $"Assign '{woundedObjectName}' instead.");
+            woundedRoot = null;
+        }
+
         if (woundedRoot == null)
             woundedRoot = FindSceneObjectByName(woundedObjectName);
+
+        if (woundedRoot == null)
+        {
+            var wounded = FindFirstObjectByType<WoundedMan>(FindObjectsInactive.Include);
+            if (wounded != null)
+                woundedRoot = wounded.gameObject;
+        }
     }
 
     private void HideWounded()
@@ -396,7 +412,28 @@ public class SimulationMissionBootstrap : MonoBehaviour
             return;
         }
 
+        EnsureFirstAidKitOnObject(simulation2FirstAidKit.gameObject);
         simulation2FirstAidKit.gameObject.SetActive(true);
+    }
+
+    private void HideDuplicateFirstAidKits()
+    {
+        if (simulation2FirstAidKit == null)
+            return;
+
+        var missionKit = simulation2FirstAidKit.gameObject;
+        var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            var t = transforms[i];
+            if (t == null || t.gameObject == missionKit || t.GetComponent<RectTransform>() != null)
+                continue;
+
+            if (!t.name.StartsWith("firstaid", System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            t.gameObject.SetActive(false);
+        }
     }
 
     private void ShowFirstAidKit()
