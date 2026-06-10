@@ -1,9 +1,9 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Simulation 2 — Kibbutz courtyard first aid under ongoing alarm. Uses persisted physiology from scene 0.
+/// Simulation 2 ΓÇö Kibbutz courtyard first aid under ongoing alarm. Uses persisted physiology from scene 0.
 /// </summary>
 public class Simulation2SceneController : MonoBehaviour
 {

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// FR 9: emergency pause / exit. Default: Escape opens pause; second press or Resume closes.

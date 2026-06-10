@@ -4259,7 +4259,7 @@ Transform:
   m_GameObject: {fileID: 102647698}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.42, y: 1.57, z: 1.55}
+  m_LocalPosition: {x: -1.24, y: 1.17, z: -2.01}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9648,6 +9648,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1310966946}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 996756714}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: fa115918a4e230248bb2babc60cacc0c, type: 3}
       insertIndex: -1
@@ -17644,12 +17647,26 @@ MonoBehaviour:
   sim1ShelterDoorOpenHint: "The entrance door is still open. \nClose the door before
     entering the Mamad."
   sim1ObjectiveTurnOffLights: Turn off the lights using inside the home.
+  sim1ObjectiveTurnOffLightsApproach: Turn off the lights using the light switch
+    inside the home.
+  sim1ObjectiveTurnOffLightsAction: Press E on the light switch to turn off the lights.
   sim1ObjectiveCloseDoor: Close the entrance door before leaving.
+  sim1ObjectiveCloseDoorApproach: Close the entrance door before going to the Mamad
+    shelter.
+  sim1ObjectiveCloseDoorAction: Press E to close the entrance door.
   sim1ObjectiveRunToShelter: Run to the Mamad (shelter) outside.
+  sim1ObjectiveRunToShelterApproach: Run to the Mamad shelter outside.
+  sim1ObjectiveRunToShelterAction: Enter the Mamad shelter.
   sim2ObjectiveFindKit: Search the city for the first aid kit.
+  sim2ObjectiveFindKitApproach: Find the first aid kit in the city.
+  sim2ObjectiveFindKitAction: Press E to collect the first aid kit.
   sim2ObjectiveFindWounded: Find the wounded person in the city and press E.
+  sim2ObjectiveFindWoundedApproach: Find the wounded person in the city.
+  sim2ObjectiveFindWoundedAction: Press E on the wounded person.
   sim2CasualtyContactedCompleted: Wounded person found.
   sim2ObjectiveGoToPhone: Go to the public telephone and open the door.
+  sim2ObjectiveGoToPhoneApproach: Go to the public telephone.
+  sim2ObjectiveDialPhoneApproach: Go to the telephone and dial 1, 0, 1 on the keypad.
   sim2EmergencyReportedCompleted: Emergency call placed.
   sim2PhoneOpenDoorHint: Press E on the booth door to open it.
   sim2PhoneDoorOpenedCompleted: Door opened.
@@ -17667,6 +17684,11 @@ MonoBehaviour:
   sim2AlreadyReportedHint: ' Find the wounded person.'
   sim2TreatWoundedHint: "Find the wounded person in the city. \nPress E to start
     treatment, then keys 1 \u2192 2 \u2192 3."
+  sim2TreatWoundedApproach: Return to the wounded person for treatment.
+  sim2TreatWoundedPressEAction: Press E on the wounded person to start treatment.
+  sim2TreatWoundedPress1Action: Press 1.
+  sim2TreatWoundedPress2Action: Press 2.
+  sim2TreatWoundedPress3Action: Press 3.
   sim2CompletedHint: "First aid complete. \nSimulation 2 mission finished."
   sim2NeedKitHint: Find the first aid kit in the city before treating the wounded.
   calibrationDurationSeconds: 2
@@ -37134,8 +37156,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 996756713}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0.0011826451, y: -0.94799525, z: 0.04728057, w: 0.31475103}
+  m_LocalPosition: {x: 45.50065, y: 5.0551744, z: 32.97287}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -37143,7 +37165,7 @@ Transform:
   - {fileID: 1996856763}
   - {fileID: 421338855}
   - {fileID: 1148390346}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1637539128}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &997936843 stripped
 Transform:
@@ -59530,6 +59552,8 @@ MonoBehaviour:
   completeTrigger: FirstAidComplete
   requireFirstAidKit: 1
   requireEmergencyReport: 1
+  interactDistance: 6
+  interactFacingThreshold: 0.2
 --- !u!136 &1637539124
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -75478,6 +75502,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteract
   interactDistance: 3
+  woundedInteractDistance: 6
   phoneBoothInteractDistance: 5
 --- !u!114 &2111572962
 MonoBehaviour:
@@ -80677,4 +80702,3 @@ SceneRoots:
   - {fileID: 1951179520}
   - {fileID: 575828025}
   - {fileID: 26590991}
-  - {fileID: 996756714}
