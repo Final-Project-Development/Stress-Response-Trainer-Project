@@ -308,20 +308,44 @@ public class TrainingFlowController : MonoBehaviour
         "The entrance door is still open. Close PFB_DoorDouble before entering the Mamad.";
     [TextArea] public string sim1ObjectiveTurnOffLights =
         "Turn off the lights using the light switch inside the home.";
+    [TextArea] public string sim1ObjectiveTurnOffLightsApproach =
+        "Turn off the lights using the light switch inside the home.";
+    [TextArea] public string sim1ObjectiveTurnOffLightsAction =
+        "Press E on the light switch to turn off the lights.";
     [TextArea] public string sim1ObjectiveCloseDoor =
         "Close the entrance door before going to the Mamad shelter.";
+    [TextArea] public string sim1ObjectiveCloseDoorApproach =
+        "Close the entrance door before going to the Mamad shelter.";
+    [TextArea] public string sim1ObjectiveCloseDoorAction =
+        "Press E to close the entrance door.";
     [TextArea] public string sim1ObjectiveRunToShelter =
         "Run to the Mamad shelter outside.";
+    [TextArea] public string sim1ObjectiveRunToShelterApproach =
+        "Run to the Mamad shelter outside.";
+    [TextArea] public string sim1ObjectiveRunToShelterAction =
+        "Enter the Mamad shelter.";
 
     [Header("Simulation 2 — mission panel copy")]
     [TextArea] public string sim2ObjectiveFindKit =
         "Step 1: Find the first aid kit and press E to collect it.";
+    [TextArea] public string sim2ObjectiveFindKitApproach =
+        "Find the first aid kit in the city.";
+    [TextArea] public string sim2ObjectiveFindKitAction =
+        "Press E to collect the first aid kit.";
     [TextArea] public string sim2ObjectiveFindWounded =
         "Find the wounded person in the city and press E.";
+    [TextArea] public string sim2ObjectiveFindWoundedApproach =
+        "Find the wounded person in the city.";
+    [TextArea] public string sim2ObjectiveFindWoundedAction =
+        "Press E on the wounded person.";
     [TextArea] public string sim2CasualtyContactedCompleted =
         "Wounded person found.";
     [TextArea] public string sim2ObjectiveGoToPhone =
         "Go to the public telephone and open the door.";
+    [TextArea] public string sim2ObjectiveGoToPhoneApproach =
+        "Go to the public telephone.";
+    [TextArea] public string sim2ObjectiveDialPhoneApproach =
+        "Go to the telephone and dial 1, 0, 1 on the keypad.";
     [TextArea] public string sim2EmergencyReportedCompleted =
         "Emergency call placed.";
     [TextArea] public string sim2PhoneOpenDoorHint = "Press E on the booth door to open it (one time only).";
@@ -342,6 +366,13 @@ public class TrainingFlowController : MonoBehaviour
         "Call complete. Return to the wounded person — press E, then 1, 2, 3.";
     [TextArea] public string sim2TreatWoundedHint =
         "Step 4: Return to the wounded. Press E to start treatment, then press 1, then 2, then 3.";
+    [TextArea] public string sim2TreatWoundedApproach =
+        "Return to the wounded person for treatment.";
+    [TextArea] public string sim2TreatWoundedPressEAction =
+        "Press E on the wounded person to start treatment.";
+    [TextArea] public string sim2TreatWoundedPress1Action = "Press 1.";
+    [TextArea] public string sim2TreatWoundedPress2Action = "Press 2.";
+    [TextArea] public string sim2TreatWoundedPress3Action = "Press 3.";
     [TextArea] public string sim2CompletedHint =
         "First aid complete. Simulation 2 mission finished.";
     [TextArea] public string sim2NeedKitHint =
@@ -350,13 +381,29 @@ public class TrainingFlowController : MonoBehaviour
     public string BuildSim1CollectObjective(IReadOnlyList<string> remainingDisplayNames, int collected, int total)
     {
         if (remainingDisplayNames == null || remainingDisplayNames.Count == 0)
-            return sim1ObjectiveTurnOffLights;
+            return sim1ObjectiveTurnOffLightsApproach;
+
+        return BuildSim1CollectApproachObjective(remainingDisplayNames, collected, total);
+    }
+
+    public string BuildSim1CollectApproachObjective(IReadOnlyList<string> remainingDisplayNames, int collected, int total)
+    {
+        if (remainingDisplayNames == null || remainingDisplayNames.Count == 0)
+            return sim1ObjectiveTurnOffLightsApproach;
 
         string remaining = string.Join(", ", remainingDisplayNames);
         if (collected <= 0)
-            return $"Collect {total} supplies inside the home (press E). Remaining: {remaining}.";
+            return $"Collect {total} supplies inside the home. Remaining: {remaining}.";
 
-        return $"Collect supplies inside the home (press E). Remaining: {remaining}. Progress: {collected}/{total}.";
+        return $"Collect supplies inside the home. Remaining: {remaining}. Progress: {collected}/{total}.";
+    }
+
+    public string BuildSim1CollectActionObjective(string itemDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(itemDisplayName))
+            return "Press E to collect the item.";
+
+        return $"Press E to collect {itemDisplayName.Trim()}.";
     }
 
     public float calibrationDurationSeconds = 60f;

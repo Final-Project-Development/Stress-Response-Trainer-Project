@@ -40,6 +40,10 @@ public class WoundedMan : MonoBehaviour
 
     public float InteractDistance => interactDistance;
 
+    public bool IsTreatmentActive => treatmentStarted && !helped;
+
+    public int TreatmentStepIndex => currentStep;
+
     void Awake()
     {
         if (woundedAnimator == null)
@@ -147,9 +151,31 @@ public class WoundedMan : MonoBehaviour
         string completed = BuildTreatmentCompletedLine(flow);
         string objective = BuildTreatmentObjectiveLine();
         if (gameManager != null)
-            gameManager.SetMissionPanelProgress(completed, objective);
+        {
+            if (gameManager.HasMissionStatusPanel())
+            {
+                gameManager.SetMissionCompletedLine(completed);
+                gameManager.RefreshSimulation2MissionObjective();
+            }
+            else
+            {
+                gameManager.SetMissionPanelProgress(completed, objective);
+            }
+        }
 
         Debug.Log($"{completed} | {objective}");
+    }
+
+    public string GetProximityTreatmentObjective(TrainingFlowController flow)
+    {
+        if (flow == null)
+            return BuildTreatmentObjectiveLine();
+
+        if (currentStep <= 0)
+            return flow.sim2TreatWoundedPress1Action;
+        if (currentStep == 1)
+            return flow.sim2TreatWoundedPress2Action;
+        return flow.sim2TreatWoundedPress3Action;
     }
 
     private string BuildTreatmentCompletedLine(TrainingFlowController flow)
@@ -198,7 +224,12 @@ public class WoundedMan : MonoBehaviour
             : $"Wrong key. Press {FormatKey(expected)}. Remaining: {remaining}";
 
         if (gameManager != null)
-            gameManager.SetMissionPanelProgress(null, objective);
+        {
+            if (gameManager.HasMissionStatusPanel())
+                gameManager.RefreshSimulation2MissionObjective();
+            else
+                gameManager.SetMissionPanelProgress(null, objective);
+        }
         else
             gameManager?.ShowMissionMessage(objective, 3f);
 

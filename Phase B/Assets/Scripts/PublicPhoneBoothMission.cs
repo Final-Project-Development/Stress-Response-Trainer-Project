@@ -75,6 +75,59 @@ public class PublicPhoneBoothMission : MonoBehaviour
         return transform.position + transform.forward * 0.5f + Vector3.up * 1.2f;
     }
 
+    public bool IsInPlayerInteractRange(Camera cam)
+    {
+        if (cam == null)
+            return false;
+
+        if (MissionInteractProximity.CanPressEOn(cam, this, facingInteractDistance, 0.55f))
+            return true;
+
+        Vector3 toBooth = GetInteractCenter() - cam.transform.position;
+        float dist = toBooth.magnitude;
+        if (dist > facingInteractDistance)
+            return false;
+
+        return Vector3.Dot(cam.transform.forward, toBooth.normalized) >= 0.55f;
+    }
+
+    public string GetProximityActionObjective(TrainingFlowController flow)
+    {
+        switch (_step)
+        {
+            case BoothStep.OpenDoor:
+                return flow != null
+                    ? flow.sim2PhoneOpenDoorHint
+                    : "Press E on the booth door to open it.";
+            case BoothStep.InsertCoin:
+                return flow != null
+                    ? flow.sim2PhoneInsertCoinHint
+                    : "Press E on the coin slot.";
+            case BoothStep.TakeHandset:
+                return flow != null
+                    ? flow.sim2PhoneCoinInsertedObjective
+                    : "Press E on the receiver.";
+            case BoothStep.Dial101:
+                return GetDialPressObjective(flow);
+            default:
+                return flow != null
+                    ? flow.sim2AlreadyReportedHint
+                    : "Return to the wounded person.";
+        }
+    }
+
+    string GetDialPressObjective(TrainingFlowController flow)
+    {
+        int progress = CountDialProgressToward101();
+        if (progress <= 0)
+            return flow != null ? "Press 1." : "Press 1 on the keypad.";
+        if (progress == 1)
+            return flow != null ? "Press 0." : "Press 0 on the keypad.";
+        if (progress == 2)
+            return flow != null ? "Press 1." : "Press 1 on the keypad.";
+        return flow != null ? flow.sim2ObjectiveDialPhoneApproach : "Dial 1, 0, 1 on the keypad.";
+    }
+
     void Awake()
     {
         if (phoneBox == null)

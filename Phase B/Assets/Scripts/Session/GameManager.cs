@@ -83,6 +83,32 @@ public class GameManager : MonoBehaviour
         UpdateObjectiveText();
     }
 
+    void Update()
+    {
+        RefreshProximityObjectiveIfNeeded();
+    }
+
+    void RefreshProximityObjectiveIfNeeded()
+    {
+        if (!UsesMissionStatusPanel())
+            return;
+
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        if (_flow == null || !_flow.AllowsMissionGameplay)
+            return;
+
+        var phase = _flow.CurrentPhase;
+        if (phase != TrainingFlowController.Phase.Simulation1Active
+            && phase != TrainingFlowController.Phase.Simulation2Active)
+            return;
+
+        string objective = MissionProximityObjectiveResolver.Resolve(this, _flow, Camera.main);
+        if (!string.IsNullOrWhiteSpace(objective))
+            PushObjectiveToMissionPanel(objective);
+    }
+
     /// <summary>Mission hint text must not steal mouse input (full-screen TMP raycasts block look).</summary>
     private void ConfigureNonBlockingMissionHud()
     {
@@ -223,6 +249,8 @@ public class GameManager : MonoBehaviour
 
     public int GetSim1ItemsCollected() => itemCollected;
 
+    public Door GetMissionExitDoor() => _missionExitDoor;
+
     public bool HasMissionStatusPanel() => UsesMissionStatusPanel();
 
     public void RefreshSimulation2MissionObjective() => UpdateSimulation2ObjectiveText();
@@ -276,30 +304,18 @@ public class GameManager : MonoBehaviour
         var phase = _flow.CurrentPhase;
         if (phase == TrainingFlowController.Phase.Simulation1Active)
         {
-            switch (_sim1Phase)
-            {
-                case Sim1MissionPhase.CollectItems:
-                    return BuildSim1CollectObjectiveText();
-                case Sim1MissionPhase.TurnOffLights:
-                    return _flow.sim1ObjectiveTurnOffLights;
-                case Sim1MissionPhase.CloseDoor:
-                    return _flow.sim1ObjectiveCloseDoor;
-                case Sim1MissionPhase.RunToShelter:
-                    return _flow.sim1ObjectiveRunToShelter;
-            }
+            if (UsesMissionStatusPanel())
+                return MissionProximityObjectiveResolver.Resolve(this, _flow, Camera.main);
+
+            return BuildLegacySim1ObjectiveText();
         }
 
         if (phase == TrainingFlowController.Phase.Simulation2Active)
         {
-            if (!_firstAidKitCollected)
-                return _flow.sim2ObjectiveFindKit;
-            if (!_casualtyContacted)
-                return _flow.sim2ObjectiveFindWounded;
-            if (!_emergencyReported)
-                return _flow.sim2ObjectiveGoToPhone;
-            if (!firstAidDone)
-                return _flow.sim2TreatWoundedHint;
-            return "First aid complete.";
+            if (UsesMissionStatusPanel())
+                return MissionProximityObjectiveResolver.Resolve(this, _flow, Camera.main);
+
+            return BuildLegacySim2ObjectiveText();
         }
 
         return null;
@@ -665,71 +681,92 @@ public class GameManager : MonoBehaviour
 
     public void UpdateObjectiveText()
     {
-        string text;
-        switch (_sim1Phase)
-        {
-            case Sim1MissionPhase.CollectItems:
-                text = BuildSim1CollectObjectiveText();
-                break;
-            case Sim1MissionPhase.TurnOffLights:
-                text = _flow != null
-                    ? _flow.sim1ObjectiveTurnOffLights
-                    : "Turn off the lights using PFB_Lightswitch (1) inside the home.";
-                break;
-            case Sim1MissionPhase.CloseDoor:
-                text = _flow != null
-                    ? _flow.sim1ObjectiveCloseDoor
-                    : "Close the entrance door before going to the Mamad (press E anytime).";
-                break;
-            case Sim1MissionPhase.RunToShelter:
-                text = _flow != null
-                    ? _flow.sim1ObjectiveRunToShelter
-                    : "Run to the Mamad — the entrance door must be closed when you arrive.";
-                break;
-            default:
-                return;
-        }
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        string text = UsesMissionStatusPanel()
+            ? MissionProximityObjectiveResolver.Resolve(this, _flow, Camera.main)
+            : BuildLegacySim1ObjectiveText();
+
+        if (string.IsNullOrWhiteSpace(text))
+            return;
 
         if (objectiveText != null)
             objectiveText.text = text;
         PushObjectiveToMissionPanel(text);
     }
 
+    private string BuildLegacySim1ObjectiveText()
+    {
+        switch (_sim1Phase)
+        {
+            case Sim1MissionPhase.CollectItems:
+                return BuildSim1CollectObjectiveText();
+            case Sim1MissionPhase.TurnOffLights:
+                return _flow != null
+                    ? _flow.sim1ObjectiveTurnOffLights
+                    : "Turn off the lights using PFB_Lightswitch (1) inside the home.";
+            case Sim1MissionPhase.CloseDoor:
+                return _flow != null
+                    ? _flow.sim1ObjectiveCloseDoor
+                    : "Close the entrance door before going to the Mamad (press E anytime).";
+            case Sim1MissionPhase.RunToShelter:
+                return _flow != null
+                    ? _flow.sim1ObjectiveRunToShelter
+                    : "Run to the Mamad — the entrance door must be closed when you arrive.";
+            default:
+                return string.Empty;
+        }
+    }
+
     private void UpdateSimulation2ObjectiveText()
     {
-        string text;
-        if (!_firstAidKitCollected)
-        {
-            text = _flow != null
-                ? _flow.sim2ObjectiveFindKit
-                : "Search the city for the first aid kit.";
-        }
-        else if (!_casualtyContacted)
-        {
-            text = _flow != null
-                ? _flow.sim2ObjectiveFindWounded
-                : "Find the wounded person in the city. Press E when you reach them.";
-        }
-        else if (!_emergencyReported)
-        {
-            text = _flow != null
-                ? _flow.sim2ObjectiveGoToPhone
-                : Sim2GoToPhoneObjective;
-        }
-        else if (!firstAidDone)
-        {
-            text = _flow != null
-                ? _flow.sim2TreatWoundedHint
-                : "Return to the wounded. Press E, then 1, then 2, then 3.";
-        }
-        else
-        {
-            text = "First aid complete.";
-        }
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        string text = UsesMissionStatusPanel()
+            ? MissionProximityObjectiveResolver.Resolve(this, _flow, Camera.main)
+            : BuildLegacySim2ObjectiveText();
+
+        if (string.IsNullOrWhiteSpace(text))
+            return;
 
         if (objectiveText != null)
             objectiveText.text = text;
         PushObjectiveToMissionPanel(text);
+    }
+
+    private string BuildLegacySim2ObjectiveText()
+    {
+        if (!_firstAidKitCollected)
+        {
+            return _flow != null
+                ? _flow.sim2ObjectiveFindKit
+                : "Search the city for the first aid kit.";
+        }
+
+        if (!_casualtyContacted)
+        {
+            return _flow != null
+                ? _flow.sim2ObjectiveFindWounded
+                : "Find the wounded person in the city. Press E when you reach them.";
+        }
+
+        if (!_emergencyReported)
+        {
+            return _flow != null
+                ? _flow.sim2ObjectiveGoToPhone
+                : Sim2GoToPhoneObjective;
+        }
+
+        if (!firstAidDone)
+        {
+            return _flow != null
+                ? _flow.sim2TreatWoundedHint
+                : "Return to the wounded. Press E, then 1, then 2, then 3.";
+        }
+
+        return "First aid complete.";
     }
 
     /// <returns>True if the shelter objective was completed now; false if prerequisites are not met yet.</returns>

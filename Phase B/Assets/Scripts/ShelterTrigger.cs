@@ -111,6 +111,14 @@ public class ShelterTrigger : MonoBehaviour
     /// If <see cref="undergroundCompletionPoint"/> is set, only distance to that point matters (best for “only when down in the mamad”).
     /// Otherwise uses trigger bounds + optional depth.
     /// </summary>
+    public bool IsPlayerNearCompletionZone()
+    {
+        if (_playerTransform == null)
+            _playerTransform = FindPlayerTransform();
+
+        return _playerTransform != null && IsPlayerInCompletionZone(_playerTransform.position);
+    }
+
     private bool IsPlayerInCompletionZone(Vector3 playerWorldPosition)
     {
         if (undergroundCompletionPoint != null)
