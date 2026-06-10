@@ -151,6 +151,11 @@ public class WorldItemLabel : MonoBehaviour
         }
     }
 
+    public void RefreshLabelPosition()
+    {
+        EnsureLabelBuilt();
+    }
+
     public void ApplyAppearanceFromController()
     {
         if (_labelCanvas == null)

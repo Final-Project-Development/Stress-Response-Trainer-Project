@@ -26,6 +26,13 @@ public class SimulationMissionBootstrap : MonoBehaviour
     [Tooltip("Wounded character root, e.g. WoundedCharacter_TPose.")]
     public GameObject woundedRoot;
 
+    [Header("Simulation 2 — wounded random spawn")]
+    [Tooltip("Possible positions for the wounded person. One is chosen at random each time Simulation 2 starts.")]
+    public Transform[] woundedSpawnPoints;
+
+    [Tooltip("If the array above is empty, collect spawn markers from children of this object.")]
+    public string woundedSpawnPointsParentName = "WoundedSpawnPoints";
+
     [Tooltip("UK public telephone (or child with EmergencyDispatchStation). Drag UK Phone Box prefab instance here.")]
     public GameObject simulation2EmergencyDispatchObject;
 
@@ -47,6 +54,9 @@ public class SimulationMissionBootstrap : MonoBehaviour
     private GameManager _gameManager;
     private LightSwitch _lightSwitch;
     private Door _exitDoor;
+    private int _lastWoundedSpawnIndex = -1;
+
+    public int LastWoundedSpawnIndex => _lastWoundedSpawnIndex;
 
     void Awake()
     {
@@ -73,6 +83,7 @@ public class SimulationMissionBootstrap : MonoBehaviour
     public void PrepareSimulation2()
     {
         ResolveWoundedRoot();
+        PlaceWoundedAtRandomSpawnPoint();
         HideWounded();
         ResolveSimulation2FirstAidKit();
         ResetFirstAidKitForMission();
@@ -445,6 +456,119 @@ public class SimulationMissionBootstrap : MonoBehaviour
         ResolveWoundedRoot();
         if (woundedRoot != null)
             woundedRoot.SetActive(true);
+    }
+
+    private void PlaceWoundedAtRandomSpawnPoint()
+    {
+        if (woundedRoot == null)
+            return;
+
+        Transform[] points = ResolveWoundedSpawnPoints();
+        if (points.Length == 0)
+            return;
+
+        int index = Random.Range(0, points.Length);
+        _lastWoundedSpawnIndex = index;
+
+        Transform spawn = points[index];
+        woundedRoot.transform.SetPositionAndRotation(spawn.position, spawn.rotation);
+        ApplySpawnAnchorsToWounded(spawn);
+
+        Debug.Log(
+            $"Simulation 2: wounded placed at spawn point {index + 1}/{points.Length} ({spawn.name}).");
+    }
+
+    private void ApplySpawnAnchorsToWounded(Transform spawnPoint)
+    {
+        if (spawnPoint == null || woundedRoot == null)
+            return;
+
+        if (!TryResolveSpawnAnchors(spawnPoint, out Transform spawnLabelAnchor, out Transform spawnViewAnchor))
+            return;
+
+        var woundedLabel = woundedRoot.GetComponent<WorldItemLabel>();
+        if (woundedLabel == null)
+            return;
+
+        Transform woundedTransform = woundedRoot.transform;
+
+        if (spawnLabelAnchor != null && woundedLabel.TryGetLabelAnchor(out Transform woundedLabelAnchor))
+        {
+            SnapChildToWorldPose(woundedLabelAnchor, woundedTransform, spawnLabelAnchor);
+            woundedLabel.labelAnchor = woundedLabelAnchor;
+        }
+
+        if (spawnViewAnchor != null && woundedLabel.TryGetViewAnchor(out Transform woundedViewAnchor))
+        {
+            SnapChildToWorldPose(woundedViewAnchor, woundedTransform, spawnViewAnchor);
+            woundedLabel.viewAnchor = woundedViewAnchor;
+        }
+
+        woundedLabel.RefreshLabelPosition();
+    }
+
+    static bool TryResolveSpawnAnchors(Transform spawnPoint, out Transform labelAnchor, out Transform viewAnchor)
+    {
+        labelAnchor = null;
+        viewAnchor = null;
+
+        var marker = spawnPoint.GetComponent<WoundedSpawnPointMarker>();
+        if (marker != null)
+        {
+            marker.TryGetLabelAnchor(out labelAnchor);
+            marker.TryGetViewAnchor(out viewAnchor);
+        }
+
+        if (labelAnchor == null)
+            labelAnchor = spawnPoint.Find(WorldItemLabel.LabelAnchorName);
+
+        if (viewAnchor == null)
+            viewAnchor = spawnPoint.Find(WorldItemLabel.ViewAnchorName);
+
+        return labelAnchor != null || viewAnchor != null;
+    }
+
+    static void SnapChildToWorldPose(Transform child, Transform newParent, Transform worldPoseSource)
+    {
+        if (child == null || newParent == null || worldPoseSource == null)
+            return;
+
+        child.SetPositionAndRotation(worldPoseSource.position, worldPoseSource.rotation);
+        child.SetParent(newParent, true);
+    }
+
+    private Transform[] ResolveWoundedSpawnPoints()
+    {
+        if (woundedSpawnPoints != null && woundedSpawnPoints.Length > 0)
+        {
+            var assigned = new List<Transform>();
+            for (int i = 0; i < woundedSpawnPoints.Length; i++)
+            {
+                if (woundedSpawnPoints[i] != null)
+                    assigned.Add(woundedSpawnPoints[i]);
+            }
+
+            if (assigned.Count > 0)
+                return assigned.ToArray();
+        }
+
+        if (string.IsNullOrWhiteSpace(woundedSpawnPointsParentName))
+            return System.Array.Empty<Transform>();
+
+        var parentObject = GameObject.Find(woundedSpawnPointsParentName);
+        if (parentObject == null)
+            return System.Array.Empty<Transform>();
+
+        var children = new List<Transform>();
+        var parent = parentObject.transform;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child != null)
+                children.Add(child);
+        }
+
+        return children.ToArray();
     }
 
     /// <summary>All Sim 1 pickups still in the scene (not yet collected).</summary>
