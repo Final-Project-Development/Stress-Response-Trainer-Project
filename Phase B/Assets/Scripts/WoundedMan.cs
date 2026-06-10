@@ -25,23 +25,43 @@ public class WoundedMan : MonoBehaviour
     public bool requireFirstAidKit = true;
     public bool requireEmergencyReport = true;
 
+    [Header("Interaction range")]
+    [Tooltip("How far the player can press E on the casualty, and 1/2/3 during treatment.")]
+    public float interactDistance = 6f;
+    [Tooltip("Lower = easier to register without aiming at a specific body part.")]
+    public float interactFacingThreshold = 0.2f;
+
     private GameManager gameManager;
     private bool helped = false;
     private bool treatmentStarted = false;
     private int currentStep = 0;
+    private Collider _interactCollider;
     private const float Sim2WoundedHintDuration = 7f;
+
+    public float InteractDistance => interactDistance;
+
+    void Awake()
+    {
+        if (woundedAnimator == null)
+            woundedAnimator = GetComponentInChildren<Animator>();
+    }
 
     void Start()
     {
         gameManager = FindObjectOfType<GameManager>();
+    }
 
-        if (woundedAnimator == null)
-            woundedAnimator = GetComponentInChildren<Animator>();
+    void OnEnable()
+    {
+        EnsureBodyInteractCollider();
     }
 
     void Update()
     {
         if (!treatmentStarted || helped)
+            return;
+
+        if (!IsPlayerWithinInteractRange())
             return;
 
         KeyCode expected = GetExpectedKey();
@@ -206,6 +226,132 @@ public class WoundedMan : MonoBehaviour
         helped = false;
         treatmentStarted = false;
         currentStep = 0;
+    }
+
+    public Vector3 GetInteractCenter()
+    {
+        EnsureBodyInteractCollider();
+        if (_interactCollider != null)
+            return _interactCollider.bounds.center;
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+            return transform.position;
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+                bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        return bounds.center;
+    }
+
+    public bool IsPlayerWithinInteractRange()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+            return true;
+
+        return IsWithinInteractRange(cam.transform.position);
+    }
+
+    public bool IsWithinInteractRange(Vector3 observerPosition)
+    {
+        float maxDist = interactDistance;
+        float maxDistSqr = maxDist * maxDist;
+
+        Bounds bounds = GetInteractBounds();
+        if (bounds.SqrDistance(observerPosition) <= maxDistSqr)
+            return true;
+
+        return (GetInteractCenter() - observerPosition).sqrMagnitude <= maxDistSqr;
+    }
+
+    public bool IsFacingForInteract(Camera cam)
+    {
+        if (cam == null)
+            return false;
+
+        if (!IsWithinInteractRange(cam.transform.position))
+            return false;
+
+        Bounds bounds = GetInteractBounds();
+        Vector3 eyePosition = cam.transform.position;
+        Vector3 viewDirection = cam.transform.forward;
+
+        Vector3 closestOnBounds = bounds.ClosestPoint(eyePosition + viewDirection * interactDistance);
+        Vector3 toClosest = closestOnBounds - eyePosition;
+        if (toClosest.sqrMagnitude > 0.0001f
+            && Vector3.Dot(viewDirection, toClosest.normalized) >= interactFacingThreshold)
+            return true;
+
+        Vector3 toCenter = bounds.center - eyePosition;
+        if (toCenter.sqrMagnitude <= 0.0001f)
+            return true;
+
+        return Vector3.Dot(viewDirection, toCenter.normalized) >= interactFacingThreshold;
+    }
+
+    private Bounds GetInteractBounds()
+    {
+        EnsureBodyInteractCollider();
+        if (_interactCollider != null)
+            return _interactCollider.bounds;
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+            return new Bounds(transform.position, Vector3.one);
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+                bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        return bounds;
+    }
+
+    private void EnsureBodyInteractCollider()
+    {
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+            return;
+
+        Bounds worldBounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            if (renderers[i] != null)
+                worldBounds.Encapsulate(renderers[i].bounds);
+        }
+
+        Transform volume = transform.Find("InteractVolume");
+        if (volume == null)
+        {
+            var go = new GameObject("InteractVolume");
+            volume = go.transform;
+            volume.SetParent(transform, false);
+        }
+
+        var box = volume.GetComponent<BoxCollider>();
+        if (box == null)
+            box = volume.gameObject.AddComponent<BoxCollider>();
+
+        box.isTrigger = false;
+        box.center = transform.InverseTransformPoint(worldBounds.center);
+        Vector3 localSize = transform.InverseTransformVector(worldBounds.size);
+        box.size = new Vector3(
+            Mathf.Abs(localSize.x) * 1.2f,
+            Mathf.Abs(localSize.y) * 1.2f,
+            Mathf.Abs(localSize.z) * 1.2f);
+
+        _interactCollider = box;
+
+        var legacyCapsule = GetComponent<CapsuleCollider>();
+        if (legacyCapsule != null && legacyCapsule != _interactCollider)
+            legacyCapsule.enabled = false;
     }
 
     private void PlayAnimationTrigger(string triggerName)

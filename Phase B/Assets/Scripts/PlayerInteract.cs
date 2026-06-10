@@ -3,6 +3,8 @@ using UnityEngine;
 public class PlayerInteract : MonoBehaviour
 {
     public float interactDistance = 3f;
+    [Tooltip("Longer reach for the wounded casualty (E contact and treatment).")]
+    public float woundedInteractDistance = 6f;
     [Tooltip("Longer reach for the UK phone booth (door / coin / handset).")]
     public float phoneBoothInteractDistance = 5f;
 
@@ -61,6 +63,9 @@ public class PlayerInteract : MonoBehaviour
             if (ProcessHit(hit))
                 return;
         }
+
+        if (TryWoundedInteractWhenFacing(cam))
+            return;
 
         TryPhoneBoothFallbackWhenFacing(cam);
     }
@@ -185,7 +190,7 @@ public class PlayerInteract : MonoBehaviour
             if (col == null)
                 continue;
 
-            float maxDist = IsPhoneBoothHit(col) ? phoneBoothInteractDistance : interactDistance;
+            float maxDist = GetMaxInteractDistance(col);
             if (hits[i].distance > maxDist)
                 continue;
 
@@ -334,29 +339,72 @@ public class PlayerInteract : MonoBehaviour
         best?.TryInteractWithoutRaycast();
     }
 
-    private bool IsFacingNearbyWounded(Camera cam)
+    private bool TryWoundedInteractWhenFacing(Camera cam)
     {
         var woundedMen = FindObjectsByType<WoundedMan>(FindObjectsSortMode.None);
-        if (woundedMen == null)
+        if (woundedMen == null || woundedMen.Length == 0)
             return false;
 
-        float maxDist = interactDistance + 1.5f;
+        WoundedMan best = null;
+        float bestScore = float.MaxValue;
+
         for (int i = 0; i < woundedMen.Length; i++)
         {
             var wounded = woundedMen[i];
             if (wounded == null || !wounded.isActiveAndEnabled)
                 continue;
 
-            Vector3 toWounded = wounded.transform.position - cam.transform.position;
-            float dist = toWounded.magnitude;
-            if (dist > maxDist)
+            if (!wounded.IsFacingForInteract(cam))
                 continue;
 
-            if (Vector3.Dot(cam.transform.forward, toWounded.normalized) >= 0.45f)
+            float dist = (wounded.GetInteractCenter() - cam.transform.position).magnitude;
+            float score = dist;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = wounded;
+            }
+        }
+
+        if (best == null)
+            return false;
+
+        best.OnFirstAid();
+        return true;
+    }
+
+    private bool IsFacingNearbyWounded(Camera cam)
+    {
+        var woundedMen = FindObjectsByType<WoundedMan>(FindObjectsSortMode.None);
+        if (woundedMen == null)
+            return false;
+
+        for (int i = 0; i < woundedMen.Length; i++)
+        {
+            var wounded = woundedMen[i];
+            if (wounded == null || !wounded.isActiveAndEnabled)
+                continue;
+
+            if (wounded.IsFacingForInteract(cam))
                 return true;
         }
 
         return false;
+    }
+
+    private float GetMaxInteractDistance(Collider col)
+    {
+        if (col == null)
+            return interactDistance;
+
+        if (IsPhoneBoothHit(col))
+            return phoneBoothInteractDistance;
+
+        var wounded = col.GetComponentInParent<WoundedMan>(true);
+        if (wounded != null)
+            return Mathf.Max(woundedInteractDistance, wounded.InteractDistance);
+
+        return interactDistance;
     }
 
     private static bool TryPhoneBoothInteract(Collider col)
