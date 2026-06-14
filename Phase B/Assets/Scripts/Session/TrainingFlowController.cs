@@ -89,7 +89,11 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject sim2ResultsPanel;
     public GameObject safetyWarningPanel;
     public TextMeshProUGUI safetyWarningText;
+    public TextMeshProUGUI safetyWarningContinueWithAlarmText;
+    public TextMeshProUGUI safetyWarningContinueWithoutAlarmText;
     [TextArea] public string stressWarningMessage = "Warning: this simulation contains stress stimuli (alarm audio, time pressure, emergency context). You can pause at any time with Esc and quit safely.";
+    public string continueWithAlarmButtonLabel = "Continue with alarm";
+    public string continueWithoutAlarmButtonLabel = "Continue without alarm";
 
     [Header("Optional: hide gameplay until mission starts")]
     public GameObject simulation1GameplayRoot;
@@ -130,6 +134,8 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("Optional feedback")]
     public AudioSource sirenLoop;
+    [Tooltip("Calm loop played when the user chooses Continue without alarm on the safety warning panel.")]
+    public AudioClip calmBackgroundInsteadOfAlarmClip;
     public AudioSource narrationAudioSource;
     [Tooltip("Optional bundle of VoiceGPT clips (Window → VoiceGPT → Panel Narration Setup). Fills empty clip slots at Start.")]
     public PanelNarrationLibrary narrationLibrary;
@@ -421,6 +427,8 @@ public class TrainingFlowController : MonoBehaviour
     private Phase _simulationStressTimerPhase = Phase.Gate;
     private bool _sim2Subscribed;
     private bool _paused;
+    private bool _useCalmBackgroundInsteadOfAlarm;
+    private AudioClip _sirenDefaultClip;
     private PendingStart _pendingStart = PendingStart.None;
     private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
     private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
@@ -435,6 +443,8 @@ public class TrainingFlowController : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        if (sirenLoop != null)
+            _sirenDefaultClip = sirenLoop.clip;
         if (environmentLearningController == null)
             environmentLearningController = FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
 
@@ -919,6 +929,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_ReturnToSimulationPickFromResults()
     {
         StopAllNarration();
+        StopActiveSimulationAudio();
         if (simulationPickPanel != null)
         {
             CurrentPhase = Phase.SimulationPick;
@@ -976,6 +987,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_BackToHub()
     {
         StopAllNarration();
+        StopActiveSimulationAudio();
         environmentLearningController?.EndLearning();
         CurrentPhase = Phase.Gate;
         recorder?.Clear();
@@ -993,6 +1005,18 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_ConfirmSafetyWarning()
     {
+        _useCalmBackgroundInsteadOfAlarm = false;
+        ConfirmSafetyWarningAndStart();
+    }
+
+    public void UI_ConfirmSafetyWarningWithoutAlarm()
+    {
+        _useCalmBackgroundInsteadOfAlarm = true;
+        ConfirmSafetyWarningAndStart();
+    }
+
+    private void ConfirmSafetyWarningAndStart()
+    {
         SetSafetyWarningVisible(false);
         var action = _pendingStart;
         _pendingStart = PendingStart.None;
@@ -1006,6 +1030,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_CancelSafetyWarning()
     {
         _pendingStart = PendingStart.None;
+        _useCalmBackgroundInsteadOfAlarm = false;
         SetSafetyWarningVisible(false);
     }
 
@@ -1252,6 +1277,12 @@ public class TrainingFlowController : MonoBehaviour
     private void PlaySiren()
     {
         if (sirenLoop == null) return;
+
+        if (_useCalmBackgroundInsteadOfAlarm && calmBackgroundInsteadOfAlarmClip != null)
+            sirenLoop.clip = calmBackgroundInsteadOfAlarmClip;
+        else if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+
         sirenLoop.loop = true;
         if (!sirenLoop.isPlaying)
             sirenLoop.Play();
@@ -1261,6 +1292,23 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (sirenLoop == null) return;
         sirenLoop.Stop();
+        if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+        _useCalmBackgroundInsteadOfAlarm = false;
+    }
+
+    private void StopActiveSimulationAudio()
+    {
+        if (CurrentPhase == Phase.Simulation1Active && gameManager != null)
+            gameManager.OnAllItemsCollected -= HandleSim1Complete;
+
+        if (CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active)
+        {
+            if (physiology != null)
+                physiology.StressorActive = false;
+        }
+
+        StopSiren();
     }
 
     private void ApplyNarrationFromLibrary()
@@ -1520,8 +1568,17 @@ public class TrainingFlowController : MonoBehaviour
         _pendingStart = startAction;
         if (safetyWarningText != null)
             safetyWarningText.text = stressWarningMessage;
+        ApplySafetyWarningButtonLabels();
         SetSafetyWarningVisible(true);
         return true;
+    }
+
+    private void ApplySafetyWarningButtonLabels()
+    {
+        if (safetyWarningContinueWithAlarmText != null)
+            safetyWarningContinueWithAlarmText.text = continueWithAlarmButtonLabel;
+        if (safetyWarningContinueWithoutAlarmText != null)
+            safetyWarningContinueWithoutAlarmText.text = continueWithoutAlarmButtonLabel;
     }
 
     private void HandleSafetyKeys()
