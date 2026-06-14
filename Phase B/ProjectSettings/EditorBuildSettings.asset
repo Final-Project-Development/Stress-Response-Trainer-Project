@@ -6,10 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/danthaigames/DS UK Public Telephone/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
     path: Assets/Scenes/scene_1.unity
     guid: c179b1cff52d3e14ea9f9f08d4d7768d
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 700ba6b68b5ab2f42bb8f4c5d9a1be68, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: c6cca4c7b1ddcde4d8703cd48bdb5054, type: 2}
   m_UseUCBPForAssetBundles: 0

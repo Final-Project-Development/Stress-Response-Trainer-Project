@@ -17623,8 +17623,6 @@ MonoBehaviour:
   safetyWarningText: {fileID: 1134613329}
   safetyWarningContinueWithAlarmText: {fileID: 1004817948}
   safetyWarningContinueWithoutAlarmText: {fileID: 1474706257}
-  continueWithAlarmButtonLabel: Continue with alarm
-  continueWithoutAlarmButtonLabel: Continue without alarm
   stressWarningMessage: 'This simulation contains
 
     stress alarm audio.
@@ -17632,6 +17630,8 @@ MonoBehaviour:
 
     You
     can pause at any time with Esc.'
+  continueWithAlarmButtonLabel: Continue with alarm
+  continueWithoutAlarmButtonLabel: Continue without alarm
   simulation1GameplayRoot: {fileID: 0}
   simulation2GameplayRoot: {fileID: 1637539122}
   playerFpsController: {fileID: 2111572959}
@@ -33184,7 +33184,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -274, y: 29}
+  m_AnchoredPosition: {x: -425.00006, y: 46}
   m_SizeDelta: {x: 149, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &879326956
@@ -42533,7 +42533,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -273.99997, y: -33.99999}
+  m_AnchoredPosition: {x: -431, y: -20}
   m_SizeDelta: {x: 149, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1153670702
@@ -53722,8 +53722,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -229, y: -146}
-  m_SizeDelta: {x: 750, y: 330}
+  m_AnchoredPosition: {x: -61, y: -146}
+  m_SizeDelta: {x: 1050, y: 330}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1470844713
 MonoBehaviour:
@@ -67766,7 +67766,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -249, y: 107}
+  m_AnchoredPosition: {x: -397, y: 107}
   m_SizeDelta: {x: 200, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1881564886

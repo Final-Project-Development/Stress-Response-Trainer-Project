@@ -93,7 +93,7 @@ public static class MissionProximityObjectiveResolver
         if (remaining == null || remaining.Count == 0)
             return "Collect supplies inside the home.";
 
-        return $"Collect supplies inside the home. Remaining: {string.Join(", ", remaining)}.";
+        return $"Collect supplies inside the home.\nRemaining: {string.Join(", ", remaining)}.";
     }
 
     static string ResolveSim1LightSwitch(GameManager gameManager, TrainingFlowController flow, Camera cam)

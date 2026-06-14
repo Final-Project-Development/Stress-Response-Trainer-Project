@@ -676,7 +676,7 @@ public class GameManager : MonoBehaviour
         if (remaining.Count == 0)
             return "Turn off the lights using the light switch inside the home.";
 
-        return $"Collect supplies inside the home (press E). Remaining: {string.Join(", ", remaining)}. Progress: {itemCollected}/{itemToCollect}.";
+        return $"Collect supplies inside the home (press E).\nRemaining: {string.Join(", ", remaining)}. Progress: {itemCollected}/{itemToCollect}.";
     }
 
     public void UpdateObjectiveText()

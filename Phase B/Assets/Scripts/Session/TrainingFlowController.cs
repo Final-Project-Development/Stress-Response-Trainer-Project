@@ -399,9 +399,9 @@ public class TrainingFlowController : MonoBehaviour
 
         string remaining = string.Join(", ", remainingDisplayNames);
         if (collected <= 0)
-            return $"Collect {total} supplies inside the home. Remaining: {remaining}.";
+            return $"Collect {total} supplies inside the home.\nRemaining: {remaining}.";
 
-        return $"Collect supplies inside the home. Remaining: {remaining}. Progress: {collected}/{total}.";
+        return $"Collect supplies inside the home.\nRemaining: {remaining}. Progress: {collected}/{total}.";
     }
 
     public string BuildSim1CollectActionObjective(string itemDisplayName)
