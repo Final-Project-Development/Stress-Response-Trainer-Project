@@ -733,14 +733,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         CurrentPhase = Phase.Simulation1MissionBriefing;
         if (missionBriefingBodyText != null)
-        {
             missionBriefingBodyText.text = missionBriefingBody.TrimEnd();
-            if (physiology != null)
-            {
-                missionBriefingBodyText.text +=
-                    $"\n\nBaseline locked — HRV baseline: {physiology.HrvBaselineMs:F1} ms";
-            }
-        }
 
         ApplyPhaseUI();
         PlayMissionBriefingNarration();
@@ -1751,12 +1744,20 @@ public class TrainingFlowController : MonoBehaviour
     // Wire these to the three tab buttons in the Inspector (Simulation 1 panel).
     public void UI_ShowSim1ResultTab() => ApplySim1ResultsTab(ResultsTab.Result);
     public void UI_ShowSim1RecommendationsTab() => ApplySim1ResultsTab(ResultsTab.Recommendations);
-    public void UI_ShowSim1PressureGraphTab() => ApplySim1ResultsTab(ResultsTab.PressureGraph);
+    public void UI_ShowSim1PressureGraphTab()
+    {
+        ApplySim1ResultsTab(ResultsTab.PressureGraph);
+        ApplySimulation1ResultGraphs();
+    }
 
     // Wire these to the three tab buttons in the Inspector (Simulation 2 panel).
     public void UI_ShowSim2ResultTab() => ApplySim2ResultsTab(ResultsTab.Result);
     public void UI_ShowSim2RecommendationsTab() => ApplySim2ResultsTab(ResultsTab.Recommendations);
-    public void UI_ShowSim2PressureGraphTab() => ApplySim2ResultsTab(ResultsTab.PressureGraph);
+    public void UI_ShowSim2PressureGraphTab()
+    {
+        ApplySim2ResultsTab(ResultsTab.PressureGraph);
+        ApplySimulation2ResultGraphs();
+    }
 
     private void ApplySimulation1ResultGraphs()
     {
@@ -1767,12 +1768,23 @@ public class TrainingFlowController : MonoBehaviour
             return;
         }
 
+        float interval = recorder.sampleIntervalSeconds;
+
         if (resultsGraph != null)
         {
             if (recorder.SciHistory.Count > 0)
-                resultsGraph.SetFromSciPoints(recorder.SciHistory);
+            {
+                resultsGraph.chartTitle = "Stress Change Index (SCI)";
+                resultsGraph.SetFromSciPoints(recorder.SciHistory, interval);
+                float peakSci = MaxSci(recorder.SciHistory);
+                float meanSci = MeanSci(recorder.SciHistory);
+                resultsGraph.SetInfoText(
+                    $"Samples: {recorder.SciHistory.Count} | Peak: {peakSci:F1}% | Avg: {meanSci:F1}%");
+            }
             else
+            {
                 resultsGraph.Clear();
+            }
         }
 
         if (sim1HrvResultsGraph != null)
@@ -1784,9 +1796,16 @@ public class TrainingFlowController : MonoBehaviour
             }
 
             if (recorder.HrvHistory.Count > 0)
-                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay);
+            {
+                sim1HrvResultsGraph.chartTitle = "Heart-rate variability (HRV)";
+                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay, interval);
+                sim1HrvResultsGraph.SetInfoText(
+                    $"Samples: {recorder.HrvHistory.Count} | Min: {MinValue(recorder.HrvHistory):F1} ms | Max: {MaxValue(recorder.HrvHistory):F1} ms | Avg: {MeanValue(recorder.HrvHistory):F1} ms");
+            }
             else
+            {
                 sim1HrvResultsGraph.Clear();
+            }
         }
     }
 
@@ -1799,20 +1818,36 @@ public class TrainingFlowController : MonoBehaviour
             return;
         }
 
+        float interval = recorder.sampleIntervalSeconds;
+
         if (sim2SciResultsGraph != null)
         {
             if (recorder.SciHistory.Count > 0)
-                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay);
+            {
+                sim2SciResultsGraph.chartTitle = "Stress Change Index (SCI)";
+                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay, interval);
+                sim2SciResultsGraph.SetInfoText(
+                    $"Samples: {recorder.SciHistory.Count} | Peak: {MaxSci(recorder.SciHistory):F1}% | Avg: {MeanSci(recorder.SciHistory):F1}%");
+            }
             else
+            {
                 sim2SciResultsGraph.Clear();
+            }
         }
 
         if (sim2HrvResultsGraph != null)
         {
             if (recorder.HrvHistory.Count > 0)
-                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
+            {
+                sim2HrvResultsGraph.chartTitle = "Heart-rate variability (HRV)";
+                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay, interval);
+                sim2HrvResultsGraph.SetInfoText(
+                    $"Samples: {recorder.HrvHistory.Count} | Min: {MinValue(recorder.HrvHistory):F1} ms | Max: {MaxValue(recorder.HrvHistory):F1} ms | Avg: {MeanValue(recorder.HrvHistory):F1} ms");
+            }
             else
+            {
                 sim2HrvResultsGraph.Clear();
+            }
         }
 
         if (recorder.SciHistory.Count == 0 && recorder.HrvHistory.Count == 0)

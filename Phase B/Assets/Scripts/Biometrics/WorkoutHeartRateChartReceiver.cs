@@ -450,83 +450,26 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
         float minBpm = samples.Min(s => s.bpm);
         float maxBpm = samples.Max(s => s.bpm);
+        TextureLineChartRenderer.ComputeYRange(minBpm, maxBpm, out float yMin, out float yMax);
 
-        float yMin = minBpm;
-        float yMax = maxBpm;
-        float range = yMax - yMin;
-        float padding = Mathf.Max(5f, range * 0.15f);
-        yMin = Mathf.Max(0f, yMin - padding);
-        yMax = yMax + padding;
-
-        if (Mathf.Approximately(yMin, yMax))
-        {
-            yMin -= 5f;
-            yMax += 5f;
-        }
-
-        GetChartDimensions(out int renderWidth, out int renderHeight);
-
-        chartTexture = new Texture2D(renderWidth, renderHeight, TextureFormat.RGBA32, false);
-        chartTexture.filterMode = FilterMode.Bilinear;
-
-        Color32 background = useTransparentChartBackground
-            ? new Color32(0, 0, 0, 0)
-            : new Color32(18, 18, 18, 255);
-        Color32 grid = gridColor;
-        Color32 axis = axisColor;
-        Color32 line = lineColor;
-        Color32 point = pointColor;
-
-        FillTexture(chartTexture, background);
-
-        int left = 60;
-        int right = 20;
-        int top = 20;
-        int bottom = 50;
-        int plotLeft = left;
-        int plotRight = renderWidth - right;
-        int plotBottom = bottom;
-        int plotTop = renderHeight - top;
-        int plotWidth = plotRight - plotLeft;
-        int plotHeight = plotTop - plotBottom;
-
-        for (int i = 0; i <= 5; i++)
-        {
-            int x = plotLeft + Mathf.RoundToInt(plotWidth * (i / 5f));
-            DrawLine(chartTexture, x, plotBottom, x, plotTop, grid);
-        }
-
-        for (int i = 0; i <= 5; i++)
-        {
-            int y = plotBottom + Mathf.RoundToInt(plotHeight * (i / 5f));
-            DrawLine(chartTexture, plotLeft, y, plotRight, y, grid);
-        }
-
-        DrawLine(chartTexture, plotLeft, plotBottom, plotRight, plotBottom, axis);
-        DrawLine(chartTexture, plotLeft, plotBottom, plotLeft, plotTop, axis);
-
-        Vector2Int? previous = null;
-
+        var points = new List<TextureLineChartRenderer.TimeValuePoint>(samples.Count);
         foreach (HrSample sample in samples)
         {
             double secondsFromStart = (sample.measuredAt - start).TotalSeconds;
-            float xNorm = Mathf.Clamp01((float)(secondsFromStart / durationSeconds));
-            float yNorm = Mathf.Clamp01((sample.bpm - yMin) / (yMax - yMin));
-
-            int x = plotLeft + Mathf.RoundToInt(xNorm * plotWidth);
-            int y = plotBottom + Mathf.RoundToInt(yNorm * plotHeight);
-            var current = new Vector2Int(x, y);
-
-            if (previous.HasValue)
-                DrawThickLine(chartTexture, previous.Value.x, previous.Value.y, current.x, current.y, line, chartLineWidth);
-
-            DrawSmallPoint(chartTexture, x, y, point);
-            previous = current;
+            points.Add(new TextureLineChartRenderer.TimeValuePoint(secondsFromStart, sample.bpm));
         }
 
-        chartTexture.Apply();
-        targetChart.texture = chartTexture;
+        GetChartDimensions(out int renderWidth, out int renderHeight);
+        chartTexture = TextureLineChartRenderer.RenderTimeSeries(
+            points,
+            durationSeconds,
+            renderWidth,
+            renderHeight,
+            BuildChartStyle(),
+            yMin,
+            yMax);
 
+        targetChart.texture = chartTexture;
         ApplyChartTitle();
         nextInfoRefreshTime = 0f;
     }
@@ -589,46 +532,20 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             return;
 
         GetChartDimensions(out int renderWidth, out int renderHeight);
-
-        chartTexture = new Texture2D(renderWidth, renderHeight, TextureFormat.RGBA32, false);
-        chartTexture.filterMode = FilterMode.Bilinear;
-
-        Color32 background = useTransparentChartBackground
-            ? new Color32(0, 0, 0, 0)
-            : new Color32(18, 18, 18, 255);
-        FillTexture(chartTexture, background);
-
-        Color32 grid = gridColor;
-        Color32 axis = axisColor;
-
-        int left = 60;
-        int right = 20;
-        int top = 20;
-        int bottom = 50;
-        int plotLeft = left;
-        int plotRight = renderWidth - right;
-        int plotBottom = bottom;
-        int plotTop = renderHeight - top;
-        int plotWidth = plotRight - plotLeft;
-        int plotHeight = plotTop - plotBottom;
-
-        for (int i = 0; i <= 5; i++)
-        {
-            int x = plotLeft + Mathf.RoundToInt(plotWidth * (i / 5f));
-            DrawLine(chartTexture, x, plotBottom, x, plotTop, grid);
-        }
-
-        for (int i = 0; i <= 5; i++)
-        {
-            int y = plotBottom + Mathf.RoundToInt(plotHeight * (i / 5f));
-            DrawLine(chartTexture, plotLeft, y, plotRight, y, grid);
-        }
-
-        DrawLine(chartTexture, plotLeft, plotBottom, plotRight, plotBottom, axis);
-        DrawLine(chartTexture, plotLeft, plotBottom, plotLeft, plotTop, axis);
-
-        chartTexture.Apply();
+        chartTexture = TextureLineChartRenderer.RenderEmpty(renderWidth, renderHeight, BuildChartStyle());
         targetChart.texture = chartTexture;
+    }
+
+    private TextureLineChartRenderer.Style BuildChartStyle()
+    {
+        var style = TextureLineChartRenderer.Style.Default;
+        style.useTransparentBackground = useTransparentChartBackground;
+        style.lineColor = lineColor;
+        style.chartLineWidth = chartLineWidth;
+        style.gridColor = gridColor;
+        style.axisColor = axisColor;
+        style.pointColor = pointColor;
+        return style;
     }
 
     private void GetChartDimensions(out int width, out int height)
@@ -644,66 +561,6 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
         width = chartWidth;
         height = chartHeight;
-    }
-
-    private void FillTexture(Texture2D texture, Color32 color)
-    {
-        Color32[] pixels = new Color32[texture.width * texture.height];
-        for (int i = 0; i < pixels.Length; i++)
-            pixels[i] = color;
-        texture.SetPixels32(pixels);
-    }
-
-    private void DrawSmallPoint(Texture2D texture, int centerX, int centerY, Color32 color)
-    {
-        for (int y = centerY - 1; y <= centerY + 1; y++)
-        {
-            for (int x = centerX - 1; x <= centerX + 1; x++)
-                SetPixelSafe(texture, x, y, color);
-        }
-    }
-
-    private void DrawLine(Texture2D texture, int x0, int y0, int x1, int y1, Color32 color)
-    {
-        int dx = Mathf.Abs(x1 - x0);
-        int dy = Mathf.Abs(y1 - y0);
-        int sx = x0 < x1 ? 1 : -1;
-        int sy = y0 < y1 ? 1 : -1;
-        int err = dx - dy;
-
-        while (true)
-        {
-            SetPixelSafe(texture, x0, y0, color);
-            if (x0 == x1 && y0 == y1)
-                break;
-
-            int e2 = 2 * err;
-            if (e2 > -dy) { err -= dy; x0 += sx; }
-            if (e2 < dx) { err += dx; y0 += sy; }
-        }
-    }
-
-    private void DrawThickLine(Texture2D texture, int x0, int y0, int x1, int y1, Color32 color, int thickness)
-    {
-        if (thickness <= 1)
-        {
-            DrawLine(texture, x0, y0, x1, y1, color);
-            return;
-        }
-
-        int radius = (thickness - 1) / 2;
-        for (int oy = -radius; oy <= radius; oy++)
-        {
-            for (int ox = -radius; ox <= radius; ox++)
-                DrawLine(texture, x0 + ox, y0 + oy, x1 + ox, y1 + oy, color);
-        }
-    }
-
-    private void SetPixelSafe(Texture2D texture, int x, int y, Color32 color)
-    {
-        if (x < 0 || x >= texture.width || y < 0 || y >= texture.height)
-            return;
-        texture.SetPixel(x, y, color);
     }
 
     private void ApplyChartTitle()
