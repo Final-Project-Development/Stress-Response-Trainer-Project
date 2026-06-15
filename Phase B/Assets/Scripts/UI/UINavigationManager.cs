@@ -22,7 +22,7 @@ public class UINavigationManager : MonoBehaviour
     [TextArea] public string helpDefault =
         "Use Pause to stop safely.\nUse Back to return to hub.\nUse Help anytime for current task instructions.";
     [TextArea] public string helpSimulation1 =
-        "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, compass, map.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
+        "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, phone, key.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
         "Simulation 2:\n1) First aid kit — E\n2) Wounded — E (go call for help)\n3) Phone — E door once, E coin, E Receiver, dial 1, 0, 1\n4) Wounded — E, then 1, 2, 3 treatment";
     [TextArea] public string helpEnvironmentLearning =

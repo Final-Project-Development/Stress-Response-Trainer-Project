@@ -675,7 +675,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Map
+  m_text: Key
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
@@ -4279,7 +4279,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de5f49c9048c54d49afacd03564371e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
-  itemDisplayName: Map
+  itemDisplayName: Key
   pickUpMode: 0
 --- !u!114 &96765450
 MonoBehaviour:
@@ -4293,7 +4293,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: map
+  labelText: key
   labelAnchor: {fileID: 1545286052}
   viewAnchor: {fileID: 1425117720}
   worldOffset: {x: 0, y: 2.5, z: 0}
@@ -8695,15 +8695,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalPosition.x
@@ -8711,7 +8711,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.049
+      value: 1.267
       objectReference: {fileID: 0}
     - target: {fileID: 489937548842008626, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
       propertyPath: m_LocalPosition.z
@@ -8749,6 +8749,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: WaterBottle
       objectReference: {fileID: 0}
+    - target: {fileID: 489937548843335696, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: 3f98ed3816ff31648a910c62376dc52d, type: 3}
+    - target: {fileID: 489937548844434128, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 489937548844434128, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9d9f90793fb067d43a1b7fe2086bad76, type: 2}
+    - target: {fileID: 489937548844434128, guid: 2a6ee5441c58aff4ebdb9a3c84bd2970, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: c748b4f3be8bea04a8a464d2c2b465a6, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -10547,7 +10563,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b88b025a59b6451b97803598807db177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningTourNavButton
-  sceneObjectName: Compass
+  sceneObjectName: phone
   standoffMeters: 1.8
 --- !u!114 &299000007
 MonoBehaviour:
@@ -10561,7 +10577,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b88b025a59b6451b97803598807db177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningTourNavButton
-  sceneObjectName: Map
+  sceneObjectName: key
   standoffMeters: 1.8
 --- !u!114 &299000008
 MonoBehaviour:
@@ -16697,7 +16713,7 @@ Transform:
   m_GameObject: {fileID: 455992421}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.33, z: 0}
+  m_LocalPosition: {x: 0, y: 0.4489236, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -17767,7 +17783,7 @@ MonoBehaviour:
     No alarm will play during this step.'
   missionBriefingBody: "Simulation 1 - Emergency preparedness\n\n1) Enter the home
     and collect 5 items (press E on each):\n   \u2022 Water bottle\n   \u2022 Flash
-    light\n   \u2022 Radio\n   \u2022 Compass\n   \u2022 Map\n\n2) Turn off the lights
+    light\n   \u2022 Radio\n   \u2022 Phone\n   \u2022 Key\n\n2) Turn off the lights
     (press E)\n3) Close the entrance door (press E)\n4) Run to the Mamad (shelter)
     outside"
   learnBriefingBody: "Environment Learning - City tour\n\nExplore important locations
@@ -30119,13 +30135,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1426506262}
     m_Modifications:
+    - target: {fileID: 5592070709029341199, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: -827323528257501046, guid: 4def557500ba7364a9225f1167fc9bcf, type: 3}
+    - target: {fileID: 5592070709030341327, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: aae4d65e21c34b146bfdfed4c579ad10, type: 2}
     - target: {fileID: 5592070709032241197, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.4039755
       objectReference: {fileID: 0}
     - target: {fileID: 5592070709032241197, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.5993563
+      value: 0.667
       objectReference: {fileID: 0}
     - target: {fileID: 5592070709032241197, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
       propertyPath: m_LocalPosition.z
@@ -30161,7 +30185,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5592070709032277005, guid: f9d63876e22afd54db56cb642d15e867, type: 3}
       propertyPath: m_Name
-      value: Map
+      value: key
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -41092,63 +41116,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7289998643497998662, guid: a70b9db4c9ca9454483179f178e4aeee, type: 3}
   m_PrefabInstance: {fileID: 1110157151}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &1111976276
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 675866605}
-    m_Modifications:
-    - target: {fileID: 6252425786264639365, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_Name
-      value: CompassWithItemLogic
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 5.1282873
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -1.97222
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 13.649302
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
 --- !u!1 &1112272117
 GameObject:
   m_ObjectHideFlags: 0
@@ -50276,7 +50243,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 6252425786264639365, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
       propertyPath: m_Name
-      value: Compass
+      value: phone
       objectReference: {fileID: 0}
     - target: {fileID: 6252425786264669093, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
       propertyPath: m_LocalPosition.x
@@ -50284,7 +50251,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6252425786264669093, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.69716454
+      value: 0.769
       objectReference: {fileID: 0}
     - target: {fileID: 6252425786264669093, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
       propertyPath: m_LocalPosition.z
@@ -50318,6 +50285,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6252425786266569031, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
+      propertyPath: m_Materials.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6252425786266569031, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 05ebba48484e3b1478045899e21d98da, type: 2}
+    - target: {fileID: 6252425786266569031, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
+      propertyPath: 'm_Materials.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 017a6494a230b02479a30169fe2e1cf1, type: 2}
+    - target: {fileID: 6252425786267536263, guid: 04197e332f5484748b6e8bfc3b00e4ad, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: 53ee823ff543aa24d855d8f9f8c2b87b, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -52617,7 +52600,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Compass
+  m_text: Phone
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
@@ -58375,7 +58358,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de5f49c9048c54d49afacd03564371e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUpItem
-  itemDisplayName: Compass
+  itemDisplayName: Phone
   pickUpMode: 0
 --- !u!114 &1600712720
 MonoBehaviour:
@@ -58389,7 +58372,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0a0026ec7adc6d489a9d17a040935a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItemLabel
-  labelText: compass
+  labelText: phone
   labelAnchor: {fileID: 1186300959}
   viewAnchor: {fileID: 1279040078}
   worldOffset: {x: 0, y: 2.5, z: 0}
@@ -65039,11 +65022,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6695084668892933283, guid: 28a69432604101f4e8b2e93b7d82201d, type: 3}
   m_PrefabInstance: {fileID: 1781957325}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1785237164 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6252425786264669093, guid: de9fcc26ca64df94386d2053e3cce895, type: 3}
-  m_PrefabInstance: {fileID: 1111976276}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1792172138
 GameObject:
   m_ObjectHideFlags: 0
@@ -66703,7 +66681,7 @@ GameObject:
   - component: {fileID: 299000007}
   - component: {fileID: 1855153104}
   m_Layer: 5
-  m_Name: Map
+  m_Name: Key
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -66823,7 +66801,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b88b025a59b6451b97803598807db177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningTourNavButton
-  sceneObjectName: Map
+  sceneObjectName: key
   standoffMeters: 1.8
 --- !u!4 &1855946696 stripped
 Transform:
@@ -69800,7 +69778,7 @@ MonoBehaviour:
     Help anytime for current task instructions.'
   helpSimulation1: "Simulation 1 - Emergency preparedness\n\n1) Enter the home and
     collect 5 items (press E):\n   \u2022 Water bottle\n   \u2022 Flash light\n  
-    \u2022 Radio\n   \u2022 Compass\n   \u2022 Map\n\n2) Turn off the lights (press
+    \u2022 Radio\n   \u2022 Phone\n   \u2022 Key\n\n2) Turn off the lights (press
     E)\n3) Close the entrance door (press E)\n4) Run to the Mamad (shelter) outside"
   helpSimulation2: "Simulation 2 - First Aid Under Pressure\n\n1) Collect the first
     aid kit (press E)\r\n2) Find the wounded person and press E\r\n3) At the public
@@ -69813,8 +69791,8 @@ MonoBehaviour:
     world.\r\n\u2022 Use the left sidebar and click an item name to go there.\n\u2022
     Take your time to look around and remember each location.\n\u2022 Press Back
     or Esc when finished to return to simulation selection.\r\n\r\nSimulation 1:\r\nHome,
-    Water Bottle, Flashlight, Radio, Compass, Map, Light Switch,\nEntrance Door,
-    Mamad\n\r\nSimulation 2:\r\nFirst Aid, Wounded Character, Public Phone"
+    Water Bottle, Flashlight, Radio, Phone, Key, Light Switch,\nEntrance Door, Mamad\n\r\nSimulation
+    2:\r\nFirst Aid, Wounded Character, Public Phone"
   pauseKey: 27
   helpKey: 104
 --- !u!4 &1942517051
@@ -71189,7 +71167,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 763364929}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.4862028
+  m_Size: 0.20930186
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -72294,7 +72272,7 @@ GameObject:
   - component: {fileID: 299000006}
   - component: {fileID: 2008596428}
   m_Layer: 5
-  m_Name: Compass
+  m_Name: Phone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -72414,7 +72392,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b88b025a59b6451b97803598807db177, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningTourNavButton
-  sceneObjectName: Compass
+  sceneObjectName: phone
   standoffMeters: 1.8
 --- !u!1001 &2009798476
 PrefabInstance:
@@ -75734,6 +75712,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1426506262}
     m_Modifications:
+    - target: {fileID: 2068541145894572998, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 160e393992debaf489d3979bb43d2a4c, type: 2}
     - target: {fileID: 2068541145896570116, guid: b8ccbc431aad8c34295787a42ce1ee2a, type: 3}
       propertyPath: m_Name
       value: Radio
@@ -76960,18 +76942,15 @@ PrefabInstance:
       addedObject: {fileID: 1466990325}
     - targetCorrespondingSourceObject: {fileID: 5004314085794718416, guid: 5782b766151c54217bad14e4303df043, type: 3}
       insertIndex: 7
-      addedObject: {fileID: 1785237164}
-    - targetCorrespondingSourceObject: {fileID: 5004314085794718416, guid: 5782b766151c54217bad14e4303df043, type: 3}
-      insertIndex: 8
       addedObject: {fileID: 553403988}
     - targetCorrespondingSourceObject: {fileID: 5004314085794718416, guid: 5782b766151c54217bad14e4303df043, type: 3}
-      insertIndex: 9
+      insertIndex: -1
       addedObject: {fileID: 240002229}
     - targetCorrespondingSourceObject: {fileID: 5004314085794718416, guid: 5782b766151c54217bad14e4303df043, type: 3}
-      insertIndex: 10
+      insertIndex: -1
       addedObject: {fileID: 462126790}
     - targetCorrespondingSourceObject: {fileID: 5004314085794718416, guid: 5782b766151c54217bad14e4303df043, type: 3}
-      insertIndex: 11
+      insertIndex: -1
       addedObject: {fileID: 218971402}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 5782b766151c54217bad14e4303df043, type: 3}

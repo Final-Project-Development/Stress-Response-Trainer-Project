@@ -280,8 +280,8 @@ public class TrainingFlowController : MonoBehaviour
         "   • Water bottle\n" +
         "   • Flash light\n" +
         "   • Radio\n" +
-        "   • Compass\n" +
-        "   • Map\n\n" +
+        "   • Phone\n" +
+        "   • Key\n\n" +
         "2) Turn off the lights — switch: PFB_Lightswitch (1)\n" +
         "3) Close the entrance door — PFB_DoorDouble\n" +
         "4) Run to the Mamad (shelter) outside\n\n" +
