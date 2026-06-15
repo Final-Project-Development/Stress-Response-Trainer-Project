@@ -692,18 +692,11 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         string timePart = $"Time remaining: {remainingSeconds:F0} s";
-        string livePart =
-            $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
 
-        if (splitTimer)
-            calibrationStatusText.text = $"{calibrationInstruction}\n\n{livePart}";
-        else if (splitHrv)
-            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
+        if (splitTimer || splitHrv)
+            calibrationStatusText.text = calibrationInstruction;
         else
-        {
-            calibrationStatusText.text =
-                $"{calibrationInstruction}\n\n{timePart}\n{livePart}";
-        }
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
     }
 
     private string FormatCalibrationRemainingDisplay(float remainingSeconds)
@@ -1171,13 +1164,14 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
         SetActiveSafe(sim2ResultsPanel, CurrentPhase == Phase.Simulation2Results);
         bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
+        bool showHrChartReceiver = CurrentPhase == Phase.Simulation1Calibration || showStressTimer;
         SetActiveSafe(timerPanel, showStressTimer);
         SetActiveSafe(watchHrChartPanel, showStressTimer);
         if (missionStatusPanel != null)
             missionStatusPanel.SetPanelVisible(showStressTimer);
         if (showStressTimer)
             RefreshSimulationStressTimerDisplay();
-        SetWorkoutHeartRateChartActive(showStressTimer);
+        SetWorkoutHeartRateChartActive(showHrChartReceiver);
         ApplyPlayerInteractionMode();
     }
 
@@ -1227,6 +1221,14 @@ public class TrainingFlowController : MonoBehaviour
 
         if (workoutHeartRateChart.enabled != on)
             workoutHeartRateChart.enabled = on;
+
+        if (!on)
+            return;
+
+        workoutHeartRateChart.SetChartUiMode(
+            CurrentPhase == Phase.Simulation1Calibration
+                ? WorkoutHeartRateChartReceiver.ChartUiMode.Baseline
+                : WorkoutHeartRateChartReceiver.ChartUiMode.Simulation);
     }
 
     void HideEnvironmentLearningTourSidebar()

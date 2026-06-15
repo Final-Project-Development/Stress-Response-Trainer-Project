@@ -34,6 +34,12 @@ public class HrTimelineMessage
 
 public class WorkoutHeartRateChartReceiver : MonoBehaviour
 {
+    public enum ChartUiMode
+    {
+        Simulation,
+        Baseline
+    }
+
     [Header("Network")]
     public int unityListenPort = 5055;
 
@@ -55,6 +61,13 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     public string chartTitleText = "heart rate";
     [Tooltip("ChartInfoText TMP — assign for automatic status updates.")]
     public TextMeshProUGUI infoTextTmp;
+
+    [Header("Baseline calibration UI (Baseline_Panel / Info)")]
+    [Tooltip("RawImage on Baseline_Panel during sync/calibration.")]
+    public RawImage baselineChartImage;
+    public TextMeshProUGUI baselineTitleTextTmp;
+    public TextMeshProUGUI baselineInfoTextTmp;
+    public string baselineChartTitleText = "Heart rate";
 
     [Header("Info text (ChartInfoText)")]
     [Tooltip("Overwrite ChartInfoText at runtime (layout/style stay manual).")]
@@ -82,6 +95,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     [Tooltip("When using a designed panel background, keep the plot area transparent.")]
     public bool useTransparentChartBackground = true;
     public Color lineColor = new Color(0.3f, 0.75f, 0.95f, 1f);
+    public int chartLineWidth = 3;
     public Color gridColor = new Color(0.42f, 0.5f, 0.58f, 0.45f);
     public Color axisColor = new Color(0.75f, 0.82f, 0.9f, 0.9f);
     public Color pointColor = Color.white;
@@ -113,6 +127,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     private float nextInfoRefreshTime;
     private string lastDisplayedInfo;
     private Coroutine layoutRefreshRoutine;
+    private ChartUiMode chartUiMode = ChartUiMode.Simulation;
     private const string FallbackSessionId = "simulated-hr";
 
     private class HrSample
@@ -175,9 +190,39 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             UpdateRuntimeChartTransform();
     }
 
+    public void SetChartUiMode(ChartUiMode mode)
+    {
+        if (chartUiMode == mode)
+            return;
+
+        chartUiMode = mode;
+        chartDirty = true;
+        nextInfoRefreshTime = 0f;
+        ScheduleChartLayoutRefresh();
+        RefreshInfoDisplay(true);
+    }
+
+    RawImage ActiveChartImage =>
+        chartUiMode == ChartUiMode.Baseline && baselineChartImage != null
+            ? baselineChartImage
+            : chartImage;
+
+    TextMeshProUGUI ActiveTitleTextTmp =>
+        chartUiMode == ChartUiMode.Baseline && baselineTitleTextTmp != null
+            ? baselineTitleTextTmp
+            : titleTextTmp;
+
+    TextMeshProUGUI ActiveInfoTextTmp =>
+        chartUiMode == ChartUiMode.Baseline && baselineInfoTextTmp != null
+            ? baselineInfoTextTmp
+            : infoTextTmp;
+
+    string ActiveChartTitleText =>
+        chartUiMode == ChartUiMode.Baseline ? baselineChartTitleText : chartTitleText;
+
     private void InitializeChartUi()
     {
-        usingDesignerPanel = chartImage != null;
+        usingDesignerPanel = chartImage != null || baselineChartImage != null;
 
         if (usingDesignerPanel)
             return;
@@ -386,7 +431,8 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     private void RenderSession(HrSessionData session)
     {
-        if (chartImage == null)
+        RawImage targetChart = ActiveChartImage;
+        if (targetChart == null)
             return;
 
         List<HrSample> samples = session.samples.OrderBy(s => s.measuredAt).ToList();
@@ -472,14 +518,14 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             var current = new Vector2Int(x, y);
 
             if (previous.HasValue)
-                DrawLine(chartTexture, previous.Value.x, previous.Value.y, current.x, current.y, line);
+                DrawThickLine(chartTexture, previous.Value.x, previous.Value.y, current.x, current.y, line, chartLineWidth);
 
             DrawSmallPoint(chartTexture, x, y, point);
             previous = current;
         }
 
         chartTexture.Apply();
-        chartImage.texture = chartTexture;
+        targetChart.texture = chartTexture;
 
         ApplyChartTitle();
         nextInfoRefreshTime = 0f;
@@ -538,7 +584,8 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     private void DrawEmptyChart()
     {
-        if (chartImage == null)
+        RawImage targetChart = ActiveChartImage;
+        if (targetChart == null)
             return;
 
         GetChartDimensions(out int renderWidth, out int renderHeight);
@@ -581,14 +628,15 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         DrawLine(chartTexture, plotLeft, plotBottom, plotLeft, plotTop, axis);
 
         chartTexture.Apply();
-        chartImage.texture = chartTexture;
+        targetChart.texture = chartTexture;
     }
 
     private void GetChartDimensions(out int width, out int height)
     {
-        if (manualDesignMode && useChartImageRectSize && chartImage != null)
+        RawImage targetChart = ActiveChartImage;
+        if (manualDesignMode && useChartImageRectSize && targetChart != null)
         {
-            Rect rect = chartImage.rectTransform.rect;
+            Rect rect = targetChart.rectTransform.rect;
             width = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.width)), 64, 4096);
             height = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.height)), 64, 4096);
             return;
@@ -635,6 +683,22 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         }
     }
 
+    private void DrawThickLine(Texture2D texture, int x0, int y0, int x1, int y1, Color32 color, int thickness)
+    {
+        if (thickness <= 1)
+        {
+            DrawLine(texture, x0, y0, x1, y1, color);
+            return;
+        }
+
+        int radius = (thickness - 1) / 2;
+        for (int oy = -radius; oy <= radius; oy++)
+        {
+            for (int ox = -radius; ox <= radius; ox++)
+                DrawLine(texture, x0 + ox, y0 + oy, x1 + ox, y1 + oy, color);
+        }
+    }
+
     private void SetPixelSafe(Texture2D texture, int x, int y, Color32 color)
     {
         if (x < 0 || x >= texture.width || y < 0 || y >= texture.height)
@@ -647,10 +711,11 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         if (!updateTitleAtRuntime)
             return;
 
-        if (titleTextTmp != null)
-            titleTextTmp.text = chartTitleText;
+        string title = ActiveChartTitleText;
+        if (ActiveTitleTextTmp != null)
+            ActiveTitleTextTmp.text = title;
         else if (runtimeTitleText != null)
-            runtimeTitleText.text = chartTitleText;
+            runtimeTitleText.text = title;
     }
 
     private bool IsWatchTimelineActive()
@@ -711,8 +776,8 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     private void ApplyInfo(string text)
     {
-        if (infoTextTmp != null)
-            infoTextTmp.text = text;
+        if (ActiveInfoTextTmp != null)
+            ActiveInfoTextTmp.text = text;
         else if (runtimeInfoText != null)
             runtimeInfoText.text = text;
     }
@@ -787,7 +852,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     private void ScheduleChartLayoutRefresh()
     {
-        if (!isActiveAndEnabled || chartImage == null)
+        if (!isActiveAndEnabled || ActiveChartImage == null)
             return;
 
         if (layoutRefreshRoutine != null)
