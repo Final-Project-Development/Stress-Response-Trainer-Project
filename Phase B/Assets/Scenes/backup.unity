@@ -2285,6 +2285,8 @@ MonoBehaviour:
   startSim2ButtonName: startsim2
   alarmOnButtonLabel: Alarm on
   alarmOffButtonLabel: Alarm off
+  startSim1ButtonLabel: Simulation 1
+  startSim2ButtonLabel: Simulation 2
 --- !u!1001 &29472197
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14688,18 +14690,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8368912353735289055, guid: 105ea11a9af6f324fad068c4b2021ed4, type: 3}
   m_PrefabInstance: {fileID: 282164156}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &285910000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 485977910}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4e3d2c1b0a9787698fedcba543210ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TrainingFlowMissingUiBootstrap
 --- !u!1 &287333648
 GameObject:
   m_ObjectHideFlags: 0
@@ -25284,7 +25274,6 @@ GameObject:
   m_Component:
   - component: {fileID: 485977914}
   - component: {fileID: 485977911}
-  - component: {fileID: 285910000}
   - component: {fileID: 485977917}
   - component: {fileID: 485977916}
   - component: {fileID: 485977915}
@@ -43450,7 +43439,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Home
+  m_text: Simulation 1
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
@@ -69777,7 +69766,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Simulation 1
+  m_text: Tour options
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -79683,6 +79672,7 @@ GameObject:
   - component: {fileID: 1535916319}
   - component: {fileID: 1535916321}
   - component: {fileID: 1535916320}
+  - component: {fileID: 1535916322}
   m_Layer: 0
   m_Name: Background (1)
   m_TagString: Untagged
@@ -79751,6 +79741,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1535916318}
   m_CullTransparentMesh: 1
+--- !u!114 &1535916322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1535916318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19eebb3475874b98890b3dae5c08f3cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnvironmentLearningTourOptionsMenu
+  titleObjectName: learnMenue
+  toggleAlarmButtonName: addAlarm
+  startSim1ButtonName: startsim1
+  startSim2ButtonName: startsim2
+  titleText: Tour options
+  alarmOnButtonLabel: Alarm on
+  alarmOffButtonLabel: Alarm off
+  startSim1ButtonLabel: Simulation 1
+  startSim2ButtonLabel: Simulation 2
 --- !u!4 &1537309974 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5317444133248045765, guid: f14800a72eef93b4b8f9e5abc3844f0d, type: 3}
@@ -79906,7 +79917,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: First aid
+  m_text: Simulation 2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}

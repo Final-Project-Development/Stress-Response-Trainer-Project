@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -33,13 +32,13 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
     public string startSim2ButtonName = "startsim2";
     public string alarmOnButtonLabel = "Alarm on";
     public string alarmOffButtonLabel = "Alarm off";
+    public string startSim1ButtonLabel = "Simulation 1";
+    public string startSim2ButtonLabel = "Simulation 2";
 
     Transform _playerRoot;
     SimpleFPSController _playerController;
     bool _active;
     readonly List<(Button button, UnityAction action)> _wiredButtons = new List<(Button, UnityAction)>();
-    readonly List<(Button button, UnityAction action)> _wiredOptionButtons = new List<(Button, UnityAction)>();
-    TrainingFlowController _flow;
 
     void Awake()
     {
@@ -223,200 +222,52 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
 
     public void RefreshOptionsMenuPresentation()
     {
-        Transform searchRoot = sidebarPanel != null ? sidebarPanel.transform : sidebarRoot;
-        if (searchRoot == null)
-            return;
-
-        Transform optionsRoot = FindChildByName(searchRoot, optionsMenuObjectName);
-        if (optionsRoot == null)
-            return;
-
-        ApplyOptionsTitle(optionsRoot);
-        ApplyAlarmButtonLabel(optionsRoot);
+        ResolveOptionsMenu()?.ApplyPresentation();
     }
 
     void WireOptionsMenu()
     {
         UnwireOptionsMenu();
-
-        Transform searchRoot = sidebarPanel != null ? sidebarPanel.transform : sidebarRoot;
-        if (searchRoot == null)
+        EnvironmentLearningTourOptionsMenu optionsMenu = ResolveOptionsMenu();
+        if (optionsMenu == null)
+        {
+            Debug.LogWarning(
+                $"EnvironmentLearningTourGuide: options menu '{optionsMenuObjectName}' was not found under the sidebar.");
             return;
+        }
 
-        Transform optionsRoot = FindChildByName(searchRoot, optionsMenuObjectName);
-        if (optionsRoot == null)
-            return;
-
-        DisableMisplacedNavButtons(optionsRoot);
-        ApplyOptionsTitle(optionsRoot);
-        ApplyAlarmButtonLabel(optionsRoot);
-
-        WireOptionButton(optionsRoot, toggleAlarmButtonName, OnToggleAlarmClicked);
-        WireStartSimButton(optionsRoot, startSim1ButtonName, OnStartSim1Clicked, pickHighestY: true);
-        WireStartSimButton(optionsRoot, startSim2ButtonName, OnStartSim2Clicked, pickHighestY: false);
+        optionsMenu.titleObjectName = optionsMenuTitleObjectName;
+        optionsMenu.titleText = optionsMenuTitleText;
+        optionsMenu.toggleAlarmButtonName = toggleAlarmButtonName;
+        optionsMenu.startSim1ButtonName = startSim1ButtonName;
+        optionsMenu.startSim2ButtonName = startSim2ButtonName;
+        optionsMenu.alarmOnButtonLabel = alarmOnButtonLabel;
+        optionsMenu.alarmOffButtonLabel = alarmOffButtonLabel;
+        optionsMenu.startSim1ButtonLabel = startSim1ButtonLabel;
+        optionsMenu.startSim2ButtonLabel = startSim2ButtonLabel;
+        optionsMenu.Wire();
     }
 
     void UnwireOptionsMenu()
     {
-        for (int i = 0; i < _wiredOptionButtons.Count; i++)
-        {
-            if (_wiredOptionButtons[i].button != null)
-                _wiredOptionButtons[i].button.onClick.RemoveListener(_wiredOptionButtons[i].action);
-        }
-
-        _wiredOptionButtons.Clear();
+        ResolveOptionsMenu()?.Unwire();
     }
 
-    static void DisableMisplacedNavButtons(Transform optionsRoot)
+    EnvironmentLearningTourOptionsMenu ResolveOptionsMenu()
     {
-        var navButtons = optionsRoot.GetComponentsInChildren<EnvironmentLearningTourNavButton>(true);
-        for (int i = 0; i < navButtons.Length; i++)
-        {
-            if (navButtons[i] != null)
-                navButtons[i].enabled = false;
-        }
-    }
-
-    void ApplyOptionsTitle(Transform optionsRoot)
-    {
-        Transform title = FindChildByName(optionsRoot, optionsMenuTitleObjectName);
-        if (title == null)
-            return;
-
-        var tmp = title.GetComponent<TextMeshProUGUI>();
-        if (tmp == null)
-            tmp = title.GetComponentInChildren<TextMeshProUGUI>(true);
-
-        if (tmp != null && !string.IsNullOrWhiteSpace(optionsMenuTitleText))
-            tmp.text = optionsMenuTitleText;
-    }
-
-    void ApplyAlarmButtonLabel(Transform optionsRoot)
-    {
-        Transform alarmButton = FindChildByName(optionsRoot, toggleAlarmButtonName);
-        if (alarmButton == null)
-            return;
-
-        bool alarmOn = ResolveFlow() != null && ResolveFlow().IsEnvironmentLearningTourAlarmActive;
-        string label = alarmOn ? alarmOnButtonLabel : alarmOffButtonLabel;
-        SetButtonCaption(alarmButton, label);
-    }
-
-    static void SetButtonCaption(Transform buttonRoot, string label)
-    {
-        if (buttonRoot == null || string.IsNullOrWhiteSpace(label))
-            return;
-
-        var tmp = buttonRoot.GetComponentInChildren<TextMeshProUGUI>(true);
-        if (tmp != null)
-            tmp.text = label;
-    }
-
-    void WireStartSimButton(
-        Transform optionsRoot,
-        string buttonName,
-        UnityAction action,
-        bool pickHighestY)
-    {
-        Transform buttonTransform = FindChildByName(optionsRoot, buttonName);
-        if (buttonTransform == null && buttonName == startSim2ButtonName)
-        {
-            var duplicateSim1Buttons = new List<Transform>();
-            CollectChildrenByName(optionsRoot, startSim1ButtonName, duplicateSim1Buttons);
-            if (duplicateSim1Buttons.Count >= 2)
-                buttonTransform = PickSimButtonByVerticalPosition(duplicateSim1Buttons, pickHighestY);
-        }
-        else if (buttonTransform == null && buttonName == startSim1ButtonName)
-        {
-            var duplicateSim1Buttons = new List<Transform>();
-            CollectChildrenByName(optionsRoot, startSim1ButtonName, duplicateSim1Buttons);
-            if (duplicateSim1Buttons.Count >= 2)
-                buttonTransform = PickSimButtonByVerticalPosition(duplicateSim1Buttons, pickHighestY);
-        }
-
-        if (buttonTransform == null)
-            return;
-
-        var button = buttonTransform.GetComponent<Button>();
-        if (button == null || action == null)
-            return;
-
-        for (int i = 0; i < _wiredOptionButtons.Count; i++)
-        {
-            if (_wiredOptionButtons[i].button == button)
-                return;
-        }
-
-        button.onClick.AddListener(action);
-        _wiredOptionButtons.Add((button, action));
-    }
-
-    static Transform PickSimButtonByVerticalPosition(List<Transform> buttons, bool pickHighestY)
-    {
-        if (buttons == null || buttons.Count == 0)
+        Transform searchRoot = sidebarPanel != null ? sidebarPanel.transform : sidebarRoot;
+        if (searchRoot == null)
             return null;
 
-        return pickHighestY
-            ? buttons.OrderByDescending(GetAnchoredY).First()
-            : buttons.OrderBy(GetAnchoredY).First();
-    }
-
-    static float GetAnchoredY(Transform transform)
-    {
-        var rect = transform.GetComponent<RectTransform>();
-        return rect != null ? rect.anchoredPosition.y : 0f;
-    }
-
-    void WireOptionButton(
-        Transform optionsRoot,
-        string buttonName,
-        UnityAction action,
-        bool preferHighestY = false)
-    {
-        if (optionsRoot == null || string.IsNullOrWhiteSpace(buttonName) || action == null)
-            return;
-
-        Transform buttonTransform = ResolveOptionButtonTransform(optionsRoot, buttonName, preferHighestY);
-        if (buttonTransform == null)
-            return;
-
-        var button = buttonTransform.GetComponent<Button>();
-        if (button == null)
-            return;
-
-        for (int i = 0; i < _wiredOptionButtons.Count; i++)
-        {
-            if (_wiredOptionButtons[i].button == button)
-                return;
-        }
-
-        button.onClick.AddListener(action);
-        _wiredOptionButtons.Add((button, action));
-    }
-
-    Transform ResolveOptionButtonTransform(Transform optionsRoot, string buttonName, bool preferHighestY)
-    {
-        var matches = new List<Transform>();
-        CollectChildrenByName(optionsRoot, buttonName, matches);
-        if (matches.Count == 0)
+        Transform optionsRoot = FindChildByName(searchRoot, optionsMenuObjectName);
+        if (optionsRoot == null)
             return null;
 
-        if (matches.Count == 1)
-            return matches[0];
+        var optionsMenu = optionsRoot.GetComponent<EnvironmentLearningTourOptionsMenu>();
+        if (optionsMenu == null)
+            optionsMenu = optionsRoot.gameObject.AddComponent<EnvironmentLearningTourOptionsMenu>();
 
-        return PickSimButtonByVerticalPosition(matches, preferHighestY);
-    }
-
-    static void CollectChildrenByName(Transform root, string childName, List<Transform> results)
-    {
-        if (root == null || string.IsNullOrWhiteSpace(childName))
-            return;
-
-        if (root.name.Trim() == childName)
-            results.Add(root);
-
-        for (int i = 0; i < root.childCount; i++)
-            CollectChildrenByName(root.GetChild(i), childName, results);
+        return optionsMenu;
     }
 
     bool IsOptionsMenuControl(Transform control)
@@ -424,35 +275,7 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         if (control == null)
             return false;
 
-        Transform searchRoot = sidebarPanel != null ? sidebarPanel.transform : sidebarRoot;
-        Transform optionsRoot = searchRoot != null ? FindChildByName(searchRoot, optionsMenuObjectName) : null;
-        if (optionsRoot == null)
-            return false;
-
-        return control == optionsRoot || control.IsChildOf(optionsRoot);
-    }
-
-    TrainingFlowController ResolveFlow()
-    {
-        if (_flow == null)
-            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
-
-        return _flow;
-    }
-
-    void OnToggleAlarmClicked()
-    {
-        ResolveFlow()?.UI_ToggleEnvironmentLearningAlarm();
-    }
-
-    void OnStartSim1Clicked()
-    {
-        ResolveFlow()?.UI_StartSimulation1FromTour();
-    }
-
-    void OnStartSim2Clicked()
-    {
-        ResolveFlow()?.UI_StartSimulation2FromTour();
+        return control.GetComponentInParent<EnvironmentLearningTourOptionsMenu>(true) != null;
     }
 
     void WirePlayerCursorMode(bool tourActive)

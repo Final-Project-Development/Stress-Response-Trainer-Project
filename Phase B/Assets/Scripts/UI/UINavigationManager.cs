@@ -42,7 +42,8 @@ public class UINavigationManager : MonoBehaviour
     public bool IsOverlayUiOpen =>
         _helpOpen
         || (confirmBackPanel != null && confirmBackPanel.activeSelf)
-        || (flow != null && flow.IsPaused);
+        || (flow != null && flow.IsPaused)
+        || (flow != null && flow.IsSafetyWarningVisible);
 
     void Start()
     {
@@ -276,6 +277,14 @@ public class UINavigationManager : MonoBehaviour
 
         if (environmentLearning)
         {
+            if (flow != null && flow.IsSafetyWarningVisible)
+            {
+                playerController.SetOverlayUiOpen(true);
+                playerController.SetUiMenuMode(false);
+                playerController.SetSimulationToolbarMode(false);
+                return;
+            }
+
             playerController.SetOverlayUiOpen(false);
             playerController.SetUiMenuMode(false);
             playerController.SetSimulationToolbarMode(false);

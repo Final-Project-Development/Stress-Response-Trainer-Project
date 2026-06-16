@@ -418,6 +418,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public Phase CurrentPhase { get; private set; } = Phase.Gate;
     public bool IsPaused => _paused;
+    public bool IsSafetyWarningVisible => safetyWarningPanel != null && safetyWarningPanel.activeSelf;
 
     /// <summary>Elapsed seconds in the current Sim 1/2 run (pauses with game pause).</summary>
     public float SimulationStressElapsedSeconds => _simulationStressTimer;
@@ -1664,6 +1665,11 @@ public class TrainingFlowController : MonoBehaviour
     private void SetSafetyWarningVisible(bool visible)
     {
         SetActiveSafe(safetyWarningPanel, visible);
+        if (playerFpsController != null)
+            playerFpsController.SetOverlayUiOpen(visible);
+
+        var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
+        navigation?.ApplyPlayerCursorMode();
     }
 
     private bool ShowSafetyWarningFor(PendingStart startAction)
