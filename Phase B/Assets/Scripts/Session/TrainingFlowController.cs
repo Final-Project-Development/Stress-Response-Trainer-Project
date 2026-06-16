@@ -437,8 +437,12 @@ public class TrainingFlowController : MonoBehaviour
     {
         None,
         Simulation1,
-        Simulation2
+        Simulation2,
+        Simulation1FromTour,
+        Simulation2FromTour
     }
+
+    private bool _tourAlarmActive;
 
     void Awake()
     {
@@ -629,12 +633,55 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_EndEnvironmentLearning()
     {
         if (CurrentPhase != Phase.EnvironmentLearning) return;
+        StopTourAlarmIfPlaying();
         environmentLearningController?.EndLearning();
         gameManager?.RestoreExitDoorAfterEnvironmentLearning();
         CurrentPhase = Phase.SimulationPick;
         SetEnvironmentLearningTourPropsVisible(false);
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
+    }
+
+    /// <summary>Tour sidebar — toggle siren while exploring the city.</summary>
+    public void UI_ToggleEnvironmentLearningAlarm()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (_tourAlarmActive)
+            StopTourAlarmIfPlaying();
+        else
+        {
+            _useCalmBackgroundInsteadOfAlarm = false;
+            PlaySiren();
+            _tourAlarmActive = true;
+        }
+
+        environmentLearningController?.tourGuide?.RefreshOptionsMenuPresentation();
+    }
+
+    /// <summary>Tour sidebar — start Simulation 1 from the player's current position.</summary>
+    public void UI_StartSimulation1FromTour()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (ShowSafetyWarningFor(PendingStart.Simulation1FromTour))
+            return;
+
+        BeginSimulation1FromTourNow();
+    }
+
+    /// <summary>Tour sidebar — start Simulation 2 from the player's current position.</summary>
+    public void UI_StartSimulation2FromTour()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (ShowSafetyWarningFor(PendingStart.Simulation2FromTour))
+            return;
+
+        BeginSimulation2FromTourNow();
     }
 
     public void UI_StartIntro()
@@ -781,10 +828,29 @@ public class TrainingFlowController : MonoBehaviour
 
     private void BeginSimulation1Now()
     {
+        BeginSimulation1Core(teleportToSpawn: true);
+    }
+
+    private void BeginSimulation1FromTourNow()
+    {
+        BeginSimulation1Core(teleportToSpawn: false);
+    }
+
+    private void BeginSimulation1Core(bool teleportToSpawn)
+    {
         StopAllNarration();
+        if (!teleportToSpawn)
+        {
+            StopTourAlarmIfPlaying();
+            environmentLearningController?.EndLearning();
+            SetActiveSafe(environmentLearningHudPanel, false);
+        }
+
         CurrentPhase = Phase.Simulation1Active;
         SetSimulationGameplayState(true, false);
-        MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        if (teleportToSpawn)
+            MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+
         recorder?.BeginRecording();
         if (physiology != null)
             physiology.StressorActive = true;
@@ -1011,6 +1077,10 @@ public class TrainingFlowController : MonoBehaviour
             BeginSimulation1Now();
         else if (action == PendingStart.Simulation2)
             StartSimulation2Now();
+        else if (action == PendingStart.Simulation1FromTour)
+            BeginSimulation1FromTourNow();
+        else if (action == PendingStart.Simulation2FromTour)
+            BeginSimulation2FromTourNow();
     }
 
     public void UI_CancelSafetyWarning()
@@ -1404,6 +1474,7 @@ public class TrainingFlowController : MonoBehaviour
         if (physiology != null)
             physiology.StressorActive = false;
         StopSiren();
+        _tourAlarmActive = false;
         SetHudVisible(false);
         environmentLearningController?.BeginLearning();
         ApplyPhaseUI();
@@ -1528,16 +1599,45 @@ public class TrainingFlowController : MonoBehaviour
 
     private void StartSimulation2InSameScene()
     {
+        StartSimulation2InSameSceneCore(teleportToSpawn: true);
+    }
+
+    private void BeginSimulation2FromTourNow()
+    {
+        if (!runSimulation2InSameScene)
+        {
+            Debug.LogWarning(
+                "Start Simulation 2 from tour keeps your current position only when runSimulation2InSameScene is enabled.");
+            StartSimulation2Now();
+            return;
+        }
+
+        StartSimulation2InSameSceneCore(teleportToSpawn: false);
+    }
+
+    private void StartSimulation2InSameSceneCore(bool teleportToSpawn)
+    {
+        if (!teleportToSpawn)
+        {
+            StopTourAlarmIfPlaying();
+            environmentLearningController?.EndLearning();
+            SetActiveSafe(environmentLearningHudPanel, false);
+        }
+
         CurrentPhase = Phase.Simulation2Active;
         SetSimulationGameplayState(false, true);
-        if (simulation2SpawnPoint != null)
-            MovePlayerToSpawn(simulation2SpawnPoint, false, default, default);
-        else if (simulation2SpawnUseWorldCoordinates)
-            MovePlayerToSpawn(null, true, simulation2SpawnWorldPosition, simulation2SpawnWorldEuler);
-        else if (simulation1SpawnPoint != null)
-            MovePlayerToSpawn(simulation1SpawnPoint, false, default, default);
-        else if (simulation1SpawnUseWorldCoordinates)
-            MovePlayerToSpawn(null, true, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        if (teleportToSpawn)
+        {
+            if (simulation2SpawnPoint != null)
+                MovePlayerToSpawn(simulation2SpawnPoint, false, default, default);
+            else if (simulation2SpawnUseWorldCoordinates)
+                MovePlayerToSpawn(null, true, simulation2SpawnWorldPosition, simulation2SpawnWorldEuler);
+            else if (simulation1SpawnPoint != null)
+                MovePlayerToSpawn(simulation1SpawnPoint, false, default, default);
+            else if (simulation1SpawnUseWorldCoordinates)
+                MovePlayerToSpawn(null, true, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        }
+
         recorder?.Clear();
         recorder?.BeginRecording();
         if (physiology != null)
@@ -1548,6 +1648,17 @@ public class TrainingFlowController : MonoBehaviour
         gameManager?.PrepareSimulation2Mission();
         SubscribeSimulation2IfNeeded();
         ApplyPhaseUI();
+    }
+
+    public bool IsEnvironmentLearningTourAlarmActive => _tourAlarmActive;
+
+    private void StopTourAlarmIfPlaying()
+    {
+        if (!_tourAlarmActive)
+            return;
+
+        StopSiren();
+        _tourAlarmActive = false;
     }
 
     private void SetSafetyWarningVisible(bool visible)
