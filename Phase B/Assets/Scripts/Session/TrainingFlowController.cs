@@ -136,6 +136,9 @@ public class TrainingFlowController : MonoBehaviour
     public AudioSource sirenLoop;
     [Tooltip("Calm loop played when the user chooses Continue without alarm on the safety warning panel.")]
     public AudioClip calmBackgroundInsteadOfAlarmClip;
+    [Tooltip("Very quiet background loop for baseline calibration (Baseline_Panel). Leave empty to reuse calmBackgroundInsteadOfAlarmClip.")]
+    public AudioClip baselineCalibrationBackgroundClip;
+    [Range(0f, 1f)] public float baselineCalibrationBackgroundVolume = 0.08f;
     public AudioSource narrationAudioSource;
     [Tooltip("Optional bundle of VoiceGPT clips (Window → VoiceGPT → Panel Narration Setup). Fills empty clip slots at Start.")]
     public PanelNarrationLibrary narrationLibrary;
@@ -430,6 +433,8 @@ public class TrainingFlowController : MonoBehaviour
     private bool _paused;
     private bool _useCalmBackgroundInsteadOfAlarm;
     private AudioClip _sirenDefaultClip;
+    private float _sirenVolumeBeforeBaseline;
+    private bool _baselineCalibrationBackgroundPlaying;
     private PendingStart _pendingStart = PendingStart.None;
     private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
     private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
@@ -470,6 +475,8 @@ public class TrainingFlowController : MonoBehaviour
 
     void OnDestroy()
     {
+        StopBaselineCalibrationBackgroundIfPlaying();
+
         if (Instance == this)
             Instance = null;
     }
@@ -1236,11 +1243,56 @@ public class TrainingFlowController : MonoBehaviour
         if (showStressTimer)
             RefreshSimulationStressTimerDisplay();
         SetWorkoutHeartRateChartActive(showHrChartReceiver);
+        UpdateBaselineCalibrationBackgroundAudio();
         ApplyPlayerInteractionMode();
+    }
+
+    private void UpdateBaselineCalibrationBackgroundAudio()
+    {
+        bool inBaselineCalibration = CurrentPhase == Phase.Simulation1Calibration;
+        if (inBaselineCalibration)
+            PlayBaselineCalibrationBackground();
+        else
+            StopBaselineCalibrationBackgroundIfPlaying();
+    }
+
+    private void PlayBaselineCalibrationBackground()
+    {
+        if (sirenLoop == null || _baselineCalibrationBackgroundPlaying)
+            return;
+
+        AudioClip calibrationClip = baselineCalibrationBackgroundClip != null
+            ? baselineCalibrationBackgroundClip
+            : calmBackgroundInsteadOfAlarmClip;
+        if (calibrationClip == null)
+            return;
+
+        _sirenVolumeBeforeBaseline = sirenLoop.volume;
+        sirenLoop.clip = calibrationClip;
+        sirenLoop.loop = true;
+        sirenLoop.volume = Mathf.Clamp01(baselineCalibrationBackgroundVolume);
+        if (!sirenLoop.isPlaying)
+            sirenLoop.Play();
+
+        _baselineCalibrationBackgroundPlaying = true;
+    }
+
+    private void StopBaselineCalibrationBackgroundIfPlaying()
+    {
+        if (sirenLoop == null || !_baselineCalibrationBackgroundPlaying)
+            return;
+
+        sirenLoop.Stop();
+        sirenLoop.volume = _sirenVolumeBeforeBaseline;
+        if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+        _baselineCalibrationBackgroundPlaying = false;
     }
 
     void OnDisable()
     {
+        StopBaselineCalibrationBackgroundIfPlaying();
+
         if (playerFpsController != null)
             playerFpsController.SetUiMenuMode(true);
     }

@@ -6572,6 +6572,7 @@ RectTransform:
   - {fileID: 1780241416}
   - {fileID: 57778528}
   - {fileID: 910429054}
+  - {fileID: 1187434871}
   - {fileID: 709410547}
   - {fileID: 509376700}
   - {fileID: 176877172}
@@ -6588,7 +6589,6 @@ RectTransform:
   - {fileID: 134477996}
   - {fileID: 1636362891}
   - {fileID: 591536215}
-  - {fileID: 1187434871}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -25350,6 +25350,8 @@ MonoBehaviour:
   environmentLearningSpawnHeightMode: 0
   sirenLoop: {fileID: 862452212}
   calmBackgroundInsteadOfAlarmClip: {fileID: 8300000, guid: 845db978a8381fd46b190c5307454752, type: 3}
+  baselineCalibrationBackgroundClip: {fileID: 0}
+  baselineCalibrationBackgroundVolume: 0.08
   narrationAudioSource: {fileID: 883422681}
   narrationLibrary: {fileID: 0}
   introNarrationClip: {fileID: 8300000, guid: 9961d8bcc43b14145bc05bebec1cf6c6, type: 3}
@@ -63958,6 +63960,11 @@ MonoBehaviour:
   disableLegacyOutdoorShelter: 1
   voiceAudioSource: {fileID: 883422681}
   allItemsCollectedRunToMamadClip: {fileID: 8300000, guid: a2551702416f52e478202e973d9aa383, type: 3}
+  objectiveSuccessClip: {fileID: 8300000, guid: 242f974d41e16c84e9faab9dac0a3e90, type: 3}
+  objectiveSuccessAudioSource: {fileID: 883422681}
+  objectiveSuccessVolume: 1
+  backgroundDuckMultiplierOnSuccess: 0.7
+  backgroundDuckSecondsOnSuccess: 0.45
 --- !u!4 &1196935696
 Transform:
   m_ObjectHideFlags: 0
@@ -79917,7 +79924,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Simulation 2
+  m_text: First aid
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}

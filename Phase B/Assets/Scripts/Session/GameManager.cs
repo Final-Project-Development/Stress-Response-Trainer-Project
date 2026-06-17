@@ -35,6 +35,16 @@ public class GameManager : MonoBehaviour
     public AudioSource voiceAudioSource;
     [Tooltip("Played once when all pre-shelter steps are complete — run to Mamad instruction.")]
     public AudioClip allItemsCollectedRunToMamadClip;
+    [Header("Success feedback (Sim 1 & Sim 2)")]
+    [Tooltip("Played when the player completes a mission step correctly.")]
+    public AudioClip objectiveSuccessClip;
+    [Tooltip("Optional dedicated source for success SFX. Empty = fallback to voice source / auto-created 2D source.")]
+    public AudioSource objectiveSuccessAudioSource;
+    [Range(0f, 1f)] public float objectiveSuccessVolume = 1f;
+    [Tooltip("Temporarily lower siren/background volume while success SFX plays.")]
+    [Range(0f, 1f)] public float backgroundDuckMultiplierOnSuccess = 0.75f;
+    [Tooltip("How long the background stays lowered after success SFX.")]
+    public float backgroundDuckSecondsOnSuccess = 0.45f;
 
     /// <summary>Raised once when Simulation 1 is fully complete (items + lights + door + shelter).</summary>
     public event Action OnAllItemsCollected;
@@ -59,6 +69,9 @@ public class GameManager : MonoBehaviour
     private SimulationMissionBootstrap _missionBootstrap;
     private TrainingFlowController _flow;
     private Door _missionExitDoor;
+    private Coroutine _successDuckRoutine;
+    private bool _backgroundDuckedForSuccess;
+    private float _backgroundVolumeBeforeSuccessDuck;
     private const float Sim2HintDuration = 8f;
     private const string Sim2GoToPhoneObjective =
         "Go to the public telephone and open the door.";
@@ -196,6 +209,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _sim1Phase = Sim1MissionPhase.RunToShelter;
+        PlayObjectiveSuccessCue();
         PlayAllItemsCollectedVoice();
         if (UsesMissionStatusPanel())
         {
@@ -328,6 +342,7 @@ public class GameManager : MonoBehaviour
 
         _lightsTurnedOff = true;
         _sim1Phase = Sim1MissionPhase.CloseDoor;
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -349,6 +364,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _firstAidKitCollected = true;
+        PlayObjectiveSuccessCue();
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
         UpdateSimulation2ObjectiveText();
@@ -361,6 +377,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _casualtyContacted = true;
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -379,6 +396,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _emergencyReported = true;
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -453,6 +471,7 @@ public class GameManager : MonoBehaviour
             return;
 
         itemCollected++;
+        PlayObjectiveSuccessCue();
 
         ShowPickupFeedback(itemName);
         UpdateObjectiveText();
@@ -645,6 +664,7 @@ public class GameManager : MonoBehaviour
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionPanelProgress(
@@ -788,9 +808,75 @@ public class GameManager : MonoBehaviour
 
         _exitDoorClosed = true;
         _shelterReached = true;
+        PlayObjectiveSuccessCue();
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();
         return true;
+    }
+
+    private void PlayObjectiveSuccessCue()
+    {
+        if (objectiveSuccessClip == null)
+            return;
+
+        AudioSource source = ResolveObjectiveSuccessAudioSource();
+        if (source == null)
+            return;
+
+        source.PlayOneShot(objectiveSuccessClip, Mathf.Clamp01(objectiveSuccessVolume));
+        DuckBackgroundForSuccessCue();
+    }
+
+    private AudioSource ResolveObjectiveSuccessAudioSource()
+    {
+        if (objectiveSuccessAudioSource != null)
+            return objectiveSuccessAudioSource;
+
+        if (voiceAudioSource != null)
+            return voiceAudioSource;
+
+        objectiveSuccessAudioSource = GetComponent<AudioSource>();
+        if (objectiveSuccessAudioSource == null)
+            objectiveSuccessAudioSource = gameObject.AddComponent<AudioSource>();
+
+        objectiveSuccessAudioSource.playOnAwake = false;
+        objectiveSuccessAudioSource.loop = false;
+        objectiveSuccessAudioSource.spatialBlend = 0f;
+        return objectiveSuccessAudioSource;
+    }
+
+    private void DuckBackgroundForSuccessCue()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        if (_flow == null || _flow.sirenLoop == null || !_flow.sirenLoop.isPlaying)
+            return;
+
+        if (!_backgroundDuckedForSuccess)
+        {
+            _backgroundVolumeBeforeSuccessDuck = _flow.sirenLoop.volume;
+            _flow.sirenLoop.volume = Mathf.Clamp01(_backgroundVolumeBeforeSuccessDuck * backgroundDuckMultiplierOnSuccess);
+            _backgroundDuckedForSuccess = true;
+        }
+
+        if (_successDuckRoutine != null)
+            StopCoroutine(_successDuckRoutine);
+        _successDuckRoutine = StartCoroutine(RestoreBackgroundAfterSuccessCue());
+    }
+
+    private IEnumerator RestoreBackgroundAfterSuccessCue()
+    {
+        AudioSource background = _flow != null ? _flow.sirenLoop : null;
+        if (background == null || !_backgroundDuckedForSuccess)
+            yield break;
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, backgroundDuckSecondsOnSuccess));
+
+        if (background != null)
+            background.volume = _backgroundVolumeBeforeSuccessDuck;
+
+        _backgroundDuckedForSuccess = false;
+        _successDuckRoutine = null;
     }
 
     private void TryCompleteSimulation1Goals()
