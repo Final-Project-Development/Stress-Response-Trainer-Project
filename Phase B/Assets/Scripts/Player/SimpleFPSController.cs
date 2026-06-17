@@ -134,10 +134,11 @@ public class SimpleFPSController : MonoBehaviour
 
         if (learningTourSidebarMode)
         {
+            bool forceCursor = IsAltForcingCursor();
             bool pointerOverSidebar = learningTourSidebarRegion != null
                 && IsPointerOverRect(learningTourSidebarRegion);
             bool pointerOverToolbar = IsPointerOverToolbar();
-            bool pointerOverUi = pointerOverSidebar || pointerOverToolbar;
+            bool pointerOverUi = forceCursor || pointerOverSidebar || pointerOverToolbar;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = pointerOverUi;
             HandleMovement();
@@ -184,9 +185,7 @@ public class SimpleFPSController : MonoBehaviour
 
     private void HandleUiMenuLookMode()
     {
-        bool forceCursor =
-            holdAltToUseCursorInUiMenus &&
-            (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt));
+        bool forceCursor = IsAltForcingCursor();
 
         bool lookNow = allowLookWhileInUiMenus &&
                        !forceCursor &&
@@ -203,6 +202,10 @@ public class SimpleFPSController : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
+
+    bool IsAltForcingCursor() =>
+        holdAltToUseCursorInUiMenus &&
+        (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt));
 
     void HandleMouseLook()
     {

@@ -29,6 +29,7 @@ public class UINavigationManager : MonoBehaviour
         "Environment Learning:\nWalk around and read item names in the world.\n" +
         "Use the left sidebar list — click a name to jump to that location.\n" +
         "Move the mouse over the left panel to click buttons.\n" +
+        "Hold Alt to show and move the cursor anywhere on screen.\n" +
         "Back or Esc — return to simulation selection.";
 
     [Header("Keys")]
