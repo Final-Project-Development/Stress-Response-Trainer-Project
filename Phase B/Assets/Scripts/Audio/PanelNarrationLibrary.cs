@@ -10,6 +10,7 @@ public class PanelNarrationLibrary : ScriptableObject
     [Header("Panel voice-overs")]
     public AudioClip introClip;
     public AudioClip calibrationClip;
+    public AudioClip learnBriefingClip;
     public AudioClip sim1MissionBriefingClip;
     public AudioClip sim2BriefingClip;
 

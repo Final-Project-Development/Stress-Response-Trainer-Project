@@ -25354,10 +25354,11 @@ MonoBehaviour:
   baselineCalibrationBackgroundVolume: 0.08
   narrationAudioSource: {fileID: 883422681}
   narrationLibrary: {fileID: 0}
-  introNarrationClip: {fileID: 8300000, guid: 9961d8bcc43b14145bc05bebec1cf6c6, type: 3}
-  calibrationNarrationClip: {fileID: 8300000, guid: 99db19142170db048898d4d8f6c59dca, type: 3}
-  missionBriefingNarrationClip: {fileID: 8300000, guid: 1c52905bea722a84eb6a61f6e18fbe06, type: 3}
-  sim2BriefingNarrationClip: {fileID: 8300000, guid: e61814afcae7bf2438d4c1aeff4255f1, type: 3}
+  introNarrationClip: {fileID: 8300000, guid: ad3a2b15583fba74dbe823142e0f0d53, type: 3}
+  calibrationNarrationClip: {fileID: 8300000, guid: 1aae04838db6e524cbcc8f73ab1fa6ec, type: 3}
+  learnBriefingNarrationClip: {fileID: 8300000, guid: 1df5099ce787ca84b802d9c9ae5b6d7f, type: 3}
+  missionBriefingNarrationClip: {fileID: 8300000, guid: 41c42bebba3b22c478676b7e9aa478f9, type: 3}
+  sim2BriefingNarrationClip: {fileID: 8300000, guid: bba8d9c9db45d574d94e4b8f91caf163, type: 3}
   onSimulation1Started:
     m_PersistentCalls:
       m_Calls: []
@@ -25434,47 +25435,40 @@ MonoBehaviour:
     gateway: Not in use'
   introNarrationText: "In recent years, many of us have experienced stress and pressure\ndue
     to emergency situations and war.\n\nThis training experience is designed to help
-    improve your ability to function under stress.\n\nPlease connect your smartwatch.
+    improve your ability to function under stress.\n\nPlease connect your watch.
     \n\nIn each simulation, your physiological response is measured and at the end
     you receive practical recommendations for next time."
-  introParagraph1: 'In recent years, many of us have experienced stress and pressure
-
-    due
-    to emergency situations and war.'
-  introParagraph2: 'This training experience is designed to help improve your ability
-    to
-
-    function under stress.'
-  introParagraph3: Please connect your smartwatch.
+  introParagraph1: "In recent years, many of us have experienced stress and \npressure
+    due to emergency situations and war."
+  introParagraph2: "This training experience is designed to help improve your \nability
+    to function under stress."
+  introParagraph3: Please connect your watch.
   introParagraph4: 'In each simulation, your physiological response is measured and
     at
 
     the end you receive practical recommendations for next time.'
   introParagraph1Start: 0
   introParagraph2Start: 6
-  introParagraph3Start: 10
-  introParagraph4Start: 13.5
+  introParagraph3Start: 10.5
+  introParagraph4Start: 13
   calibrationInstruction: 'Stand still and relax for 60 seconds.
 
     We are calibrating
-    your heart-rate metrics.
-
-'
+    your heart-rate metrics.'
   missionBriefingBody: "Simulation 1 - Emergency preparedness\n\n1) Enter the home
-    and collect 5 items (press E on each):\n   \u2022 Water bottle\n   \u2022 Flash
-    light\n   \u2022 Radio\n   \u2022 Phone\n   \u2022 Key\n\n2) Turn off the lights
-    (press E)\n3) Close the entrance door (press E)\n4) Run to the Mamad (shelter)
-    outside"
+    and collect 5 items:\n   \u2022 Water bottle\n   \u2022 Flash light\n   \u2022
+    Radio\n   \u2022 Phone\n   \u2022 Key\n\n2) Turn off the lights\n3) Close the
+    entrance door \n4) Run to the Mamad outside"
   learnBriefingBody: "Environment Learning - City tour\n\nExplore important locations
     and objects in the \ntraining environment.\n\nUse the left sidebar to jump to
     each item and read the \nlabels in the world.\n\nMovement controls:\r\nW - Move
     forward\r\nA / D - Strafe left / right\r\nS - Move backward\r\nMouse - Look around\n\nWhen
     you are ready, press Start learn."
   sim2BriefingBody: "Simulation 2 - First Aid Under Pressure\n\n1) Collect the first
-    aid kit (press E)\n2) Find the wounded person and press E\n3) Go to the public
-    telephone:\n    press E to open the door \u2192 \n    E insert coin \u2192 \n   
-    E lift the phone \u2192 \n    dial 1, 0, 1\n4) Return to the wounded person:\n   
-    Press E to start treatment, then press 1, then 2, then 3"
+    aid kit\n2) Find the wounded person\n3) Go to the public telephone:\n    Open
+    the door \u2192 \n    Insert coin \u2192 \n    Lift the phone \u2192 \n    Dial
+    1, 0, 1\n4) Return to the wounded person:\n    Start treatment, then press 1,
+    then 2, then 3"
   sim1AllItemsCollectedCompleted: All supplies collected.
   sim1LightsOffCompleted: Lights turned off.
   sim1DoorClosedCompleted: Door closed.

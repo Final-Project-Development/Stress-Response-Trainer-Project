@@ -145,6 +145,8 @@ public class TrainingFlowController : MonoBehaviour
     public AudioClip introNarrationClip;
     [Tooltip("Optional voice-over for the baseline calibration screen.")]
     public AudioClip calibrationNarrationClip;
+    [Tooltip("Optional voice-over for Environment Learning briefing (LearnBriefing_Panel).")]
+    public AudioClip learnBriefingNarrationClip;
     [Tooltip("Optional voice-over for Simulation 1 mission briefing (instructions before Start mission).")]
     public AudioClip missionBriefingNarrationClip;
     [Tooltip("Optional voice-over for Simulation 2 briefing panel.")]
@@ -247,9 +249,9 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string introNarrationText =
-        "In recent years, many of us have experienced stress and pressure due to emergency situations and war.\n\n" +
-        "This training experience is designed to help improve your ability to function under stress.\n\n" +
-        "Please connect your smartwatch. In each simulation, your physiological response is measured and at the end you receive practical recommendations for next time.";
+        "In recent years, many of us have experienced stress and pressure due to emergency situations and war...\n\n" +
+        "This training experience is designed to help improve your ability to function under stress...\n\n" +
+        "Please connect your smartwatch - in each simulation, your physiological response is measured, and at the end you receive practical recommendations for next time...";
 
     [Header("Intro subtitles (one paragraph at a time)")]
     [TextArea]
@@ -271,40 +273,40 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string calibrationInstruction =
-        "Stand still and relax for 15 seconds.\n\n" +
-        "We are calibrating your heart-rate metrics.\n\n" +
-        "No alarm will play during this step.";
+        "Stand still and relax for 15 seconds...\n\n" +
+        "We are calibrating your heart-rate metrics...\n\n" +
+        "No alarm will play during this step - just breathe slowly and stay comfortable...";
 
     [TextArea]
     public string missionBriefingBody =
-        "Simulation 1 — Emergency preparedness\n\n" +
-        "A loud continuous siren will start when the mission begins.\n\n" +
-        "1) Enter the home and collect 5 items (press E on each):\n" +
-        "   • Water bottle\n" +
-        "   • Flash light\n" +
-        "   • Radio\n" +
-        "   • Phone\n" +
-        "   • Key\n\n" +
-        "2) Turn off the lights — switch: PFB_Lightswitch (1)\n" +
-        "3) Close the entrance door — PFB_DoorDouble\n" +
-        "4) Run to the Mamad (shelter) outside\n\n" +
-        "When you are ready, press Start mission.";
+        "Simulation 1 - Emergency preparedness...\n\n" +
+        "A loud continuous siren will start when the mission begins...\n\n" +
+        "1) Enter the home and collect 5 items (press E on each) -\n" +
+        "   Water bottle...\n" +
+        "   Flash light...\n" +
+        "   Radio...\n" +
+        "   Phone...\n" +
+        "   Key...\n\n" +
+        "2) Turn off the lights - switch: PFB_Lightswitch (1)...\n" +
+        "3) Close the entrance door - PFB_DoorDouble...\n" +
+        "4) Run to the Mamad (shelter) outside...\n\n" +
+        "When you are ready, press Start mission...";
 
     [TextArea]
     public string learnBriefingBody =
-        "Environment Learning — City tour\n\n" +
-        "Explore important locations and objects in the training environment.\n\n" +
-        "Use the left sidebar to jump to each item and read the labels in the world.\n\n" +
-        "When you are ready, press Start learn.";
+        "Environment Learning - City tour...\n\n" +
+        "Explore important locations and objects in the training environment...\n\n" +
+        "Use the left sidebar to jump to each item and read the labels in the world...\n\n" +
+        "When you are ready, press Start learn...";
 
     [TextArea]
     public string sim2BriefingBody =
-        "Simulation 2 — First aid under pressure\n\n" +
-        "1) Collect the first aid kit (press E)\n" +
-        "2) Find the wounded person and press E — go to the public telephone and call for first aid help\n" +
-        "3) Public telephone: E open door (once) → E insert coin → E pick up receiver → dial 1, then 0, then 1\n" +
-        "4) Return to the wounded person: press E on the casualty, then press 1, then 2, then 3 for treatment\n\n" +
-        "Press Start Mission when you are ready.";
+        "Simulation 2 - First aid under pressure...\n\n" +
+        "1) Collect the first aid kit (press E)...\n" +
+        "2) Find the wounded person and press E - then go to the public telephone and call for first aid help...\n" +
+        "3) Public telephone - E open door (once), E insert coin, E pick up receiver, dial 1 then 0 then 1...\n" +
+        "4) Return to the wounded person - press E on the casualty, then press 1, then 2, then 3 for treatment...\n\n" +
+        "Press Start Mission when you are ready...";
 
     [Header("Simulation 1 — mission panel copy")]
     [TextArea] public string sim1AllItemsCollectedCompleted =
@@ -824,6 +826,7 @@ public class TrainingFlowController : MonoBehaviour
             learnBriefingBodyText.text = learnBriefingBody.TrimEnd();
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
+        PlayLearnBriefingNarration();
     }
 
     public void UI_BeginSimulation1()
@@ -1438,6 +1441,8 @@ public class TrainingFlowController : MonoBehaviour
             introNarrationClip = narrationLibrary.introClip;
         if (calibrationNarrationClip == null && narrationLibrary.calibrationClip != null)
             calibrationNarrationClip = narrationLibrary.calibrationClip;
+        if (learnBriefingNarrationClip == null && narrationLibrary.learnBriefingClip != null)
+            learnBriefingNarrationClip = narrationLibrary.learnBriefingClip;
         if (missionBriefingNarrationClip == null && narrationLibrary.sim1MissionBriefingClip != null)
             missionBriefingNarrationClip = narrationLibrary.sim1MissionBriefingClip;
         if (sim2BriefingNarrationClip == null && narrationLibrary.sim2BriefingClip != null)
@@ -1451,6 +1456,10 @@ public class TrainingFlowController : MonoBehaviour
     private void PlayCalibrationNarration() => PlayNarrationClip(calibrationNarrationClip);
 
     private void StopCalibrationNarration() => StopNarrationIfPlaying(calibrationNarrationClip);
+
+    private void PlayLearnBriefingNarration() => PlayNarrationClip(learnBriefingNarrationClip);
+
+    private void StopLearnBriefingNarration() => StopNarrationIfPlaying(learnBriefingNarrationClip);
 
     private void PlayMissionBriefingNarration() => PlayNarrationClip(missionBriefingNarrationClip);
 
@@ -1483,6 +1492,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         StopIntroNarration();
         StopCalibrationNarration();
+        StopLearnBriefingNarration();
         StopMissionBriefingNarration();
         StopSim2BriefingNarration();
     }
