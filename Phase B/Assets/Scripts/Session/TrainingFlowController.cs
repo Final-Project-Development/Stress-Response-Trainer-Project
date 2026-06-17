@@ -279,18 +279,9 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string missionBriefingBody =
-        "Simulation 1 - Emergency preparedness...\n\n" +
-        "A loud continuous siren will start when the mission begins...\n\n" +
-        "1) Enter the home and collect 5 items (press E on each) -\n" +
-        "   Water bottle...\n" +
-        "   Flash light...\n" +
-        "   Radio...\n" +
-        "   Phone...\n" +
-        "   Key...\n\n" +
-        "2) Turn off the lights - switch: PFB_Lightswitch (1)...\n" +
-        "3) Close the entrance door - PFB_DoorDouble...\n" +
-        "4) Run to the Mamad (shelter) outside...\n\n" +
-        "When you are ready, press Start mission...";
+        "Simulation 1: Emergency Preparedness\n\n" +
+        "Collect 5 essential supplies inside the house.\n\n" +
+        "Turn off lights, close the door, and enter the Mamad shelter.";
 
     [TextArea]
     public string learnBriefingBody =
@@ -517,7 +508,7 @@ public class TrainingFlowController : MonoBehaviour
         RefreshHubConnectionStatusText();
         if (introBodyText != null)
             introBodyText.text = introNarrationText;
-        if (missionBriefingBodyText != null)
+        if (missionBriefingBodyText != null && !UsesVisualSim1Briefing())
             missionBriefingBodyText.text = missionBriefingBody;
         if (learnBriefingBodyText != null)
             learnBriefingBodyText.text = learnBriefingBody;
@@ -789,10 +780,11 @@ public class TrainingFlowController : MonoBehaviour
     private void ShowSimulation1MissionBriefingAfterCalibration()
     {
         CurrentPhase = Phase.Simulation1MissionBriefing;
-        if (missionBriefingBodyText != null)
+        if (missionBriefingBodyText != null && !UsesVisualSim1Briefing())
             missionBriefingBodyText.text = missionBriefingBody.TrimEnd();
 
         ApplyPhaseUI();
+        RefreshVisualBriefingPanels();
         PlayMissionBriefingNarration();
     }
 
@@ -809,6 +801,7 @@ public class TrainingFlowController : MonoBehaviour
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
+        RefreshVisualBriefingPanels();
         PlaySim2BriefingNarration();
     }
 
@@ -1023,6 +1016,7 @@ public class TrainingFlowController : MonoBehaviour
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
+        RefreshVisualBriefingPanels();
         PlaySim2BriefingNarration();
     }
 
@@ -1460,6 +1454,27 @@ public class TrainingFlowController : MonoBehaviour
     private void PlayLearnBriefingNarration() => PlayNarrationClip(learnBriefingNarrationClip);
 
     private void StopLearnBriefingNarration() => StopNarrationIfPlaying(learnBriefingNarrationClip);
+
+    private void RefreshVisualBriefingPanels()
+    {
+        if (sim1MissionBriefingPanel != null)
+        {
+            var sim1Briefing = sim1MissionBriefingPanel.GetComponent<SimulationBriefingPanelController>();
+            if (sim1Briefing != null)
+                sim1Briefing.Refresh();
+        }
+
+        if (sim2BriefingPanel != null)
+        {
+            var sim2Briefing = sim2BriefingPanel.GetComponent<SimulationBriefingPanelController>();
+            if (sim2Briefing != null)
+                sim2Briefing.Refresh();
+        }
+    }
+
+    bool UsesVisualSim1Briefing() =>
+        sim1MissionBriefingPanel != null &&
+        sim1MissionBriefingPanel.GetComponent<SimulationBriefingPanelController>() != null;
 
     private void PlayMissionBriefingNarration() => PlayNarrationClip(missionBriefingNarrationClip);
 
