@@ -16,6 +16,8 @@ public class TopBarWatchStatusController : MonoBehaviour
     public WorkoutHeartRateChartReceiver workoutChart;
 
     [Header("Display")]
+    [Tooltip("When true, keeps font/color/alignment/margins exactly as set on the TMP in the Inspector.")]
+    public bool preserveInspectorTextStyle = true;
     [Tooltip("When true, uses the same status strings as Baseline calibration (recommended).")]
     public bool useCalibrationStatusText = true;
     [Tooltip("Optional shorter toolbar text (Sim · 72 bpm).")]
@@ -56,7 +58,7 @@ public class TopBarWatchStatusController : MonoBehaviour
 
     void OnEnable()
     {
-        ConfigureTextRect();
+        ApplyRuntimeTextDefaults();
         Refresh(true);
         _layout?.ApplyLayout();
     }
@@ -75,14 +77,18 @@ public class TopBarWatchStatusController : MonoBehaviour
         Refresh(false);
     }
 
-    void ConfigureTextRect()
+    void ApplyRuntimeTextDefaults()
     {
         if (statusText == null)
             return;
 
+        statusText.raycastTarget = false;
+
+        if (preserveInspectorTextStyle)
+            return;
+
         statusText.enableWordWrapping = false;
         statusText.overflowMode = TextOverflowModes.Overflow;
-        statusText.raycastTarget = false;
         statusText.margin = Vector4.zero;
         statusText.alignment = TextAlignmentOptions.MidlineLeft;
 
@@ -138,7 +144,6 @@ public class TopBarWatchStatusController : MonoBehaviour
         if (statusText != null)
         {
             statusText.text = label ?? string.Empty;
-            statusText.color = Color.white;
             statusText.ForceMeshUpdate();
             ResizeContainerToText();
         }

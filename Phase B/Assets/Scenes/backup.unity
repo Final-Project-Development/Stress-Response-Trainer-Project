@@ -6706,7 +6706,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColor: {r: 0.15294118, g: 0.10980392, b: 0.2784314, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -6723,14 +6723,14 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
-  m_fontSizeBase: 28
+  m_fontSize: 26
+  m_fontSizeBase: 26
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 3
@@ -6762,7 +6762,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: -7.455986, y: -4.00618, z: -4.383301, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -103319,8 +103319,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -328, y: -18}
-  m_SizeDelta: {x: 230, y: 35}
+  m_AnchoredPosition: {x: -328, y: -20}
+  m_SizeDelta: {x: 235, y: 33}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1864486544
 MonoBehaviour:
@@ -103337,6 +103337,7 @@ MonoBehaviour:
   statusText: {fileID: 92036961}
   statusDot: {fileID: 0}
   workoutChart: {fileID: 0}
+  preserveInspectorTextStyle: 1
   useCalibrationStatusText: 1
   useCompactToolbarText: 0
   maxToolbarWidth: 320
@@ -103367,7 +103368,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1820434636002459011, guid: acd8ec70f378a7243ab1fe6127c27ce5, type: 3}
+  m_Sprite: {fileID: 6687227328380599470, guid: b52f3dfd1724e9844ba9747d09586023, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
