@@ -106,7 +106,18 @@ public class Simulation2SceneController : MonoBehaviour
                 if (s > peak) peak = s;
             }
             mean = sum / _recorder.SciHistory.Count;
-            SessionHistoryStore.FinalizeAfterSim2(_recorder.SciHistory, _recorder.sampleIntervalSeconds);
+            SessionHistoryStore.FinalizeAfterSim2(
+                _recorder.SciHistory,
+                SimulationRunOutcome.Create(
+                    _recorder.SciHistory.Count * _recorder.sampleIntervalSeconds,
+                    600f,
+                    missionCompleted: true,
+                    timedOut: false,
+                    completionRatio: 1f,
+                    highStressSeconds: StressRecommendations.ComputeHighStressSeconds(
+                        _recorder.SciHistory,
+                        _recorder.sampleIntervalSeconds)),
+                _recorder.sampleIntervalSeconds);
         }
 
         string recovery = SessionHistoryStore.BuildPhysiologicalRecoverySummary(peak, mean);

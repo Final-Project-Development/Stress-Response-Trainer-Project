@@ -69,6 +69,8 @@ public class TrainingFlowController : MonoBehaviour
     public MockPhysiologySource physiology;
     public SessionStressRecorder recorder;
     public GameManager gameManager;
+    [Tooltip("Per-task time limits and 3-strike disqualification. Auto-added to GameManager if empty.")]
+    public MissionTaskStrikeTracker missionTaskStrikeTracker;
     public EnvironmentLearningController environmentLearningController;
     public UDPReceiver udpReceiver;
 
@@ -188,21 +190,18 @@ public class TrainingFlowController : MonoBehaviour
     public TextMeshProUGUI sim2ResultsRecommendationsText;
     public TextMeshProUGUI simulationActiveHudText;
 
-    [Header("Simulation stress timer (Sim 1 & 2 active only)")]
-    [Tooltip("timer_panel on Canvas — shown only during active simulations.")]
+    [Header("Per-task timer (Sim 1 & 2 active only)")]
+    [Tooltip("timer_panel on Canvas — shows countdown for the current mission step only.")]
     public GameObject timerPanel;
-    [Tooltip("TimeText TMP under timer_panel.")]
+    [Tooltip("TimeText TMP under timer_panel — remaining seconds for the active task.")]
     public TextMeshProUGUI simulationTimerText;
     [Tooltip("Optional title TMP (e.g. Timer label on timer_panel).")]
     public TextMeshProUGUI simulationTimerTitleText;
+    [Tooltip("Title above the countdown (e.g. Timer). Task name is shown in the mission panel, not here.")]
     public string simulationTimerTitle = "Timer";
-    [Tooltip("Count down for time pressure, or count up elapsed stress time.")]
-    public bool simulationTimerCountDown = true;
-    public float simulation1TimerSeconds = 300f;
-    public float simulation2TimerSeconds = 600f;
-    [Tooltip("Timer text color when remaining time is at or below urgent threshold.")]
+    [Tooltip("Timer text color when task remaining time is at or below urgent threshold.")]
     public bool simulationTimerUrgentColorEnabled = true;
-    public float simulationTimerUrgentBelowSeconds = 60f;
+    public float simulationTimerUrgentBelowSeconds = 15f;
     public Color simulationTimerNormalColor = Color.white;
     public Color simulationTimerUrgentColor = new Color(1f, 0.4f, 0.35f, 1f);
 
@@ -422,6 +421,7 @@ public class TrainingFlowController : MonoBehaviour
     private float _calibrationTimer;
     private float _simulationStressTimer;
     private Phase _simulationStressTimerPhase = Phase.Gate;
+    private bool _simulationFinishHandled;
     private bool _sim2Subscribed;
     private bool _paused;
     private bool _useCalmBackgroundInsteadOfAlarm;
@@ -463,7 +463,20 @@ public class TrainingFlowController : MonoBehaviour
         if (gameManager != null && missionStatusPanel != null)
             gameManager.missionStatusPanel = missionStatusPanel;
 
+        EnsureMissionTaskStrikeTracker();
         HideEnvironmentLearningTourSidebar();
+    }
+
+    void EnsureMissionTaskStrikeTracker()
+    {
+        if (gameManager == null)
+            return;
+
+        if (missionTaskStrikeTracker == null)
+            missionTaskStrikeTracker = gameManager.GetComponent<MissionTaskStrikeTracker>();
+
+        if (missionTaskStrikeTracker == null)
+            missionTaskStrikeTracker = gameManager.gameObject.AddComponent<MissionTaskStrikeTracker>();
     }
 
     void OnDestroy()
@@ -864,14 +877,41 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(true);
 
         gameManager?.PrepareSimulation1Mission();
+        ResetSimulationRunState();
+        missionTaskStrikeTracker?.BeginTracking(simulation2: false);
 
         if (gameManager != null)
             gameManager.OnAllItemsCollected += HandleSim1Complete;
     }
 
-    private void HandleSim1Complete()
+    public void FinishSim1Disqualified(string lastTaskDisplayName)
     {
-        if (CurrentPhase != Phase.Simulation1Active) return;
+        string reason = string.IsNullOrEmpty(lastTaskDisplayName)
+            ? "Disqualified after 3 task time violations."
+            : $"Disqualified after 3 task time violations (last: {lastTaskDisplayName}).";
+        FinishSim1Run(missionCompleted: false, timedOut: false, disqualified: true, disqualificationReason: reason);
+    }
+
+    public void FinishSim2Disqualified(string lastTaskDisplayName)
+    {
+        string reason = string.IsNullOrEmpty(lastTaskDisplayName)
+            ? "Disqualified after 3 task time violations."
+            : $"Disqualified after 3 task time violations (last: {lastTaskDisplayName}).";
+        FinishSim2Run(missionCompleted: false, timedOut: false, disqualified: true, disqualificationReason: reason);
+    }
+
+    private void HandleSim1Complete() => FinishSim1Run(missionCompleted: true, timedOut: false);
+
+    private void FinishSim1Run(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        if (CurrentPhase != Phase.Simulation1Active || _simulationFinishHandled)
+            return;
+
+        _simulationFinishHandled = true;
 
         if (gameManager != null)
             gameManager.OnAllItemsCollected -= HandleSim1Complete;
@@ -883,7 +923,11 @@ public class TrainingFlowController : MonoBehaviour
         onSimulation1Ended?.Invoke();
         SetActiveSafe(highStressWarningRoot, false);
         SetHudVisible(false);
+        SetSimulationGameplayState(false, false);
+        gameManager?.ClearMissionMessages();
+        missionTaskStrikeTracker?.EndTracking();
 
+        var outcome = BuildSim1RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation1Results;
         ApplySimulation1ResultGraphs();
 
@@ -892,68 +936,117 @@ public class TrainingFlowController : MonoBehaviour
             float peakSci = recorder.SciHistory.Count > 0 ? MaxSci(recorder.SciHistory) : 0f;
             float meanSci = recorder.SciHistory.Count > 0 ? MeanSci(recorder.SciHistory) : 0f;
             var peakBand = StressChangeIndexCalculator.Classify(peakSci);
-            SessionHistoryStore.UpdateAfterSim1(recorder.SciHistory, physiology.HrvBaselineMs, recorder.sampleIntervalSeconds);
-            string nextStage = StressRecommendations.BeforeNextStageBreathingTip();
+            SessionHistoryStore.UpdateAfterSim1(
+                recorder.SciHistory,
+                physiology.HrvBaselineMs,
+                outcome,
+                recorder.sampleIntervalSeconds);
+            string sim1Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
+                recorder.SciHistory,
+                StressRecommendations.SimulationStage.Sim1,
+                outcome);
 
             if (UseSim1SplitColumns())
             {
                 if (resultsSummaryText != null)
                     resultsSummaryText.gameObject.SetActive(false);
 
-                var metrics = new StringBuilder();
-                metrics.AppendLine("<b>Results</b>");
-                metrics.AppendLine();
-                metrics.AppendLine("<color=#B8D4EE>Simulation 1</color>");
-                metrics.AppendLine();
-                metrics.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
-                metrics.AppendLine(
-                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
-                metrics.AppendLine();
-                metrics.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
-                metrics.AppendLine($"Average SCI: {meanSci:F1}%");
-                metrics.AppendLine($"Samples: {recorder.SciHistory.Count}");
+                string metrics = StressRecommendations.BuildResultsTabMetrics(
+                    StressRecommendations.SimulationStage.Sim1,
+                    peakSci,
+                    meanSci,
+                    outcome,
+                    baselineHrvMs: physiology.HrvBaselineMs,
+                    sciHistory: recorder.SciHistory,
+                    sampleIntervalSeconds: recorder.sampleIntervalSeconds);
 
-                var rec = new StringBuilder();
-                rec.AppendLine("<b>Recommendations</b>");
-                rec.AppendLine();
-                rec.AppendLine(StressRecommendations.BuildBehavioralTips(recorder.SciHistory));
-                rec.AppendLine();
-                rec.AppendLine(nextStage);
-                AppendSimulationPickFooter(rec);
-
-                PrepareResultsTextForManualBox(sim1ResultsMetricsText);
-                PrepareResultsTextForManualBox(sim1ResultsRecommendationsText);
-                sim1ResultsMetricsText.text = metrics.ToString().TrimEnd();
-                sim1ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+                LayoutSim1ResultsPanels();
+                sim1ResultsMetricsText.text = metrics;
+                sim1ResultsRecommendationsText.text = sim1Recommendations;
             }
             else if (resultsSummaryText != null)
             {
                 resultsSummaryText.gameObject.SetActive(true);
-                string tips = StressRecommendations.BuildFromSciHistory(recorder.SciHistory);
-
                 var sb = new StringBuilder();
                 sb.AppendLine("Simulation 1 — Results");
                 sb.AppendLine();
-                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
-                sb.AppendLine(
-                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
-                sb.AppendLine();
+                if (outcome != null && outcome.disqualified)
+                    sb.AppendLine("Disqualified — too many task time violations.");
+                else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
+                    sb.AppendLine("Mission not finished in time.");
+                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms");
                 sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
                 sb.AppendLine($"Average SCI: {meanSci:F1}%");
-                sb.AppendLine($"Samples: {recorder.SciHistory.Count}");
                 sb.AppendLine();
                 sb.AppendLine("Recommendations:");
-                sb.AppendLine(tips);
-                sb.AppendLine();
-                sb.AppendLine(nextStage);
-                AppendSimulationPickFooter(sb);
-                PrepareResultsTextForManualBox(resultsSummaryText);
+                sb.AppendLine(sim1Recommendations);
+                PrepareResultsPanelText(resultsSummaryText);
                 resultsSummaryText.text = sb.ToString();
             }
         }
 
         ApplyPhaseUI();
         ApplySim1ResultsTab(ResultsTab.Result);
+    }
+
+    private SimulationRunOutcome BuildSim1RunOutcome(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        float elapsed = _simulationStressTimer;
+        float progress = missionCompleted ? 1f : gameManager?.GetSim1MissionProgress01() ?? 0f;
+        float highStressSeconds = recorder != null
+            ? StressRecommendations.ComputeHighStressSeconds(recorder.SciHistory, recorder.sampleIntervalSeconds)
+            : 0f;
+        int strikes = missionTaskStrikeTracker != null ? missionTaskStrikeTracker.StrikeCount : 0;
+        if (disqualified && string.IsNullOrEmpty(disqualificationReason) && missionTaskStrikeTracker != null)
+            disqualificationReason = missionTaskStrikeTracker.GetDisqualificationSummary();
+        return SimulationRunOutcome.Create(
+            elapsed,
+            timeLimitSeconds: 0f,
+            missionCompleted,
+            timedOut: false,
+            progress,
+            highStressSeconds,
+            disqualified,
+            strikes,
+            disqualificationReason);
+    }
+
+    private SimulationRunOutcome BuildSim2RunOutcome(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        float elapsed = _simulationStressTimer;
+        float progress = missionCompleted ? 1f : gameManager?.GetSim2MissionProgress01() ?? 0f;
+        float highStressSeconds = recorder != null
+            ? StressRecommendations.ComputeHighStressSeconds(recorder.SciHistory, recorder.sampleIntervalSeconds)
+            : 0f;
+        int strikes = missionTaskStrikeTracker != null ? missionTaskStrikeTracker.StrikeCount : 0;
+        if (disqualified && string.IsNullOrEmpty(disqualificationReason) && missionTaskStrikeTracker != null)
+            disqualificationReason = missionTaskStrikeTracker.GetDisqualificationSummary();
+        return SimulationRunOutcome.Create(
+            elapsed,
+            timeLimitSeconds: 0f,
+            missionCompleted,
+            timedOut: false,
+            progress,
+            highStressSeconds,
+            disqualified,
+            strikes,
+            disqualificationReason);
+    }
+
+    private void ResetSimulationRunState()
+    {
+        _simulationFinishHandled = false;
+        _simulationStressTimer = 0f;
+        _simulationStressTimerPhase = CurrentPhase;
+        missionTaskStrikeTracker?.EndTracking();
     }
 
     private static float MaxSci(System.Collections.Generic.IReadOnlyList<float> list)
@@ -1162,33 +1255,49 @@ public class TrainingFlowController : MonoBehaviour
         if (!_paused)
             _simulationStressTimer += Time.deltaTime;
 
-        RefreshSimulationStressTimerDisplay();
+        RefreshPerTaskTimerDisplay();
     }
 
-    private void RefreshSimulationStressTimerDisplay()
+    private void RefreshPerTaskTimerDisplay()
     {
         if (simulationTimerText == null)
             return;
 
-        float limit = CurrentPhase == Phase.Simulation2Active
-            ? simulation2TimerSeconds
-            : simulation1TimerSeconds;
+        EnsureMissionTaskStrikeTracker();
+        var tracker = missionTaskStrikeTracker;
+        bool showTaskTimer = tracker != null &&
+                             tracker.trackingEnabled &&
+                             tracker.IsTrackingActive &&
+                             !string.IsNullOrEmpty(tracker.CurrentTaskKey);
 
-        float displaySeconds = simulationTimerCountDown
-            ? Mathf.Max(0f, limit - _simulationStressTimer)
-            : _simulationStressTimer;
-
-        simulationTimerText.text = FormatMmSs(displaySeconds);
-
-        if (!simulationTimerUrgentColorEnabled || !simulationTimerCountDown)
+        if (showTaskTimer)
         {
-            simulationTimerText.color = simulationTimerNormalColor;
+            float remaining = tracker.CurrentTaskRemainingSeconds;
+            simulationTimerText.text = FormatMmSs(remaining);
+
+            if (simulationTimerTitleText != null)
+                simulationTimerTitleText.text = simulationTimerTitle;
+
+            if (!simulationTimerUrgentColorEnabled)
+            {
+                simulationTimerText.color = simulationTimerNormalColor;
+                return;
+            }
+
+            float urgentThreshold = Mathf.Min(
+                simulationTimerUrgentBelowSeconds,
+                tracker.CurrentTaskLimitSeconds * 0.25f);
+            simulationTimerText.color = remaining <= urgentThreshold
+                ? simulationTimerUrgentColor
+                : simulationTimerNormalColor;
             return;
         }
 
-        simulationTimerText.color = displaySeconds <= simulationTimerUrgentBelowSeconds
-            ? simulationTimerUrgentColor
-            : simulationTimerNormalColor;
+        simulationTimerText.text = "--:--";
+        if (simulationTimerTitleText != null)
+            simulationTimerTitleText.text = simulationTimerTitle;
+
+        simulationTimerText.color = simulationTimerNormalColor;
     }
 
     private static string FormatMmSs(float seconds)
@@ -1238,7 +1347,7 @@ public class TrainingFlowController : MonoBehaviour
         if (missionStatusPanel != null)
             missionStatusPanel.SetPanelVisible(showStressTimer);
         if (showStressTimer)
-            RefreshSimulationStressTimerDisplay();
+            RefreshPerTaskTimerDisplay();
         SetWorkoutHeartRateChartActive(showHrChartReceiver);
         UpdateBaselineCalibrationBackgroundAudio();
         ApplyPlayerInteractionMode();
@@ -1635,7 +1744,11 @@ public class TrainingFlowController : MonoBehaviour
         if (levelUi == null)
             levelUi = simulationPickPanel.GetComponentInChildren<LevelSelectUI>(true);
 
-        levelUi?.ScrollToTop();
+        if (levelUi != null)
+        {
+            levelUi.ApplyCopy();
+            levelUi.ScrollToTop();
+        }
     }
 
     /// <summary>
@@ -1724,6 +1837,8 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(true);
         SetSimulation2Status(sim2ObjectiveFindKit);
         gameManager?.PrepareSimulation2Mission();
+        ResetSimulationRunState();
+        missionTaskStrikeTracker?.BeginTracking(simulation2: true);
         SubscribeSimulation2IfNeeded();
         ApplyPhaseUI();
     }
@@ -1832,20 +1947,30 @@ public class TrainingFlowController : MonoBehaviour
         _sim2Subscribed = false;
     }
 
-    private void HandleSimulation2Complete()
+    private void HandleSimulation2Complete() => FinishSim2Run(missionCompleted: true, timedOut: false);
+
+    private void FinishSim2Run(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
     {
-        if (CurrentPhase != Phase.Simulation2Active)
+        if (CurrentPhase != Phase.Simulation2Active || _simulationFinishHandled)
             return;
 
+        _simulationFinishHandled = true;
         UnsubscribeSimulation2IfNeeded();
         if (physiology != null)
             physiology.StressorActive = false;
         StopSiren();
         recorder?.EndRecording();
         gameManager?.ClearMissionMessages();
+        missionTaskStrikeTracker?.EndTracking();
         SetSimulationGameplayState(false, false);
         SetHudVisible(false);
         SetActiveSafe(highStressWarningRoot, false);
+
+        var outcome = BuildSim2RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation2Results;
 
         float peakSci = 0f;
@@ -1854,12 +1979,22 @@ public class TrainingFlowController : MonoBehaviour
         {
             peakSci = MaxSci(recorder.SciHistory);
             meanSci = MeanSci(recorder.SciHistory);
-            SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, recorder.sampleIntervalSeconds);
+            SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, outcome, recorder.sampleIntervalSeconds);
+        }
+        else if (timedOut || disqualified)
+        {
+            SessionHistoryStore.FinalizeAfterSim2(null, outcome, recorder?.sampleIntervalSeconds ?? 0.4f);
         }
 
-        string tips = recorder != null && recorder.SciHistory.Count > 0
-            ? StressRecommendations.BuildFromSciHistory(recorder.SciHistory)
-            : "Complete another Simulation 2 run to generate tailored guidance.";
+        string sim2Recommendations = recorder != null && recorder.SciHistory.Count > 0
+            ? StressRecommendations.BuildRecommendationsTabOnly(
+                recorder.SciHistory,
+                StressRecommendations.SimulationStage.Sim2,
+                outcome)
+            : StressRecommendations.BuildRecommendationsTabOnly(
+                null,
+                StressRecommendations.SimulationStage.Sim2,
+                outcome);
         float minHrv = 0f;
         float maxHrv = 0f;
         float avgHrv = 0f;
@@ -1875,31 +2010,20 @@ public class TrainingFlowController : MonoBehaviour
             if (sim2ResultsSummaryText != null)
                 sim2ResultsSummaryText.gameObject.SetActive(false);
 
-            var metrics = new StringBuilder();
-            metrics.AppendLine("<b>Results</b>");
-            metrics.AppendLine();
-            metrics.AppendLine("<color=#B8D4EE>Simulation 2</color>");
-            metrics.AppendLine();
-            metrics.AppendLine($"Peak SCI: {peakSci:F1}%");
-            metrics.AppendLine($"Average SCI: {meanSci:F1}%");
-            metrics.AppendLine();
-            metrics.AppendLine("HRV summary (this simulation only):");
-            metrics.AppendLine($"Min HRV: {minHrv:F1} ms");
-            metrics.AppendLine($"Max HRV: {maxHrv:F1} ms");
-            metrics.AppendLine($"Avg HRV: {avgHrv:F1} ms");
-            metrics.AppendLine($"Samples: {(recorder != null ? recorder.HrvHistory.Count : 0)}");
+            string metrics = StressRecommendations.BuildResultsTabMetrics(
+                StressRecommendations.SimulationStage.Sim2,
+                peakSci,
+                meanSci,
+                outcome,
+                minHrvMs: minHrv,
+                maxHrvMs: maxHrv,
+                avgHrvMs: avgHrv,
+                sciHistory: recorder?.SciHistory,
+                sampleIntervalSeconds: recorder?.sampleIntervalSeconds ?? 0.4f);
 
-            var rec = new StringBuilder();
-            rec.AppendLine("<b>Recommendations</b>");
-            rec.AppendLine();
-            rec.AppendLine(tips);
-            rec.AppendLine();
-            rec.AppendLine(Sim2ResultsFooterLine());
-
-            PrepareResultsTextForManualBox(sim2ResultsMetricsText);
-            PrepareResultsTextForManualBox(sim2ResultsRecommendationsText);
-            sim2ResultsMetricsText.text = metrics.ToString().TrimEnd();
-            sim2ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+            LayoutSim2ResultsPanels();
+            sim2ResultsMetricsText.text = metrics;
+            sim2ResultsRecommendationsText.text = sim2Recommendations;
         }
         else if (sim2ResultsSummaryText != null)
         {
@@ -1907,20 +2031,16 @@ public class TrainingFlowController : MonoBehaviour
             var sb = new StringBuilder();
             sb.AppendLine("Simulation 2 — Results");
             sb.AppendLine();
+            if (outcome != null && outcome.disqualified)
+                sb.AppendLine("Disqualified — too many task time violations.");
+            else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
+                sb.AppendLine("Mission not finished in time.");
             sb.AppendLine($"Peak SCI: {peakSci:F1}%");
             sb.AppendLine($"Average SCI: {meanSci:F1}%");
             sb.AppendLine();
-            sb.AppendLine("HRV summary (this simulation only):");
-            sb.AppendLine($"Min HRV: {minHrv:F1} ms");
-            sb.AppendLine($"Max HRV: {maxHrv:F1} ms");
-            sb.AppendLine($"Avg HRV: {avgHrv:F1} ms");
-            sb.AppendLine($"Samples: {(recorder != null ? recorder.HrvHistory.Count : 0)}");
-            sb.AppendLine();
             sb.AppendLine("Recommendations:");
-            sb.AppendLine(tips);
-            sb.AppendLine();
-            sb.AppendLine(Sim2ResultsFooterLinePlain());
-            PrepareResultsTextForManualBox(sim2ResultsSummaryText);
+            sb.AppendLine(sim2Recommendations);
+            PrepareResultsPanelText(sim2ResultsSummaryText);
             sim2ResultsSummaryText.text = sb.ToString();
         }
         else if (sim2BriefingBodyText != null)
@@ -1968,12 +2088,9 @@ public class TrainingFlowController : MonoBehaviour
         {
             if (recorder.SciHistory.Count > 0)
             {
-                resultsGraph.chartTitle = "Stress Change Index (SCI)";
+                resultsGraph.chartTitle = "SCI";
                 resultsGraph.SetFromSciPoints(recorder.SciHistory, interval);
-                float peakSci = MaxSci(recorder.SciHistory);
-                float meanSci = MeanSci(recorder.SciHistory);
-                resultsGraph.SetInfoText(
-                    $"Samples: {recorder.SciHistory.Count} | Peak: {peakSci:F1}% | Avg: {meanSci:F1}%");
+                resultsGraph.SetInfoText(string.Empty);
             }
             else
             {
@@ -1991,10 +2108,9 @@ public class TrainingFlowController : MonoBehaviour
 
             if (recorder.HrvHistory.Count > 0)
             {
-                sim1HrvResultsGraph.chartTitle = "Heart-rate variability (HRV)";
+                sim1HrvResultsGraph.chartTitle = "HRV";
                 sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay, interval);
-                sim1HrvResultsGraph.SetInfoText(
-                    $"Samples: {recorder.HrvHistory.Count} | Min: {MinValue(recorder.HrvHistory):F1} ms | Max: {MaxValue(recorder.HrvHistory):F1} ms | Avg: {MeanValue(recorder.HrvHistory):F1} ms");
+                sim1HrvResultsGraph.SetInfoText(string.Empty);
             }
             else
             {
@@ -2018,10 +2134,9 @@ public class TrainingFlowController : MonoBehaviour
         {
             if (recorder.SciHistory.Count > 0)
             {
-                sim2SciResultsGraph.chartTitle = "Stress Change Index (SCI)";
+                sim2SciResultsGraph.chartTitle = "SCI";
                 sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay, interval);
-                sim2SciResultsGraph.SetInfoText(
-                    $"Samples: {recorder.SciHistory.Count} | Peak: {MaxSci(recorder.SciHistory):F1}% | Avg: {MeanSci(recorder.SciHistory):F1}%");
+                sim2SciResultsGraph.SetInfoText(string.Empty);
             }
             else
             {
@@ -2033,10 +2148,9 @@ public class TrainingFlowController : MonoBehaviour
         {
             if (recorder.HrvHistory.Count > 0)
             {
-                sim2HrvResultsGraph.chartTitle = "Heart-rate variability (HRV)";
+                sim2HrvResultsGraph.chartTitle = "HRV";
                 sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay, interval);
-                sim2HrvResultsGraph.SetInfoText(
-                    $"Samples: {recorder.HrvHistory.Count} | Min: {MinValue(recorder.HrvHistory):F1} ms | Max: {MaxValue(recorder.HrvHistory):F1} ms | Avg: {MeanValue(recorder.HrvHistory):F1} ms");
+                sim2HrvResultsGraph.SetInfoText(string.Empty);
             }
             else
             {
@@ -2147,38 +2261,30 @@ public class TrainingFlowController : MonoBehaviour
             image.color = active ? config.activeTabButtonColor : config.inactiveTabButtonColor;
     }
 
-    private static void PrepareResultsTextForManualBox(TextMeshProUGUI tmp)
-    {
-        if (tmp == null)
-            return;
-
-        tmp.enableWordWrapping = true;
-        tmp.textWrappingMode = TextWrappingModes.Normal;
-    }
-
-    /// <summary>
-    /// Keeps legacy summary text hidden when Sim 1 uses manual split tabs,
-    /// without overriding the scene's manual visual design.
-    /// </summary>
     private void EnforceSim1ResultsVisibilityForTab(ResultsTab activeTab)
     {
         bool splitColumns = UseSim1SplitColumns();
 
-        // In split mode, never show the legacy combined summary text.
         if (splitColumns && resultsSummaryText != null)
             SetActiveSafe(resultsSummaryText.gameObject, false);
 
-        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
         if (!splitColumns)
             return;
 
         bool showResult = activeTab == ResultsTab.Result;
         bool showRecommendations = activeTab == ResultsTab.Recommendations;
+        bool showGraph = activeTab == ResultsTab.PressureGraph;
 
         if (sim1ResultsMetricsText != null)
             SetActiveSafe(sim1ResultsMetricsText.gameObject, showResult);
         if (sim1ResultsRecommendationsText != null)
             SetActiveSafe(sim1ResultsRecommendationsText.gameObject, showRecommendations);
+
+        GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && resultsGraph != null)
+            graphRoot = resultsGraph.gameObject;
+        if (graphRoot != null)
+            SetActiveSafe(graphRoot, showGraph);
     }
 
     /// <summary>
@@ -2189,20 +2295,79 @@ public class TrainingFlowController : MonoBehaviour
     {
         bool splitColumns = UseSim2SplitColumns();
 
-        // In split mode, never show the legacy combined summary text.
         if (splitColumns && sim2ResultsSummaryText != null)
             SetActiveSafe(sim2ResultsSummaryText.gameObject, false);
 
-        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
         if (!splitColumns)
             return;
 
         bool showResult = activeTab == ResultsTab.Result;
         bool showRecommendations = activeTab == ResultsTab.Recommendations;
+        bool showGraph = activeTab == ResultsTab.PressureGraph;
 
         if (sim2ResultsMetricsText != null)
             SetActiveSafe(sim2ResultsMetricsText.gameObject, showResult);
         if (sim2ResultsRecommendationsText != null)
             SetActiveSafe(sim2ResultsRecommendationsText.gameObject, showRecommendations);
+
+        GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && sim2SciResultsGraph != null)
+            graphRoot = sim2SciResultsGraph.gameObject;
+        if (graphRoot != null)
+            SetActiveSafe(graphRoot, showGraph);
+    }
+
+    const float ResultsPanelFontSize = 18f;
+    const float ResultsPanelPadding = 24f;
+
+    void LayoutSim1ResultsPanels()
+    {
+        PrepareResultsPanelText(sim1ResultsMetricsText);
+        PrepareResultsPanelText(sim1ResultsRecommendationsText);
+
+        GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && resultsGraph != null)
+            graphRoot = resultsGraph.gameObject;
+        PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+    }
+
+    void LayoutSim2ResultsPanels()
+    {
+        PrepareResultsPanelText(sim2ResultsMetricsText);
+        PrepareResultsPanelText(sim2ResultsRecommendationsText);
+
+        GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && sim2SciResultsGraph != null)
+            graphRoot = sim2SciResultsGraph.gameObject;
+        PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+    }
+
+    static void PrepareResultsPanelText(TextMeshProUGUI tmp)
+    {
+        if (tmp == null)
+            return;
+
+        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+        tmp.overflowMode = TextOverflowModes.Truncate;
+        tmp.enableAutoSizing = false;
+        tmp.fontSize = ResultsPanelFontSize;
+        tmp.horizontalAlignment = HorizontalAlignmentOptions.Left;
+        tmp.verticalAlignment = VerticalAlignmentOptions.Top;
+        tmp.margin = new Vector4(8f, 8f, 8f, 8f);
+        PrepareResultsPanelRect(tmp.rectTransform);
+    }
+
+    static void PrepareResultsPanelRect(RectTransform rect)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = new Vector2(ResultsPanelPadding, ResultsPanelPadding);
+        rect.offsetMax = new Vector2(-ResultsPanelPadding, -ResultsPanelPadding);
     }
 }

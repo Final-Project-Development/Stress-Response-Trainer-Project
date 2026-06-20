@@ -41,8 +41,15 @@ public class LevelSelectUI : MonoBehaviour
     [SerializeField] Sprite simulation1MissionIconSprite;
     [SerializeField] Sprite simulation2MissionIconSprite;
 
-    [TextArea] public string panelTitle = "בחרי סימולציה";
-    [TextArea] public string panelSubtitle = "או סיור היכרות ללמידת העיר";
+    [TextArea] public string panelTitle = "Choose a simulation";
+    [TextArea] public string panelSubtitle = "Or take an environment tour to learn the city";
+
+    [Header("Personalized guidance")]
+    [Tooltip("Static label, e.g. RecommendedPrefix under Recommendation_Block.")]
+    public TextMeshProUGUI personalizedRecommendationPrefixText;
+    [Tooltip("Dynamic guidance body, e.g. PersonalizedGuidance under Recommendation_Block.")]
+    public TextMeshProUGUI personalizedRecommendationText;
+    [TextArea] public string personalizedRecommendationPrefix = "Recommended for you:";
 
     [Header("Scroll (Level_Select_UI list)")]
     [Tooltip("Scrollable_Area ScrollRect. If empty, finds ScrollRect under this panel.")]
@@ -115,6 +122,36 @@ public class LevelSelectUI : MonoBehaviour
         ApplyEnvironmentLearningCardLabel();
         ApplyCardSubtitles();
         ApplySimulationLevelBadges();
+        ApplyPersonalizedGuidance();
+    }
+
+    void ApplyPersonalizedGuidance()
+    {
+        string guidance = StressRecommendations.BuildLevelSelectGuidance();
+        bool hasGuidance = !string.IsNullOrWhiteSpace(guidance);
+
+        if (personalizedRecommendationPrefixText != null)
+        {
+            personalizedRecommendationPrefixText.text = string.IsNullOrWhiteSpace(personalizedRecommendationPrefix)
+                ? string.Empty
+                : personalizedRecommendationPrefix.Trim();
+        }
+
+        if (personalizedRecommendationText != null)
+        {
+            personalizedRecommendationText.text = hasGuidance ? guidance.Trim() : string.Empty;
+            return;
+        }
+
+        if (!hasGuidance)
+            return;
+
+        string formatted = string.IsNullOrWhiteSpace(personalizedRecommendationPrefix)
+            ? guidance.Trim()
+            : $"{personalizedRecommendationPrefix.Trim()}\n{guidance.Trim()}";
+
+        if (subtitleText != null)
+            subtitleText.text = $"{panelSubtitle.Trim()}\n\n{formatted}";
     }
 
     void ApplyEnvironmentLearningCardLabel()

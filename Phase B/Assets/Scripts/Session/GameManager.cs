@@ -261,7 +261,117 @@ public class GameManager : MonoBehaviour
 
     public bool IsSim2TreatmentComplete() => firstAidDone;
 
+    /// <summary>Stable key for the player's current mission step (used by task time limits).</summary>
+    public string GetCurrentMissionTaskKey()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        if (_flow == null)
+            return string.Empty;
+
+        var phase = _flow.CurrentPhase;
+        if (phase == TrainingFlowController.Phase.Simulation1Active)
+            return GetSim1MissionTaskKey();
+
+        if (phase == TrainingFlowController.Phase.Simulation2Active)
+            return GetSim2MissionTaskKey();
+
+        return string.Empty;
+    }
+
+    string GetSim1MissionTaskKey()
+    {
+        switch (_sim1Phase)
+        {
+            case Sim1MissionPhase.CollectItems:
+                return "sim1_collect";
+            case Sim1MissionPhase.TurnOffLights:
+                return "sim1_lights";
+            case Sim1MissionPhase.CloseDoor:
+                return "sim1_door";
+            case Sim1MissionPhase.RunToShelter:
+                return "sim1_shelter";
+            default:
+                return string.Empty;
+        }
+    }
+
+    string GetSim2MissionTaskKey()
+    {
+        if (firstAidDone)
+            return string.Empty;
+
+        if (!_firstAidKitCollected)
+            return "sim2_kit";
+
+        if (!_casualtyContacted)
+            return "sim2_contact";
+
+        if (!_emergencyReported)
+            return GetSim2PhoneTaskKey();
+
+        return "sim2_treatment";
+    }
+
+    string GetSim2PhoneTaskKey()
+    {
+        var booth = FindFirstObjectByType<PublicPhoneBoothMission>(FindObjectsInactive.Include);
+        if (booth == null)
+            return "sim2_phone_door";
+
+        switch (booth.CurrentStep)
+        {
+            case PublicPhoneBoothMission.BoothStep.OpenDoor:
+                return "sim2_phone_door";
+            case PublicPhoneBoothMission.BoothStep.InsertCoin:
+                return "sim2_phone_coin";
+            case PublicPhoneBoothMission.BoothStep.TakeHandset:
+                return "sim2_phone_handset";
+            case PublicPhoneBoothMission.BoothStep.Dial101:
+                return "sim2_phone_dial";
+            default:
+                return "sim2_phone_dial";
+        }
+    }
+
     public int GetSim1ItemsCollected() => itemCollected;
+
+    public int GetSim1ItemsTarget() => itemToCollect;
+
+    /// <summary>Estimated mission progress 0–1 for timeout / partial results.</summary>
+    public float GetSim1MissionProgress01()
+    {
+        if (_allItemsCollectedRaised)
+            return 1f;
+
+        float progress = Mathf.Clamp01((float)itemCollected / Mathf.Max(1, itemToCollect)) * 0.35f;
+        if (_itemsCollectionComplete || _sim1Phase != Sim1MissionPhase.CollectItems)
+            progress = Mathf.Max(progress, 0.35f);
+        if (_lightsTurnedOff)
+            progress += 0.15f;
+        if (_exitDoorClosed)
+            progress += 0.2f;
+        if (_shelterReached)
+            progress += 0.3f;
+        return Mathf.Clamp01(progress);
+    }
+
+    /// <summary>Estimated mission progress 0–1 for timeout / partial results.</summary>
+    public float GetSim2MissionProgress01()
+    {
+        if (firstAidDone)
+            return 1f;
+
+        float progress = 0f;
+        if (_firstAidKitCollected)
+            progress += 0.25f;
+        if (_casualtyContacted)
+            progress += 0.25f;
+        if (_emergencyReported)
+            progress += 0.25f;
+        return Mathf.Clamp01(progress);
+    }
 
     public Door GetMissionExitDoor() => _missionExitDoor;
 
