@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Top-bar watch status — same detection as Baseline calibration, compact label for the toolbar.
+/// Top-bar watch status — same detection and wording as Baseline calibration.
 /// </summary>
 public class TopBarWatchStatusController : MonoBehaviour
 {
@@ -16,9 +16,14 @@ public class TopBarWatchStatusController : MonoBehaviour
     public WorkoutHeartRateChartReceiver workoutChart;
 
     [Header("Display")]
-    [Tooltip("Short toolbar text (Sim · 72 bpm). Full calibration text stays on Baseline_Panel.")]
-    public bool useCompactToolbarText = true;
-    public float maxToolbarWidth = 180f;
+    [Tooltip("When true, uses the same status strings as Baseline calibration (recommended).")]
+    public bool useCalibrationStatusText = true;
+    [Tooltip("Optional shorter toolbar text (Sim · 72 bpm).")]
+    public bool useCompactToolbarText = false;
+    [Tooltip("Max pill width; 0 = no limit.")]
+    public float maxToolbarWidth = 320f;
+    public float minToolbarWidth = 120f;
+    public float toolbarHorizontalPadding = 20f;
 
     [Header("Refresh")]
     [Tooltip("When empty, uses WorkoutHeartRateChartReceiver.infoRefreshInterval.")]
@@ -36,9 +41,12 @@ public class TopBarWatchStatusController : MonoBehaviour
         WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected;
 
     TopBarLayoutController _layout;
+    RectTransform _containerRect;
 
     void Awake()
     {
+        _containerRect = transform as RectTransform;
+
         if (statusText == null)
             statusText = GetComponentInChildren<TextMeshProUGUI>(true);
 
@@ -51,6 +59,12 @@ public class TopBarWatchStatusController : MonoBehaviour
         ConfigureTextRect();
         Refresh(true);
         _layout?.ApplyLayout();
+    }
+
+    void Start()
+    {
+        // Physiology fallback may not be ready on the first OnEnable.
+        Refresh(true);
     }
 
     void Update()
@@ -67,16 +81,16 @@ public class TopBarWatchStatusController : MonoBehaviour
             return;
 
         statusText.enableWordWrapping = false;
-        statusText.overflowMode = TextOverflowModes.Ellipsis;
+        statusText.overflowMode = TextOverflowModes.Overflow;
         statusText.raycastTarget = false;
+        statusText.margin = Vector4.zero;
+        statusText.alignment = TextAlignmentOptions.MidlineLeft;
 
         var rect = statusText.rectTransform;
-        if (rect != null && maxToolbarWidth > 0f)
-        {
-            var size = rect.sizeDelta;
-            size.x = maxToolbarWidth;
-            rect.sizeDelta = size;
-        }
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(10f, 2f);
+        rect.offsetMax = new Vector2(-10f, -2f);
     }
 
     float ResolveRefreshInterval()
@@ -96,15 +110,21 @@ public class TopBarWatchStatusController : MonoBehaviour
 
         if (workoutChart == null)
         {
-            ApplyDisplay("No watch", WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected, force);
+            ApplyDisplay("No smartwatch connected", WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected, force);
             return;
         }
 
-        string label = useCompactToolbarText
-            ? workoutChart.GetWatchConnectionStatusTextCompact()
-            : workoutChart.GetWatchConnectionStatusText();
+        string label = ResolveStatusLabel();
         var state = workoutChart.GetWatchLinkState();
         ApplyDisplay(label, state, force);
+    }
+
+    string ResolveStatusLabel()
+    {
+        if (useCompactToolbarText && !useCalibrationStatusText)
+            return workoutChart.GetWatchConnectionStatusTextCompact();
+
+        return workoutChart.GetWatchConnectionStatusText();
     }
 
     void ApplyDisplay(string label, WorkoutHeartRateChartReceiver.WatchLinkState state, bool force)
@@ -117,8 +137,10 @@ public class TopBarWatchStatusController : MonoBehaviour
 
         if (statusText != null)
         {
-            statusText.text = label;
+            statusText.text = label ?? string.Empty;
             statusText.color = Color.white;
+            statusText.ForceMeshUpdate();
+            ResizeContainerToText();
         }
 
         if (statusDot != null)
@@ -133,5 +155,21 @@ public class TopBarWatchStatusController : MonoBehaviour
         }
 
         _layout?.ApplyLayout();
+    }
+
+    void ResizeContainerToText()
+    {
+        if (_containerRect == null || statusText == null)
+            return;
+
+        float preferred = statusText.preferredWidth + toolbarHorizontalPadding;
+        if (maxToolbarWidth > 0f)
+            preferred = Mathf.Min(preferred, maxToolbarWidth);
+
+        preferred = Mathf.Max(preferred, minToolbarWidth);
+
+        var size = _containerRect.sizeDelta;
+        size.x = preferred;
+        _containerRect.sizeDelta = size;
     }
 }

@@ -6730,7 +6730,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 2
+  m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 3
@@ -6762,7 +6762,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -1.1051407, y: 0, z: -25.742023, w: 10.815252}
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -103337,8 +103337,11 @@ MonoBehaviour:
   statusText: {fileID: 92036961}
   statusDot: {fileID: 0}
   workoutChart: {fileID: 0}
-  useCompactToolbarText: 1
-  maxToolbarWidth: 180
+  useCalibrationStatusText: 1
+  useCompactToolbarText: 0
+  maxToolbarWidth: 320
+  minToolbarWidth: 120
+  toolbarHorizontalPadding: 20
   refreshIntervalSeconds: 0.5
   connectedColor: {r: 0.35, g: 0.9, b: 0.55, a: 1}
   receivingColor: {r: 0.45, g: 0.82, b: 0.98, a: 1}
