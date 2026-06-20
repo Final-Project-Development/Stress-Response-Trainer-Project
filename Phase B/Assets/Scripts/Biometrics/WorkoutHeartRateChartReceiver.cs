@@ -79,6 +79,14 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
     [TextArea] public string watchConnectedStatsText =
         "Smartwatch connected | Samples: {0} | HR: {1:0} bpm (avg {2:0.0})";
 
+    public enum WatchLinkState
+    {
+        Disconnected,
+        Simulated,
+        Receiving,
+        Connected
+    }
+
     [Header("Manual design")]
     [Tooltip("On = script only updates Chart Image texture. Design all labels/layout on WatchHrChart_Panel yourself.")]
     public bool manualDesignMode = true;
@@ -581,7 +589,33 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             Time.realtimeSinceStartup - lastPacketUnityTime < watchTimelineIdleSeconds;
     }
 
-    private string BuildInfoStatus()
+    /// <summary>True while HR timeline UDP (port 5055) is receiving fresh watch samples.</summary>
+    public bool IsWatchReceivingData => IsWatchTimelineActive();
+
+    /// <summary>Latest BPM from the active watch timeline session, if available.</summary>
+    public bool TryGetLatestHeartRateBpm(out float bpm)
+    {
+        bpm = 0f;
+        if (!IsWatchTimelineActive() ||
+            string.IsNullOrWhiteSpace(currentSessionId) ||
+            currentSessionId == FallbackSessionId ||
+            !sessions.TryGetValue(currentSessionId, out HrSessionData watchSession) ||
+            watchSession.samples.Count == 0)
+        {
+            return false;
+        }
+
+        HrSample latest = watchSession.samples
+            .OrderBy(s => s.measuredAt)
+            .Last();
+        bpm = latest.bpm;
+        return bpm > 0f;
+    }
+
+    private string BuildInfoStatus() => GetWatchConnectionStatusText();
+
+    /// <summary>Same status line used on Baseline_Panel and the top-bar watch indicator.</summary>
+    public string GetWatchConnectionStatusText()
     {
         if (IsWatchTimelineActive() &&
             !string.IsNullOrWhiteSpace(currentSessionId) &&
@@ -611,6 +645,46 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         }
 
         return noWatchConnectedText;
+    }
+
+    /// <summary>Connection category for compact UI (toolbar dot color).</summary>
+    public WatchLinkState GetWatchLinkState()
+    {
+        if (IsWatchTimelineActive() &&
+            !string.IsNullOrWhiteSpace(currentSessionId) &&
+            currentSessionId != FallbackSessionId &&
+            sessions.TryGetValue(currentSessionId, out HrSessionData watchSession))
+        {
+            return watchSession.samples.Count >= 2 ? WatchLinkState.Connected : WatchLinkState.Receiving;
+        }
+
+        if (usePhysiologyFallbackWhenIdle &&
+            physiologyFallback != null &&
+            physiologyFallback.CurrentHeartRate > 0f)
+        {
+            return WatchLinkState.Simulated;
+        }
+
+        return WatchLinkState.Disconnected;
+    }
+
+    /// <summary>Short toolbar label — same detection as <see cref="GetWatchConnectionStatusText"/>.</summary>
+    public string GetWatchConnectionStatusTextCompact()
+    {
+        switch (GetWatchLinkState())
+        {
+            case WatchLinkState.Connected:
+                if (TryGetLatestHeartRateBpm(out float bpm))
+                    return $"Watch · {bpm:0} bpm";
+                return "Watch connected";
+            case WatchLinkState.Receiving:
+                return "Watch connecting…";
+            case WatchLinkState.Simulated:
+                float hr = physiologyFallback != null ? physiologyFallback.CurrentHeartRate : 0f;
+                return hr > 0f ? $"Sim · {hr:0} bpm" : "Simulated HR";
+            default:
+                return "No watch";
+        }
     }
 
     private void RefreshInfoDisplay(bool force = false)
