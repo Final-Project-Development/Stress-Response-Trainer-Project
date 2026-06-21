@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -15,6 +16,8 @@ public class TopBarLayoutController : MonoBehaviour
     [SerializeField] private RectTransform profileButton;
     [SerializeField] private RectTransform watchStatusContainer;
     [SerializeField] private RectTransform extraCenterObject;   // Optional legacy alias
+    [SerializeField] private TextMeshProUGUI characterNameText;
+    [SerializeField] private TrainingFlowController flow;
 
     [Header("Layout")]
     [SerializeField] private float topY = -18f;
@@ -26,10 +29,15 @@ public class TopBarLayoutController : MonoBehaviour
     [SerializeField] private bool applyInLateUpdateOnce = true;
 
     bool _appliedLate;
+    string _lastDisplayedName;
 
     private void Awake()
     {
+        if (flow == null)
+            flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
         ResolveWatchStatusContainer();
+        ResolveCharacterNameText();
     }
 
     private void Start()
@@ -45,6 +53,11 @@ public class TopBarLayoutController : MonoBehaviour
 
         _appliedLate = true;
         ApplyLayout();
+    }
+
+    private void Update()
+    {
+        RefreshCharacterName();
     }
 
     [ContextMenu("Apply TopBar Layout")]
@@ -78,6 +91,47 @@ public class TopBarLayoutController : MonoBehaviour
         PlaceRightButton(pauseButton, rightSpacing * 2f);
         PlaceRightButton(profileButton, rightSpacing * 3f);
         PlaceWatchStatusLeftOfButtons();
+    }
+
+    void ResolveCharacterNameText()
+    {
+        if (characterNameText != null)
+            return;
+
+        if (topBarRoot == null)
+            topBarRoot = GetComponent<RectTransform>();
+
+        Transform found = topBarRoot != null ? topBarRoot.Find("Character_Name_Text") : null;
+        if (found != null)
+            characterNameText = found.GetComponent<TextMeshProUGUI>();
+    }
+
+    void RefreshCharacterName()
+    {
+        if (characterNameText == null)
+            return;
+
+        string email = LocalAuthStore.GetCurrentLoggedInEmail();
+        bool loggedInWithPassword = !string.IsNullOrEmpty(email);
+        bool hideOnGateOrLogin = flow != null
+            && (flow.CurrentPhase == TrainingFlowController.Phase.Gate
+                || flow.CurrentPhase == TrainingFlowController.Phase.Login);
+
+        bool visible = loggedInWithPassword && !hideOnGateOrLogin;
+        if (characterNameText.gameObject.activeSelf != visible)
+            characterNameText.gameObject.SetActive(visible);
+
+        if (!visible)
+        {
+            _lastDisplayedName = null;
+            return;
+        }
+
+        if (email == _lastDisplayedName)
+            return;
+
+        _lastDisplayedName = email;
+        characterNameText.text = email;
     }
 
     void ResolveWatchStatusContainer()

@@ -339,6 +339,63 @@ public class GameManager : MonoBehaviour
 
     public int GetSim1ItemsTarget() => itemToCollect;
 
+    public const int Sim1MissionStepCount = 4;
+    public const int Sim2MissionStepCount = 7;
+
+    public int GetSim1TotalMissionCount() => Sim1MissionStepCount;
+
+    public int GetSim2TotalMissionCount() => Sim2MissionStepCount;
+
+    /// <summary>Discrete Sim 1 steps: collect, lights, door, shelter.</summary>
+    public int GetSim1CompletedMissionCount()
+    {
+        int completed = 0;
+        if (_itemsCollectionComplete) completed++;
+        if (_lightsTurnedOff) completed++;
+        if (_exitDoorClosed) completed++;
+        if (_shelterReached) completed++;
+        return completed;
+    }
+
+    /// <summary>Discrete Sim 2 steps aligned with MissionTaskStrikeTracker (kit, contact, 4 phone steps, treatment).</summary>
+    public int GetSim2CompletedMissionCount()
+    {
+        int completed = 0;
+        if (_firstAidKitCollected) completed++;
+        if (_casualtyContacted) completed++;
+        completed += GetSim2PhoneSubStepsCompleted();
+        if (firstAidDone) completed++;
+        return Mathf.Clamp(completed, 0, Sim2MissionStepCount);
+    }
+
+    int GetSim2PhoneSubStepsCompleted()
+    {
+        if (_emergencyReported)
+            return 4;
+
+        if (!_casualtyContacted)
+            return 0;
+
+        var booth = FindFirstObjectByType<PublicPhoneBoothMission>(FindObjectsInactive.Include);
+        if (booth == null)
+            return 0;
+
+        switch (booth.CurrentStep)
+        {
+            case PublicPhoneBoothMission.BoothStep.OpenDoor:
+                return 0;
+            case PublicPhoneBoothMission.BoothStep.InsertCoin:
+                return 1;
+            case PublicPhoneBoothMission.BoothStep.TakeHandset:
+                return 2;
+            case PublicPhoneBoothMission.BoothStep.Dial101:
+            case PublicPhoneBoothMission.BoothStep.CallComplete:
+                return 3;
+            default:
+                return 0;
+        }
+    }
+
     /// <summary>Estimated mission progress 0–1 for timeout / partial results.</summary>
     public float GetSim1MissionProgress01()
     {

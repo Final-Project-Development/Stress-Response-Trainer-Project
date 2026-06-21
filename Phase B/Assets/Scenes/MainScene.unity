@@ -2667,7 +2667,6 @@ Transform:
   m_Children:
   - {fileID: 388276710}
   - {fileID: 1375899866}
-  - {fileID: 234959632}
   m_Father: {fileID: 591536215}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &26529629
@@ -2683,13 +2682,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExperienceSimulationsController
   flow: {fileID: 485977911}
+  gameManager: {fileID: 1196935695}
   simulationsSlider: {fileID: 388276711}
   progressText: {fileID: 1714686553}
   levelValueText: {fileID: 797450776}
-  characterNameText: {fileID: 234959633}
-  totalSimulations: 2
-  guestName: Guest
-  showOnlyAfterLogin: 1
+  progressFormat: '{0}/{1}'
   containerCanvasGroup: {fileID: 0}
 --- !u!1 &26590989
 GameObject:
@@ -6761,7 +6758,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: -7.455986, y: -4.00618, z: -4.383301, w: 0}
+  m_margin: {x: -2.5831223, y: -4.00618, z: -3.7743378, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -10548,13 +10545,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExperienceSimulationsController
   flow: {fileID: 485977911}
+  gameManager: {fileID: 1196935695}
   simulationsSlider: {fileID: 0}
   progressText: {fileID: 0}
   levelValueText: {fileID: 345569337}
-  characterNameText: {fileID: 0}
-  totalSimulations: 2
-  guestName: Guest
-  showOnlyAfterLogin: 1
+  progressFormat: '{0}/{1}'
   containerCanvasGroup: {fileID: 0}
 --- !u!114 &176877174
 MonoBehaviour:
@@ -14009,16 +14004,16 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 234959631}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.95417, y: 0.95417, z: 0.95417}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 26529628}
+  m_Father: {fileID: 591536215}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -64.0711, y: 42.493237}
+  m_AnchoredPosition: {x: -555.39307, y: 0.54584885}
   m_SizeDelta: {x: 366.6666, y: 44.2387}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &234959633
@@ -14070,7 +14065,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 38.6
+  m_fontSize: 34.95
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -14109,7 +14104,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 0, z: 0, w: 4.1724243}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -15676,6 +15671,8 @@ MonoBehaviour:
   profileButton: {fileID: 1600585904}
   watchStatusContainer: {fileID: 0}
   extraCenterObject: {fileID: 0}
+  characterNameText: {fileID: 0}
+  flow: {fileID: 0}
   topY: -18
   leftPadding: 20
   rightPadding: 26
@@ -29138,6 +29135,14 @@ MonoBehaviour:
   axisColor: {r: 0.75, g: 0.82, b: 0.9, a: 0.9}
   pointColor: {r: 1, g: 1, b: 1, a: 1}
   preserveManualLayout: 1
+  showAxisValueLabels: 1
+  axisLabelColor: {r: 0.85, g: 0.9, b: 1, a: 0.92}
+  axisLabelFontSize: 13
+  yAxisValueSuffix: '%'
+  useFixedYRange: 0
+  fixedYMin: 0
+  fixedYMax: 0
+  xAxisLabelMode: 0
 --- !u!1 &493448462
 GameObject:
   m_ObjectHideFlags: 0
@@ -30547,6 +30552,14 @@ MonoBehaviour:
   axisColor: {r: 0.75, g: 0.82, b: 0.9, a: 0.9}
   pointColor: {r: 1, g: 1, b: 1, a: 1}
   preserveManualLayout: 0
+  showAxisValueLabels: 1
+  axisLabelColor: {r: 0.85, g: 0.9, b: 1, a: 0.92}
+  axisLabelFontSize: 13
+  yAxisValueSuffix: '%'
+  useFixedYRange: 0
+  fixedYMin: 0
+  fixedYMax: 0
+  xAxisLabelMode: 0
 --- !u!224 &519866069
 RectTransform:
   m_ObjectHideFlags: 0
@@ -34409,6 +34422,7 @@ RectTransform:
   - {fileID: 1234037500}
   - {fileID: 1600585904}
   - {fileID: 1864486543}
+  - {fileID: 234959632}
   - {fileID: 26529628}
   m_Father: {fileID: 106029138}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -34475,6 +34489,8 @@ MonoBehaviour:
   profileButton: {fileID: 1600585904}
   watchStatusContainer: {fileID: 1864486543}
   extraCenterObject: {fileID: 0}
+  characterNameText: {fileID: 234959633}
+  flow: {fileID: 485977911}
   topY: -18
   leftPadding: 30
   rightPadding: 26
@@ -40924,13 +40940,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExperienceSimulationsController
   flow: {fileID: 485977911}
+  gameManager: {fileID: 1196935695}
   simulationsSlider: {fileID: 0}
   progressText: {fileID: 0}
   levelValueText: {fileID: 1863680394}
-  characterNameText: {fileID: 0}
-  totalSimulations: 2
-  guestName: Guest
-  showOnlyAfterLogin: 1
+  progressFormat: '{0}/{1}'
   containerCanvasGroup: {fileID: 0}
 --- !u!114 &709410549
 MonoBehaviour:
@@ -42515,6 +42529,14 @@ MonoBehaviour:
   axisColor: {r: 0.75, g: 0.82, b: 0.9, a: 0.9}
   pointColor: {r: 1, g: 1, b: 1, a: 1}
   preserveManualLayout: 0
+  showAxisValueLabels: 1
+  axisLabelColor: {r: 0.85, g: 0.9, b: 1, a: 0.92}
+  axisLabelFontSize: 13
+  yAxisValueSuffix: '%'
+  useFixedYRange: 0
+  fixedYMin: 0
+  fixedYMax: 0
+  xAxisLabelMode: 0
 --- !u!1001 &741696559
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -53767,13 +53789,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExperienceSimulationsController
   flow: {fileID: 485977911}
+  gameManager: {fileID: 1196935695}
   simulationsSlider: {fileID: 0}
   progressText: {fileID: 0}
   levelValueText: {fileID: 0}
-  characterNameText: {fileID: 0}
-  totalSimulations: 2
-  guestName: Guest
-  showOnlyAfterLogin: 1
+  progressFormat: '{0}/{1}'
   containerCanvasGroup: {fileID: 0}
 --- !u!1001 &911280003
 PrefabInstance:
@@ -104689,7 +104709,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -328, y: -20.9}
+  m_AnchoredPosition: {x: -328, y: -19.3}
   m_SizeDelta: {x: 235, y: 33}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1864486544
