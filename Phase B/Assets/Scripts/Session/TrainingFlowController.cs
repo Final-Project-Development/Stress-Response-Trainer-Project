@@ -153,10 +153,24 @@ public class TrainingFlowController : MonoBehaviour
     public AudioClip missionBriefingNarrationClip;
     [Tooltip("Optional voice-over for Simulation 2 briefing panel.")]
     public AudioClip sim2BriefingNarrationClip;
+
+    [Header("Narration pacing")]
+    [Tooltip("Short pause after each spoken sentence so narration feels more natural.")]
+    [Range(0.2f, 1.5f)]
+    public float narrationPauseBetweenSentences = 0.55f;
+
+    [Header("Per-sentence voice-over clips (VoiceGPT → Panel Narration Setup)")]
+    public AudioClip[] introNarrationSentenceClips;
+    public AudioClip[] calibrationNarrationSentenceClips;
+    public AudioClip[] learnBriefingNarrationSentenceClips;
+    public AudioClip[] missionBriefingNarrationSentenceClips;
+    public AudioClip[] sim2BriefingNarrationSentenceClips;
+
     public UnityEvent onSimulation1Started;
     public UnityEvent onSimulation1Ended;
 
     [Header("Live stress / link")]
+    [Tooltip("Optional in-simulation high-stress banner. Must NOT be the same object as Safety Warning Panel.")]
     public GameObject highStressWarningRoot;
     public GameObject gatewayDisconnectWarningRoot;
     public float gatewayStaleSeconds = 2.5f;
@@ -442,6 +456,7 @@ public class TrainingFlowController : MonoBehaviour
     }
 
     private bool _tourAlarmActive;
+    private PanelNarrationSequencePlayer _narrationPlayer;
 
     void Awake()
     {
@@ -479,6 +494,14 @@ public class TrainingFlowController : MonoBehaviour
             missionTaskStrikeTracker = gameManager.gameObject.AddComponent<MissionTaskStrikeTracker>();
     }
 
+    void EnsureNarrationPlayer()
+    {
+        _narrationPlayer = new PanelNarrationSequencePlayer(
+            this,
+            narrationAudioSource,
+            narrationPauseBetweenSentences);
+    }
+
     void OnDestroy()
     {
         StopBaselineCalibrationBackgroundIfPlaying();
@@ -490,6 +513,7 @@ public class TrainingFlowController : MonoBehaviour
     void Start()
     {
         ApplyNarrationFromLibrary();
+        EnsureNarrationPlayer();
 
         ApplyCurrentResultsTabs();
 
@@ -744,6 +768,9 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         if (calibrationStatusText == null)
+            return;
+
+        if (_narrationPlayer != null && _narrationPlayer.IsPlaying)
             return;
 
         if (splitTimer && splitHrv)
@@ -1212,6 +1239,18 @@ public class TrainingFlowController : MonoBehaviour
         recorder.TickRecord(sci, physiology.CurrentHrvMs);
 
         var band = StressChangeIndexCalculator.Classify(sci);
+        UpdateHighStressWarningUi(band);
+    }
+
+    private void UpdateHighStressWarningUi(StressChangeIndexCalculator.StressBand band)
+    {
+        if (highStressWarningRoot == null)
+            return;
+
+        // Inspector miswire: same panel as pre-simulation safety consent must not pop mid-mission.
+        if (highStressWarningRoot == safetyWarningPanel)
+            return;
+
         SetActiveSafe(highStressWarningRoot, band == StressChangeIndexCalculator.StressBand.High);
     }
 
@@ -1550,19 +1589,59 @@ public class TrainingFlowController : MonoBehaviour
             missionBriefingNarrationClip = narrationLibrary.sim1MissionBriefingClip;
         if (sim2BriefingNarrationClip == null && narrationLibrary.sim2BriefingClip != null)
             sim2BriefingNarrationClip = narrationLibrary.sim2BriefingClip;
+
+        if ((introNarrationSentenceClips == null || introNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.introSentenceClips != null && narrationLibrary.introSentenceClips.Length > 0)
+            introNarrationSentenceClips = narrationLibrary.introSentenceClips;
+        if ((calibrationNarrationSentenceClips == null || calibrationNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.calibrationSentenceClips != null && narrationLibrary.calibrationSentenceClips.Length > 0)
+            calibrationNarrationSentenceClips = narrationLibrary.calibrationSentenceClips;
+        if ((learnBriefingNarrationSentenceClips == null || learnBriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.learnBriefingSentenceClips != null && narrationLibrary.learnBriefingSentenceClips.Length > 0)
+            learnBriefingNarrationSentenceClips = narrationLibrary.learnBriefingSentenceClips;
+        if ((missionBriefingNarrationSentenceClips == null || missionBriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.sim1MissionBriefingSentenceClips != null && narrationLibrary.sim1MissionBriefingSentenceClips.Length > 0)
+            missionBriefingNarrationSentenceClips = narrationLibrary.sim1MissionBriefingSentenceClips;
+        if ((sim2BriefingNarrationSentenceClips == null || sim2BriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.sim2BriefingSentenceClips != null && narrationLibrary.sim2BriefingSentenceClips.Length > 0)
+            sim2BriefingNarrationSentenceClips = narrationLibrary.sim2BriefingSentenceClips;
     }
 
-    private void PlayIntroNarration() => PlayNarrationClip(introNarrationClip);
+    private void PlayIntroNarration()
+    {
+        _narrationPlayer?.Play(
+            introNarrationClip,
+            introNarrationSentenceClips,
+            introNarrationText,
+            introBodyText,
+            GetIntroSubtitleLines());
+    }
 
-    private void StopIntroNarration() => StopNarrationIfPlaying(introNarrationClip, stopAnyClip: true);
+    private void StopIntroNarration() => StopPanelNarration(stopAnyClip: true);
 
-    private void PlayCalibrationNarration() => PlayNarrationClip(calibrationNarrationClip);
+    private void PlayCalibrationNarration()
+    {
+        _narrationPlayer?.Play(
+            calibrationNarrationClip,
+            calibrationNarrationSentenceClips,
+            calibrationInstruction,
+            calibrationStatusText,
+            null);
+    }
 
-    private void StopCalibrationNarration() => StopNarrationIfPlaying(calibrationNarrationClip);
+    private void StopCalibrationNarration() => StopPanelNarration(calibrationNarrationClip);
 
-    private void PlayLearnBriefingNarration() => PlayNarrationClip(learnBriefingNarrationClip);
+    private void PlayLearnBriefingNarration()
+    {
+        _narrationPlayer?.Play(
+            learnBriefingNarrationClip,
+            learnBriefingNarrationSentenceClips,
+            learnBriefingBody,
+            learnBriefingBodyText,
+            null);
+    }
 
-    private void StopLearnBriefingNarration() => StopNarrationIfPlaying(learnBriefingNarrationClip);
+    private void StopLearnBriefingNarration() => StopPanelNarration(learnBriefingNarrationClip);
 
     private void RefreshVisualBriefingPanels()
     {
@@ -1585,13 +1664,40 @@ public class TrainingFlowController : MonoBehaviour
         sim1MissionBriefingPanel != null &&
         sim1MissionBriefingPanel.GetComponent<SimulationBriefingPanelController>() != null;
 
-    private void PlayMissionBriefingNarration() => PlayNarrationClip(missionBriefingNarrationClip);
+    private void PlayMissionBriefingNarration()
+    {
+        _narrationPlayer?.Play(
+            missionBriefingNarrationClip,
+            missionBriefingNarrationSentenceClips,
+            missionBriefingBody,
+            missionBriefingBodyText,
+            null);
+    }
 
-    private void StopMissionBriefingNarration() => StopNarrationIfPlaying(missionBriefingNarrationClip);
+    private void StopMissionBriefingNarration() => StopPanelNarration(missionBriefingNarrationClip);
 
-    private void PlaySim2BriefingNarration() => PlayNarrationClip(sim2BriefingNarrationClip);
+    private void PlaySim2BriefingNarration()
+    {
+        _narrationPlayer?.Play(
+            sim2BriefingNarrationClip,
+            sim2BriefingNarrationSentenceClips,
+            sim2BriefingBody,
+            sim2BriefingBodyText,
+            null);
+    }
 
-    private void StopSim2BriefingNarration() => StopNarrationIfPlaying(sim2BriefingNarrationClip);
+    private void StopSim2BriefingNarration() => StopPanelNarration(sim2BriefingNarrationClip);
+
+    private void StopPanelNarration(AudioClip clip = null, bool stopAnyClip = false)
+    {
+        if (_narrationPlayer != null && (_narrationPlayer.IsPlaying || stopAnyClip))
+        {
+            _narrationPlayer.Stop();
+            return;
+        }
+
+        StopNarrationIfPlaying(clip, stopAnyClip);
+    }
 
     private void PlayNarrationClip(AudioClip clip)
     {
@@ -1614,15 +1720,16 @@ public class TrainingFlowController : MonoBehaviour
 
     private void StopAllNarration()
     {
-        StopIntroNarration();
-        StopCalibrationNarration();
-        StopLearnBriefingNarration();
-        StopMissionBriefingNarration();
-        StopSim2BriefingNarration();
+        _narrationPlayer?.Stop();
+        if (narrationAudioSource != null)
+            narrationAudioSource.Stop();
     }
 
     private void UpdateIntroSubtitleByNarrationTime()
     {
+        if (UsesIntroSentenceNarration())
+            return;
+
         if (introBodyText == null)
             return;
 
@@ -1631,6 +1738,41 @@ public class TrainingFlowController : MonoBehaviour
             t = narrationAudioSource.time;
 
         ShowIntroParagraph(t);
+    }
+
+    private bool UsesIntroSentenceNarration() =>
+        introNarrationSentenceClips != null && introNarrationSentenceClips.Length > 1;
+
+    private string[] GetIntroSubtitleLines()
+    {
+        var raw = new[]
+        {
+            introParagraph1,
+            introParagraph2,
+            introParagraph3,
+            introParagraph4
+        };
+
+        int count = 0;
+        for (int i = 0; i < raw.Length; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(raw[i]))
+                count++;
+        }
+
+        if (count == 0)
+            return raw;
+
+        var lines = new string[count];
+        int index = 0;
+        for (int i = 0; i < raw.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(raw[i]))
+                continue;
+            lines[index++] = raw[i];
+        }
+
+        return lines;
     }
 
     private void ShowIntroParagraph(float timeSeconds)

@@ -3816,7 +3816,6 @@ RectTransform:
   - {fileID: 1329919892}
   - {fileID: 1890105716}
   - {fileID: 437971828}
-  - {fileID: 245514600}
   m_Father: {fileID: 924749409}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -9300,7 +9299,7 @@ GameObject:
   m_Component:
   - component: {fileID: 149357160}
   m_Layer: 5
-  m_Name: Store_Container
+  m_Name: Button_Container
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14449,41 +14448,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7861350953103440092, guid: efe06c0608269fb45a852b9c1aff7526, type: 3}
   m_PrefabInstance: {fileID: 245490730}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &245514599
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 245514600}
-  m_Layer: 5
-  m_Name: _OldHeartRateGroup
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &245514600
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 245514599}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 38329468}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -43, y: 45}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &245824273
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28230,6 +28194,45 @@ MonoBehaviour:
   learnBriefingNarrationClip: {fileID: 8300000, guid: 1df5099ce787ca84b802d9c9ae5b6d7f, type: 3}
   missionBriefingNarrationClip: {fileID: 8300000, guid: 41c42bebba3b22c478676b7e9aa478f9, type: 3}
   sim2BriefingNarrationClip: {fileID: 8300000, guid: bba8d9c9db45d574d94e4b8f91caf163, type: 3}
+  narrationPauseBetweenSentences: 0.55
+  introNarrationSentenceClips:
+  - {fileID: 8300000, guid: ad3a2b15583fba74dbe823142e0f0d53, type: 3}
+  - {fileID: 8300000, guid: 915cd9ba2f3fcd044ac0f9e0fd82c8e9, type: 3}
+  - {fileID: 8300000, guid: b324f75f39244ed4992517f54fd1992c, type: 3}
+  - {fileID: 8300000, guid: cf8b8a65bbd491445a39c40b9d4c6690, type: 3}
+  calibrationNarrationSentenceClips:
+  - {fileID: 8300000, guid: 1aae04838db6e524cbcc8f73ab1fa6ec, type: 3}
+  - {fileID: 8300000, guid: e408f2fb2cdc23b4abb380e93d618b2b, type: 3}
+  - {fileID: 8300000, guid: f18080c83decba145a8c2161d7b8c7af, type: 3}
+  learnBriefingNarrationSentenceClips:
+  - {fileID: 8300000, guid: 1df5099ce787ca84b802d9c9ae5b6d7f, type: 3}
+  - {fileID: 8300000, guid: 2cf21acc236b09145a4a7b068e04ae19, type: 3}
+  - {fileID: 8300000, guid: bf1bb306b8b120d48b36a234e3c54aa7, type: 3}
+  - {fileID: 8300000, guid: 4880de1896cf7de46b1de9ba513a23fd, type: 3}
+  - {fileID: 8300000, guid: d673e398650c04d46820c0e077e67ebe, type: 3}
+  - {fileID: 8300000, guid: 9a7316a74209dae47ac53fc98c26437d, type: 3}
+  - {fileID: 8300000, guid: 80458221a9194cc4a911ce683a75f956, type: 3}
+  - {fileID: 8300000, guid: 3fa0678e2754ed640bc81182cbd06314, type: 3}
+  - {fileID: 8300000, guid: c51133e723149fe419d6ec54668542e2, type: 3}
+  - {fileID: 8300000, guid: 73ad70bf6dd2ecf40a4c0421021e3517, type: 3}
+  - {fileID: 8300000, guid: da20b05aa5912dd45af97e6466ca4a6b, type: 3}
+  missionBriefingNarrationSentenceClips:
+  - {fileID: 8300000, guid: 41c42bebba3b22c478676b7e9aa478f9, type: 3}
+  - {fileID: 8300000, guid: d7f59bb007361f24386524a5df0a78ce, type: 3}
+  - {fileID: 8300000, guid: 1aa2d745600bf7c45acf722deffbd3ff, type: 3}
+  - {fileID: 8300000, guid: 3b4db2320e197c148a22bb33b56ff60b, type: 3}
+  sim2BriefingNarrationSentenceClips:
+  - {fileID: 8300000, guid: bba8d9c9db45d574d94e4b8f91caf163, type: 3}
+  - {fileID: 8300000, guid: d44e71fc702e4484b86dd3e4acdf4869, type: 3}
+  - {fileID: 8300000, guid: d9210c3b50a5ceb4eac29a780c331c3a, type: 3}
+  - {fileID: 8300000, guid: 12a9f9f4e6ab20f4084968ca50dc4cc1, type: 3}
+  - {fileID: 8300000, guid: f615f497e49da3145befd614f58e71c0, type: 3}
+  - {fileID: 8300000, guid: b2da9b8777f96e74daeb8d15fade2696, type: 3}
+  - {fileID: 8300000, guid: 7f140b3160ceb384b8d17197d495f88e, type: 3}
+  - {fileID: 8300000, guid: fdbd86742ca42604fa2cfbe3390e33e9, type: 3}
+  - {fileID: 8300000, guid: 938585dfd7dec104797988ff96447fd1, type: 3}
+  - {fileID: 8300000, guid: a2249fe5513a9f24bb96b65b71c0f52a, type: 3}
+  - {fileID: 8300000, guid: e13055b8577c327418296876fa5eef91, type: 3}
   onSimulation1Started:
     m_PersistentCalls:
       m_Calls: []
@@ -28297,10 +28300,7 @@ MonoBehaviour:
     inactiveTabButtonColor: {r: 0.3137255, g: 0.3137255, b: 0.3137255, a: 1}
   hubTitle: VR Stress Response Trainer
   applyHubTitleFromController: 0
-  hubConnectionStatusDemo: 'Smartwatch: Not connected (simulated HR/HRV)
-
-    Android
-    gateway: Not in use'
+  hubConnectionStatusDemo: 
   introNarrationText: "In recent years, many of us have experienced stress and pressure\ndue
     to emergency situations and war.\n\nThis training experience is designed to help
     improve your ability to function under stress.\n\nPlease connect your watch.
@@ -28319,31 +28319,52 @@ MonoBehaviour:
   introParagraph2Start: 6
   introParagraph3Start: 10.5
   introParagraph4Start: 13
-  calibrationInstruction: "Stand still and relax for 60s.\nWe are calibrating your
-    \nheart-rate metrics."
-  missionBriefingBody: 'Simulation 1: Emergency Preparedness
+  calibrationInstruction: 'Stand still and relax for 60 seconds.
+
+    We are calibrating
+    your heart-rate metrics.'
+  missionBriefingBody: 'Simulation 1: ....... Emergency Preparedness
 
 
-    Collect 5 essential
-    supplies inside the house.
+    Collect
+    5 essential supplies inside the house.
 
 
 
 
 
 
-    Turn off lights, close the door, and enter
-    the Mamad shelter.'
-  learnBriefingBody: "Environment Learning - City tour\n\nExplore important locations
-    and objects in the \ntraining environment.\n\nUse the left sidebar to jump to
-    each item and read the \nlabels in the world.\n\nMovement controls:\r\nW - Move
-    forward\r\nA / D - Strafe left / right\r\nS - Move backward\r\nMouse - Look around\n\nWhen
-    you are ready, press Start learn."
-  sim2BriefingBody: "Simulation 2 - First Aid Under Pressure\n\n1) Collect the first
-    aid kit\n2) Find the wounded person\n3) Go to the public telephone:\n    Open
-    the door \u2192 \n    Insert coin \u2192 \n    Lift the phone \u2192 \n    Dial
-    1, 0, 1\n4) Return to the wounded person:\n    Start treatment, then press 1,
-    then 2, then 3"
+    Turn off lights, close the door
+    and enter the Mamad shelter.'
+  learnBriefingBody: 'Environment Learning:
+
+
+    Explore important locations and
+    objects in the training environment.
+
+
+    Use the left sidebar to jump to each
+    item and read the labels in the world.
+
+
+    Movement controls:
+
+    W - Move
+    forward
+
+    A / D - Strafe left / right
+
+    S - Move backward
+
+    Mouse
+    - Look around
+
+
+    When you are ready, press Start learn.'
+  sim2BriefingBody: "Simulation 2 : ...... First Aid Under Pressure\n\nCollect the
+    first aid kit\nFind the wounded person\nGo to the public telephone:\n    Open
+    the door. then Insert coin. then Lift the phone. then Dial 1, 0, 1\nReturn to
+    the wounded person:\nStart treatment, then press 1, then 2, then 3"
   sim1AllItemsCollectedCompleted: All supplies collected.
   sim1LightsOffCompleted: Lights turned off.
   sim1DoorClosedCompleted: Door closed.
@@ -34987,67 +35008,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 606015613}
   m_CullTransparentMesh: 1
---- !u!1 &606523037
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 606523039}
-  - component: {fileID: 606523038}
-  - component: {fileID: 606523040}
-  m_Layer: 0
-  m_Name: UIManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &606523038
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 606523037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa83f6eb51a6c5a47bb7b8fcba1e86b6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HeartRateUI
-  receiver: {fileID: 2061476697}
-  mainText: {fileID: 0}
---- !u!4 &606523039
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 606523037}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.84345, y: 1.14949, z: 5.36}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &606523040
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 606523037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c78ba954e9da10a49a85a21ac0651ed9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BioMetricsUI
-  bio: {fileID: 0}
-  text: {fileID: 0}
 --- !u!1001 &606666560
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -123426,7 +123386,6 @@ SceneRoots:
   - {fileID: 1678824947}
   - {fileID: 265743909}
   - {fileID: 1196935696}
-  - {fileID: 606523039}
   - {fileID: 2061476698}
   - {fileID: 1583832695}
   - {fileID: 485977914}
