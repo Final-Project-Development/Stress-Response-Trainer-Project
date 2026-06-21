@@ -53,6 +53,10 @@ public class ExperienceSimulationsController : MonoBehaviour
     {
         ApplyVisibility();
 
+        UserProfileController profileController =
+            FindFirstObjectByType<UserProfileController>(FindObjectsInactive.Include);
+        profileController?.RefreshProfileToolbarState();
+
         if (flow == null)
         {
             // Safe default: hide until flow is available and login state can be evaluated.

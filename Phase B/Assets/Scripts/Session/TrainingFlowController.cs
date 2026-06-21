@@ -1219,6 +1219,25 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_Resume() => SetPaused(false);
     public void UI_SetPause(bool paused) => SetPaused(paused);
 
+    /// <summary>Stops narration, siren/background loops, and brief gameplay voice lines.</summary>
+    public void UI_StopAllAudio()
+    {
+        StopAllNarration();
+        StopSiren();
+        StopBaselineCalibrationBackgroundIfPlaying();
+
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+
+        if (gameManager != null)
+        {
+            if (gameManager.voiceAudioSource != null)
+                gameManager.voiceAudioSource.Stop();
+            if (gameManager.objectiveSuccessAudioSource != null)
+                gameManager.objectiveSuccessAudioSource.Stop();
+        }
+    }
+
     public void UI_QuitApplication()
     {
         Time.timeScale = 1f;

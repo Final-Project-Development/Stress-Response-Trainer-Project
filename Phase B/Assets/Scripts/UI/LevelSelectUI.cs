@@ -37,6 +37,7 @@ public class LevelSelectUI : MonoBehaviour
     public string simulation2LevelValue = "2";
 
     [Header("Simulation level badges")]
+    [SerializeField] bool preserveManualIconLayout = true;
     [SerializeField] Sprite simulationLevelBadgeSprite;
     [SerializeField] Sprite simulation1MissionIconSprite;
     [SerializeField] Sprite simulation2MissionIconSprite;
@@ -329,11 +330,14 @@ public class LevelSelectUI : MonoBehaviour
         badgeImage.enabled = true;
 
         var badgeRect = badgeImage.rectTransform;
-        badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
-        badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
-        badgeRect.pivot = new Vector2(0.5f, 0.5f);
-        badgeRect.anchoredPosition = Vector2.zero;
-        badgeRect.sizeDelta = new Vector2(100f, 114f);
+        if (!preserveManualIconLayout)
+        {
+            badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
+            badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
+            badgeRect.pivot = new Vector2(0.5f, 0.5f);
+            badgeRect.anchoredPosition = Vector2.zero;
+            badgeRect.sizeDelta = new Vector2(100f, 114f);
+        }
 
         var levelValueText = FindOrCreateLevelValueText(badgeRect);
         levelValueText.text = levelValue.Trim();
@@ -341,15 +345,7 @@ public class LevelSelectUI : MonoBehaviour
         ApplyMissionIconOverlay(badgeRect, missionIconSprite);
     }
 
-    static Image FindLevelBadgeImage(RectTransform container)
-    {
-        var badge = container.Find(LevelIconImageName);
-        if (badge == null)
-            badge = container.Find(LegacyIconObjectName);
-        return badge != null ? badge.GetComponent<Image>() : null;
-    }
-
-    static TextMeshProUGUI FindOrCreateLevelValueText(RectTransform badgeRect)
+    TextMeshProUGUI FindOrCreateLevelValueText(RectTransform badgeRect)
     {
         var levelValue = badgeRect.Find(LevelValueObjectName);
         TextMeshProUGUI levelValueText;
@@ -377,22 +373,26 @@ public class LevelSelectUI : MonoBehaviour
         }
         else
         {
-            levelValue.SetParent(badgeRect, false);
+            if (!preserveManualIconLayout)
+                levelValue.SetParent(badgeRect, false);
             levelValueText = levelValue.GetComponent<TextMeshProUGUI>();
         }
 
-        var levelValueRect = levelValue as RectTransform;
-        levelValueRect.anchorMin = new Vector2(0.5f, 0.5f);
-        levelValueRect.anchorMax = new Vector2(0.5f, 0.5f);
-        levelValueRect.pivot = new Vector2(0.5f, 0.5f);
-        levelValueRect.anchoredPosition = new Vector2(-0.2622f, 8.1872f);
-        levelValueRect.sizeDelta = new Vector2(71.238f, 73.9067f);
-        levelValueRect.localScale = Vector3.one;
+        if (!preserveManualIconLayout)
+        {
+            var levelValueRect = levelValue as RectTransform;
+            levelValueRect.anchorMin = new Vector2(0.5f, 0.5f);
+            levelValueRect.anchorMax = new Vector2(0.5f, 0.5f);
+            levelValueRect.pivot = new Vector2(0.5f, 0.5f);
+            levelValueRect.anchoredPosition = new Vector2(-0.2622f, 8.1872f);
+            levelValueRect.sizeDelta = new Vector2(71.238f, 73.9067f);
+            levelValueRect.localScale = Vector3.one;
+        }
 
         return levelValueText;
     }
 
-    static void ApplyMissionIconOverlay(RectTransform badgeRect, Sprite missionIconSprite)
+    void ApplyMissionIconOverlay(RectTransform badgeRect, Sprite missionIconSprite)
     {
         var missionIconTransform = badgeRect.Find(MissionIconObjectName);
         if (missionIconSprite == null)
@@ -416,18 +416,29 @@ public class LevelSelectUI : MonoBehaviour
             missionIconTransform.gameObject.SetActive(true);
         }
 
-        var missionIconRect = missionIconImage.rectTransform;
-        missionIconRect.anchorMin = new Vector2(0.5f, 0.5f);
-        missionIconRect.anchorMax = new Vector2(0.5f, 0.5f);
-        missionIconRect.pivot = new Vector2(0.5f, 0.5f);
-        missionIconRect.anchoredPosition = new Vector2(0f, 6f);
-        missionIconRect.sizeDelta = new Vector2(56f, 56f);
-        missionIconRect.SetAsFirstSibling();
+        if (!preserveManualIconLayout)
+        {
+            var missionIconRect = missionIconImage.rectTransform;
+            missionIconRect.anchorMin = new Vector2(0.5f, 0.5f);
+            missionIconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            missionIconRect.pivot = new Vector2(0.5f, 0.5f);
+            missionIconRect.anchoredPosition = new Vector2(0f, 6f);
+            missionIconRect.sizeDelta = new Vector2(56f, 56f);
+            missionIconRect.SetAsFirstSibling();
+        }
 
         missionIconImage.sprite = missionIconSprite;
         missionIconImage.preserveAspect = true;
         missionIconImage.color = Color.white;
         missionIconImage.enabled = true;
+    }
+
+    static Image FindLevelBadgeImage(RectTransform container)
+    {
+        var badge = container.Find(LevelIconImageName);
+        if (badge == null)
+            badge = container.Find(LegacyIconObjectName);
+        return badge != null ? badge.GetComponent<Image>() : null;
     }
 
     static Transform FindDeepChild(Transform parent, string childName)

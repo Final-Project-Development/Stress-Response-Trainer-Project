@@ -16,6 +16,7 @@ public class UINavigationManager : MonoBehaviour
     public GameObject topBar;
     public GameObject helpPanel;
     public GameObject confirmBackPanel;
+    public UserProfileController userProfile;
 
     [Header("Help")]
     public TextMeshProUGUI helpBodyText;
@@ -42,6 +43,7 @@ public class UINavigationManager : MonoBehaviour
 
     public bool IsOverlayUiOpen =>
         _helpOpen
+        || (userProfile != null && userProfile.IsProfileOpen)
         || (confirmBackPanel != null && confirmBackPanel.activeSelf)
         || (flow != null && flow.IsPaused)
         || (flow != null && flow.IsSafetyWarningVisible);
@@ -52,10 +54,13 @@ public class UINavigationManager : MonoBehaviour
             flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+        if (userProfile == null)
+            userProfile = FindFirstObjectByType<UserProfileController>(FindObjectsInactive.Include);
 
         SetActiveSafe(topBar, true);
         SetActiveSafe(helpPanel, false);
         SetActiveSafe(confirmBackPanel, false);
+        userProfile?.RefreshProfileButtonVisibility();
         ApplyPlayerCursorMode();
     }
 
@@ -74,6 +79,12 @@ public class UINavigationManager : MonoBehaviour
         if (_helpOpen)
         {
             CloseHelp();
+            return true;
+        }
+
+        if (userProfile != null && userProfile.IsProfileOpen)
+        {
+            userProfile.CloseProfile();
             return true;
         }
 

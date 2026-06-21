@@ -105,6 +105,40 @@ public class SimpleStressLineGraph : MonoBehaviour
         ApplyInfo(chartInfo);
     }
 
+    /// <summary>Fills the host RectTransform area with caption strip + chart inset.</summary>
+    public void ApplyInsetFillLayout(float left, float bottom, float right, float top, float captionHeight = 28f)
+    {
+        ResolveDesignerReferences();
+        EnsureDesignerChartUi();
+
+        if (chartTitleText != null)
+            chartTitleText.gameObject.SetActive(false);
+
+        if (chartInfoText != null && captionHeight > 0f)
+        {
+            var caption = chartInfoText.rectTransform;
+            caption.gameObject.SetActive(true);
+            caption.anchorMin = new Vector2(0f, 1f);
+            caption.anchorMax = new Vector2(1f, 1f);
+            caption.pivot = new Vector2(0.5f, 1f);
+            caption.anchoredPosition = Vector2.zero;
+            caption.offsetMin = new Vector2(left, -captionHeight);
+            caption.offsetMax = new Vector2(-right, 0f);
+        }
+
+        if (chartImage != null)
+        {
+            var graph = chartImage.rectTransform;
+            graph.anchorMin = Vector2.zero;
+            graph.anchorMax = Vector2.one;
+            graph.pivot = new Vector2(0.5f, 0.5f);
+            graph.anchoredPosition = Vector2.zero;
+            graph.offsetMin = new Vector2(left, bottom);
+            float topInset = top + (captionHeight > 0f ? captionHeight : 0f);
+            graph.offsetMax = new Vector2(-right, -topInset);
+        }
+    }
+
     public void Clear()
     {
         hasCachedValues = false;
@@ -282,7 +316,10 @@ public class SimpleStressLineGraph : MonoBehaviour
     {
         yield return null;
         Canvas.ForceUpdateCanvases();
-        DrawEmptyChart();
+        if (hasCachedValues)
+            RenderCachedValues();
+        else
+            DrawEmptyChart();
         ApplyChartLabels();
         layoutRefreshRoutine = null;
     }

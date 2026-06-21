@@ -151,6 +151,68 @@ public static class SessionHistoryStore
         return GetPriorSessions(userEmail, 100).Count;
     }
 
+    /// <summary>Total completed simulation runs (Sim 1 and Sim 2 counted separately).</summary>
+    public static int CountCompletedSimulations(string userEmail = null)
+    {
+        string email = NormalizeUserEmail(userEmail ?? ActiveUserEmail);
+        int count = 0;
+
+        foreach (SessionRecord session in LoadAll().sessions)
+        {
+            if (session == null || !UserMatches(session, email))
+                continue;
+
+            if (session.sim1Samples > 0)
+                count++;
+            if (session.sim2Samples > 0)
+                count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Mean SCI values for the user's most recent simulation runs (oldest → newest for charting).
+    /// Sim 1 and Sim 2 from the same session are separate points.
+    /// </summary>
+    public static List<float> GetRecentSimulationMeanSciValues(string userEmail = null, int maxPoints = 8)
+    {
+        string email = NormalizeUserEmail(userEmail ?? ActiveUserEmail);
+        var points = new List<(DateTime timestamp, float meanSci)>();
+
+        foreach (SessionRecord session in LoadAll().sessions)
+        {
+            if (session == null || !UserMatches(session, email))
+                continue;
+
+            DateTime sessionStart = ParseUtc(session.startedUtc);
+
+            if (session.sim1Samples > 0)
+                points.Add((sessionStart, session.sim1MeanSci));
+
+            if (session.sim2Samples > 0)
+            {
+                DateTime sim2Time = ParseUtc(session.endedUtc);
+                if (sim2Time <= DateTime.MinValue.AddDays(1))
+                    sim2Time = sessionStart.AddSeconds(Mathf.Max(1f, session.sim1DurationSeconds));
+
+                points.Add((sim2Time, session.sim2MeanSci));
+            }
+        }
+
+        points.Sort((a, b) => b.timestamp.CompareTo(a.timestamp));
+        if (points.Count > maxPoints)
+            points.RemoveRange(maxPoints, points.Count - maxPoints);
+
+        points.Reverse();
+
+        var values = new List<float>(points.Count);
+        for (int i = 0; i < points.Count; i++)
+            values.Add(points[i].meanSci);
+
+        return values;
+    }
+
     /// <summary>Compares Simulation 2 SCI peaks/means to stored Simulation 1 stats for the current session.</summary>
     public static string BuildPhysiologicalRecoverySummary(float sim2PeakSci, float sim2MeanSci)
     {

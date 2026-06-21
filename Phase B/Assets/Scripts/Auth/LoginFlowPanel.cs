@@ -106,6 +106,7 @@ public class LoginFlowPanel : MonoBehaviour
             LocalAuthStore.ClearLastLoggedInEmail();
 
         SetStatus("", false);
+        FindFirstObjectByType<UserProfileController>(FindObjectsInactive.Include)?.RefreshProfileButtonVisibility();
         trainingFlow?.UI_CompleteLoginAndStartIntro();
     }
 

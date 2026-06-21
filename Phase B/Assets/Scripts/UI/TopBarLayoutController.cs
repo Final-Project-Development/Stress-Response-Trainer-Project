@@ -12,6 +12,7 @@ public class TopBarLayoutController : MonoBehaviour
     [SerializeField] private RectTransform pauseButton;
     [SerializeField] private RectTransform backButton;
     [SerializeField] private RectTransform helpButton;
+    [SerializeField] private RectTransform profileButton;
     [SerializeField] private RectTransform watchStatusContainer;
     [SerializeField] private RectTransform extraCenterObject;   // Optional legacy alias
 
@@ -71,10 +72,11 @@ public class TopBarLayoutController : MonoBehaviour
             leftContainer.anchoredPosition = new Vector2(leftPadding, topY);
         }
 
-        // Right row: Help (rightmost), Back, Pause — then watch status further left.
+        // Right row: Help (rightmost), Back, Pause, Profile — then watch status further left.
         PlaceRightButton(helpButton, 0f);
         PlaceRightButton(backButton, rightSpacing);
         PlaceRightButton(pauseButton, rightSpacing * 2f);
+        PlaceRightButton(profileButton, rightSpacing * 3f);
         PlaceWatchStatusLeftOfButtons();
     }
 
@@ -109,8 +111,11 @@ public class TopBarLayoutController : MonoBehaviour
             return;
 
         // Anchor on the right; pivot on the right edge so the pill grows left, away from buttons.
-        float pauseOffset = rightSpacing * 2f;
-        float offsetFromRight = pauseOffset + rightSpacing + watchStatusGapFromButtons;
+        // Keep the watch pill left of the rightmost toolbar button.
+        float rightmostButtonOffset = profileButton != null
+            ? rightSpacing * 3f
+            : rightSpacing * 2f;
+        float offsetFromRight = rightmostButtonOffset + rightSpacing + watchStatusGapFromButtons;
 
         watchSlot.anchorMin = new Vector2(1f, 1f);
         watchSlot.anchorMax = new Vector2(1f, 1f);
