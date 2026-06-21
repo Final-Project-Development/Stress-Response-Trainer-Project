@@ -37,11 +37,33 @@ public class SimpleStressLineGraph : MonoBehaviour
     public Color gridColor = new Color(0.42f, 0.5f, 0.58f, 0.45f);
     public Color axisColor = new Color(0.75f, 0.82f, 0.9f, 0.9f);
     public Color pointColor = Color.white;
+    [Tooltip("When enabled, chartImage/caption rects are not moved at runtime.")]
+    public bool preserveManualLayout = false;
+
+    [Header("Axis value labels")]
+    public bool showAxisValueLabels = true;
+    public Color axisLabelColor = new Color(0.85f, 0.9f, 1f, 0.92f);
+    public float axisLabelFontSize = 13f;
+    public string yAxisValueSuffix = "%";
+    [Tooltip("Use a fixed Y range (recommended for SCI % charts).")]
+    public bool useFixedYRange = false;
+    public float fixedYMin = 0f;
+    public float fixedYMax = 0f;
+    public AxisXLabelMode xAxisLabelMode = AxisXLabelMode.RunIndex;
+
+    public enum AxisXLabelMode
+    {
+        RunIndex,
+        TimeSeconds
+    }
 
     private Texture2D chartTexture;
     private Coroutine layoutRefreshRoutine;
     private float sampleIntervalSeconds = 0.4f;
     private readonly List<float> cachedValues = new List<float>(256);
+    private readonly List<TextMeshProUGUI> yAxisLabels = new List<TextMeshProUGUI>(6);
+    private readonly List<TextMeshProUGUI> xAxisLabels = new List<TextMeshProUGUI>(6);
+    private RectTransform axisLabelsRoot;
     private bool hasCachedValues;
 
     void Awake()
@@ -105,9 +127,22 @@ public class SimpleStressLineGraph : MonoBehaviour
         ApplyInfo(chartInfo);
     }
 
+    /// <summary>Re-draw using the current ChartGraph RectTransform size (manual layout friendly).</summary>
+    public void RefreshRenderToFitLayout()
+    {
+        ResolveDesignerReferences();
+        if (hasCachedValues)
+            RenderCachedValues();
+        else
+            DrawEmptyChart();
+    }
+
     /// <summary>Fills the host RectTransform area with caption strip + chart inset.</summary>
     public void ApplyInsetFillLayout(float left, float bottom, float right, float top, float captionHeight = 28f)
     {
+        if (preserveManualLayout)
+            return;
+
         ResolveDesignerReferences();
         EnsureDesignerChartUi();
 
@@ -146,6 +181,7 @@ public class SimpleStressLineGraph : MonoBehaviour
         DrawEmptyChart();
         chartInfo = string.Empty;
         ApplyInfo(string.Empty);
+        HideAxisValueLabels();
     }
 
     private void RenderCachedValues()
@@ -165,16 +201,27 @@ public class SimpleStressLineGraph : MonoBehaviour
         }
 
         GetChartDimensions(out int renderWidth, out int renderHeight);
-        chartTexture = TextureLineChartRenderer.RenderIndexedSeries(
-            cachedValues,
-            sampleIntervalSeconds,
+        var style = BuildStyle();
+        ComputeYRangeForDisplay(out float yMin, out float yMax);
+
+        var points = new List<TextureLineChartRenderer.TimeValuePoint>(cachedValues.Count);
+        for (int i = 0; i < cachedValues.Count; i++)
+            points.Add(new TextureLineChartRenderer.TimeValuePoint(i * sampleIntervalSeconds, cachedValues[i]));
+
+        double duration = Mathf.Max(1f, (cachedValues.Count - 1) * sampleIntervalSeconds);
+        chartTexture = TextureLineChartRenderer.RenderTimeSeries(
+            points,
+            duration,
             renderWidth,
             renderHeight,
-            BuildStyle());
+            style,
+            yMin,
+            yMax);
 
         if (chartImage != null)
             chartImage.texture = chartTexture;
 
+        UpdateAxisValueLabels(yMin, yMax, cachedValues.Count, duration);
         ApplyChartLabels();
     }
 
@@ -204,7 +251,19 @@ public class SimpleStressLineGraph : MonoBehaviour
     private void EnsureDesignerChartUi()
     {
         if (chartImage == null)
-            chartImage = CreateUiChild<RawImage>("ChartGraph", new Vector2(0f, -82f), new Vector2(900f, 320f));
+        {
+            if (preserveManualLayout)
+                chartImage = CreateStretchFillUiChild<RawImage>("ChartGraph");
+            else
+                chartImage = CreateUiChild<RawImage>("ChartGraph", new Vector2(0f, -82f), new Vector2(900f, 320f));
+        }
+
+        if (preserveManualLayout && chartImage != null)
+        {
+            if (chartTitleText != null)
+                chartTitleText.gameObject.SetActive(false);
+            return;
+        }
 
         if (chartTitleText == null)
             chartTitleText = CreateUiChild<TextMeshProUGUI>("ChartTitle", new Vector2(-185f, 159f), new Vector2(500f, 100f));
@@ -250,6 +309,32 @@ public class SimpleStressLineGraph : MonoBehaviour
         return go.AddComponent<T>();
     }
 
+    private T CreateStretchFillUiChild<T>(string childName) where T : Component
+    {
+        Transform existing = transform.Find(childName);
+        if (existing != null)
+            return existing.GetComponent<T>();
+
+        var go = new GameObject(childName, typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        if (typeof(T) == typeof(RawImage))
+            return go.AddComponent<RawImage>() as T;
+
+        if (typeof(T) == typeof(TextMeshProUGUI))
+            return go.AddComponent<TextMeshProUGUI>() as T;
+
+        return go.AddComponent<T>();
+    }
+
     private void DrawEmptyChart()
     {
         if (chartImage == null)
@@ -258,6 +343,14 @@ public class SimpleStressLineGraph : MonoBehaviour
         GetChartDimensions(out int renderWidth, out int renderHeight);
         chartTexture = TextureLineChartRenderer.RenderEmpty(renderWidth, renderHeight, BuildStyle());
         chartImage.texture = chartTexture;
+
+        if (useFixedYRange)
+        {
+            float yMax = fixedYMax > 0f ? fixedYMax : maxSciDisplay;
+            UpdateAxisValueLabels(fixedYMin, yMax, 0, 1.0);
+        }
+        else
+            HideAxisValueLabels();
     }
 
     private TextureLineChartRenderer.Style BuildStyle()
@@ -299,6 +392,178 @@ public class SimpleStressLineGraph : MonoBehaviour
     {
         if (chartInfoText != null)
             chartInfoText.text = text;
+    }
+
+    private void ComputeYRangeForDisplay(out float yMin, out float yMax)
+    {
+        if (useFixedYRange)
+        {
+            yMin = fixedYMin;
+            yMax = fixedYMax > 0f ? fixedYMax : maxSciDisplay;
+            return;
+        }
+
+        float minValue = cachedValues[0];
+        float maxValue = cachedValues[0];
+        for (int i = 1; i < cachedValues.Count; i++)
+        {
+            minValue = Mathf.Min(minValue, cachedValues[i]);
+            maxValue = Mathf.Max(maxValue, cachedValues[i]);
+        }
+
+        TextureLineChartRenderer.ComputeYRange(minValue, maxValue, out yMin, out yMax);
+    }
+
+    private void EnsureAxisValueLabels()
+    {
+        if (chartImage == null)
+            return;
+
+        if (axisLabelsRoot == null)
+        {
+            var rootGo = new GameObject("ChartAxisLabels", typeof(RectTransform));
+            axisLabelsRoot = rootGo.GetComponent<RectTransform>();
+            axisLabelsRoot.SetParent(chartImage.transform, false);
+            axisLabelsRoot.anchorMin = Vector2.zero;
+            axisLabelsRoot.anchorMax = Vector2.one;
+            axisLabelsRoot.offsetMin = Vector2.zero;
+            axisLabelsRoot.offsetMax = Vector2.zero;
+        }
+
+        const int tickCount = 5;
+        EnsureAxisLabelSet(yAxisLabels, "Y", tickCount + 1, TextAlignmentOptions.MidlineRight);
+        EnsureAxisLabelSet(xAxisLabels, "X", tickCount + 1, TextAlignmentOptions.Top);
+    }
+
+    private void EnsureAxisLabelSet(
+        List<TextMeshProUGUI> labels,
+        string prefix,
+        int count,
+        TextAlignmentOptions alignment)
+    {
+        TMP_FontAsset font = chartInfoText != null
+            ? chartInfoText.font
+            : chartTitleText != null
+                ? chartTitleText.font
+                : TMP_Settings.defaultFontAsset;
+
+        while (labels.Count < count)
+        {
+            int index = labels.Count;
+            var go = new GameObject($"{prefix}AxisLabel_{index}", typeof(RectTransform));
+            go.transform.SetParent(axisLabelsRoot, false);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.raycastTarget = false;
+            label.font = font;
+            label.fontSize = axisLabelFontSize;
+            label.color = axisLabelColor;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 9f;
+            label.fontSizeMax = axisLabelFontSize;
+            label.alignment = alignment;
+            label.overflowMode = TextOverflowModes.Overflow;
+
+            var rt = label.rectTransform;
+            rt.sizeDelta = prefix == "Y" ? new Vector2(52f, 22f) : new Vector2(36f, 22f);
+            labels.Add(label);
+        }
+    }
+
+    private void UpdateAxisValueLabels(float yMin, float yMax, int pointCount, double durationSeconds)
+    {
+        if (!showAxisValueLabels || chartImage == null)
+        {
+            HideAxisValueLabels();
+            return;
+        }
+
+        EnsureAxisValueLabels();
+
+        var style = BuildStyle();
+        Rect chartRect = chartImage.rectTransform.rect;
+        float plotLeft = style.plotLeft;
+        float plotBottom = style.plotBottom;
+        float plotWidth = chartRect.width - style.plotLeft - style.plotRight;
+        float plotHeight = chartRect.height - style.plotBottom - style.plotTop;
+
+        const int tickCount = 5;
+        float scaledFont = Mathf.Clamp(axisLabelFontSize, 9f, Mathf.Max(9f, chartRect.height * 0.045f));
+
+        for (int i = 0; i <= tickCount; i++)
+        {
+            float t = i / (float)tickCount;
+            float yValue = Mathf.Lerp(yMin, yMax, t);
+            float yPos = plotBottom + plotHeight * t;
+
+            TextMeshProUGUI label = yAxisLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = axisLabelColor;
+            label.text = FormatYAxisValue(yValue);
+            label.gameObject.SetActive(true);
+            PlaceAxisLabel(label, plotLeft - 6f, yPos, new Vector2(1f, 0.5f));
+        }
+
+        for (int i = 0; i <= tickCount; i++)
+        {
+            float t = i / (float)tickCount;
+            float xPos = plotLeft + plotWidth * t;
+
+            TextMeshProUGUI label = xAxisLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = axisLabelColor;
+            label.text = FormatXAxisValue(i, tickCount, pointCount, durationSeconds);
+            label.gameObject.SetActive(pointCount >= 2 && !string.IsNullOrEmpty(label.text));
+            PlaceAxisLabel(label, xPos, plotBottom - 8f, new Vector2(0.5f, 1f));
+        }
+
+        axisLabelsRoot.SetAsLastSibling();
+    }
+
+    private void PlaceAxisLabel(TextMeshProUGUI label, float x, float y, Vector2 pivot)
+    {
+        RectTransform rt = label.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.zero;
+        rt.pivot = pivot;
+        rt.anchoredPosition = new Vector2(x, y);
+    }
+
+    private string FormatYAxisValue(float value)
+    {
+        string numeric = Mathf.Abs(value - Mathf.Round(value)) < 0.05f
+            ? Mathf.RoundToInt(value).ToString()
+            : value.ToString("0.0");
+        return string.IsNullOrEmpty(yAxisValueSuffix) ? numeric : numeric + yAxisValueSuffix;
+    }
+
+    private string FormatXAxisValue(int tickIndex, int tickCount, int pointCount, double durationSeconds)
+    {
+        if (pointCount < 2)
+            return string.Empty;
+
+        float t = tickIndex / (float)tickCount;
+
+        switch (xAxisLabelMode)
+        {
+            case AxisXLabelMode.TimeSeconds:
+                return Mathf.RoundToInt((float)(durationSeconds * t)).ToString();
+
+            case AxisXLabelMode.RunIndex:
+            default:
+                int runNumber = 1 + Mathf.RoundToInt((pointCount - 1) * t);
+                return runNumber.ToString();
+        }
+    }
+
+    private void HideAxisValueLabels()
+    {
+        for (int i = 0; i < yAxisLabels.Count; i++)
+            yAxisLabels[i].gameObject.SetActive(false);
+        for (int i = 0; i < xAxisLabels.Count; i++)
+            xAxisLabels[i].gameObject.SetActive(false);
     }
 
     private void ScheduleChartLayoutRefresh()

@@ -18,9 +18,13 @@ public class UserProfileController : MonoBehaviour
 
     [Header("My Sessions")]
     [SerializeField] private RectTransform mySessionsSection;
+    [SerializeField] private TextMeshProUGUI sessionsTitleText;
+    [SerializeField] private TextMeshProUGUI sessionsChartCaptionText;
     [SerializeField] private SimpleStressLineGraph sessionsChart;
     [SerializeField] private GameObject sessionsChartRoot;
     [SerializeField] private TextMeshProUGUI sessionsEmptyText;
+    [Tooltip("When enabled, title/chart/empty positions and sizes come from the Unity Editor only.")]
+    [SerializeField] private bool preserveManualMySessionsLayout = true;
 
     [Header("Navigation")]
     [SerializeField] private Button profileOpenButton;
@@ -29,6 +33,7 @@ public class UserProfileController : MonoBehaviour
 
     [Header("Config")]
     [SerializeField] private int maxChartPoints = 8;
+    [Header("Auto layout (used only when Preserve Manual My Sessions Layout is off)")]
     [SerializeField] private float chartAreaPaddingLeft = 56f;
     [SerializeField] private float chartAreaPaddingRight = 56f;
     [SerializeField] private float chartAreaPaddingBottom = 40f;
@@ -72,6 +77,9 @@ public class UserProfileController : MonoBehaviour
 
         if (mySessionsSection == null && sessionsChartRoot != null)
             mySessionsSection = sessionsChartRoot.transform.parent as RectTransform;
+
+        ResolveMySessionsReferences();
+        ApplyManualLayoutModeToChart();
 
         _isOpen = false;
         SetPanelActive(false);
@@ -190,26 +198,22 @@ public class UserProfileController : MonoBehaviour
 
         if (sessionsEmptyText != null)
         {
-            sessionsEmptyText.text = emptySessionsMessage;
-            sessionsEmptyText.alignment = TextAlignmentOptions.Center;
-            sessionsEmptyText.verticalAlignment = VerticalAlignmentOptions.Middle;
-            sessionsEmptyText.gameObject.SetActive(!hasData);
+            ApplyEmptyTextPresentation(hasData);
         }
 
         if (sessionsChartRoot != null)
             sessionsChartRoot.SetActive(hasData);
 
         string captionText = hasData
-            ? $"Last {Mathf.Min(completedCount, maxChartPoints)} simulation runs"
+            ? $"Last {Mathf.Min(completedCount, maxChartPoints)} simulation runs (mean SCI %)"
             : string.Empty;
 
-        LayoutMySessionsSectionHeader(captionText);
+        UpdateMySessionsCaption(captionText);
         ConfigureProfileChartPresentation();
 
         if (!hasData)
         {
-            if (sessionsChart?.chartInfoText != null)
-                sessionsChart.chartInfoText.gameObject.SetActive(false);
+            HideAutoChartCaption();
             sessionsChart?.Clear();
             return;
         }
@@ -220,8 +224,103 @@ public class UserProfileController : MonoBehaviour
         if (sessionsChart != null)
         {
             sessionsChart.SetFromValues(sciValues, sessionsChart.maxSciDisplay);
-            ScheduleChartRefreshAfterLayout(captionText);
+            if (preserveManualMySessionsLayout)
+                ScheduleManualChartRefresh();
+            else
+                ScheduleChartRefreshAfterLayout(captionText);
         }
+    }
+
+    private void ApplyEmptyTextPresentation(bool hasData)
+    {
+        if (sessionsEmptyText == null)
+            return;
+
+        sessionsEmptyText.text = emptySessionsMessage;
+        sessionsEmptyText.enableWordWrapping = true;
+        sessionsEmptyText.overflowMode = TextOverflowModes.Overflow;
+        sessionsEmptyText.color = new Color(0.88f, 0.9f, 1f, 1f);
+
+        if (!preserveManualMySessionsLayout)
+        {
+            sessionsEmptyText.alignment = TextAlignmentOptions.Center;
+            sessionsEmptyText.verticalAlignment = VerticalAlignmentOptions.Middle;
+        }
+
+        sessionsEmptyText.gameObject.SetActive(!hasData);
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (Application.isPlaying || sessionsEmptyText == null)
+            return;
+
+        if (preserveManualMySessionsLayout && string.IsNullOrWhiteSpace(sessionsEmptyText.text))
+            sessionsEmptyText.text = emptySessionsMessage;
+    }
+#endif
+
+    private void ScheduleManualChartRefresh()
+    {
+        if (!isActiveAndEnabled || sessionsChart == null)
+            return;
+
+        if (_refreshChartRoutine != null)
+            StopCoroutine(_refreshChartRoutine);
+
+        _refreshChartRoutine = StartCoroutine(RefreshManualChartAfterLayout());
+    }
+
+    private IEnumerator RefreshManualChartAfterLayout()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        sessionsChart?.RefreshRenderToFitLayout();
+        _refreshChartRoutine = null;
+    }
+
+    private void ResolveMySessionsReferences()
+    {
+        if (sessionsTitleText == null && mySessionsSection != null)
+            sessionsTitleText = mySessionsSection.Find("MySessionsTitle_TXT")?.GetComponent<TextMeshProUGUI>();
+
+        if (sessionsChartCaptionText == null && mySessionsSection != null)
+            sessionsChartCaptionText = mySessionsSection.Find("MySessionsCaption_TXT")?.GetComponent<TextMeshProUGUI>();
+    }
+
+    private void ApplyManualLayoutModeToChart()
+    {
+        if (sessionsChart == null)
+            return;
+
+        sessionsChart.preserveManualLayout = preserveManualMySessionsLayout;
+        if (preserveManualMySessionsLayout)
+            HideAutoChartCaption();
+    }
+
+    private void HideAutoChartCaption()
+    {
+        if (sessionsChart?.chartInfoText != null)
+            sessionsChart.chartInfoText.gameObject.SetActive(false);
+    }
+
+    private void UpdateMySessionsCaption(string captionText)
+    {
+        if (preserveManualMySessionsLayout)
+        {
+            if (sessionsChartCaptionText != null)
+            {
+                bool showCaption = !string.IsNullOrEmpty(captionText);
+                sessionsChartCaptionText.text = captionText;
+                sessionsChartCaptionText.gameObject.SetActive(showCaption);
+            }
+
+            HideAutoChartCaption();
+            return;
+        }
+
+        LayoutMySessionsSectionHeader(captionText);
     }
 
     private void LayoutMySessionsSectionHeader(string captionText)
@@ -229,7 +328,9 @@ public class UserProfileController : MonoBehaviour
         if (mySessionsSection == null)
             return;
 
-        RectTransform titleRt = mySessionsSection.Find("MySessionsTitle_TXT") as RectTransform;
+        RectTransform titleRt = sessionsTitleText != null
+            ? sessionsTitleText.rectTransform
+            : mySessionsSection.Find("MySessionsTitle_TXT") as RectTransform;
         if (titleRt != null)
         {
             titleRt.anchorMin = new Vector2(0.5f, 1f);
@@ -276,11 +377,13 @@ public class UserProfileController : MonoBehaviour
 
     private void ConfigureProfileChartPresentation()
     {
-        ApplyChartAreaRect();
+        if (!preserveManualMySessionsLayout)
+            ApplyChartAreaRect();
 
         if (sessionsChart == null)
             return;
 
+        sessionsChart.preserveManualLayout = preserveManualMySessionsLayout;
         sessionsChart.updateTitleAtRuntime = false;
         sessionsChart.updateInfoAtRuntime = false;
         sessionsChart.chartTitle = string.Empty;
@@ -289,17 +392,31 @@ public class UserProfileController : MonoBehaviour
         sessionsChart.pointColor = new Color(1f, 0.85f, 0.35f, 1f);
         sessionsChart.gridColor = new Color(0.75f, 0.82f, 0.95f, 0.35f);
         sessionsChart.axisColor = new Color(0.85f, 0.9f, 1f, 0.85f);
+        sessionsChart.showAxisValueLabels = true;
+        sessionsChart.useFixedYRange = true;
+        sessionsChart.fixedYMin = 0f;
+        sessionsChart.fixedYMax = sessionsChart.maxSciDisplay;
+        sessionsChart.xAxisLabelMode = SimpleStressLineGraph.AxisXLabelMode.RunIndex;
+        sessionsChart.yAxisValueSuffix = "%";
+        sessionsChart.axisLabelColor = new Color(0.85f, 0.9f, 1f, 0.92f);
+        sessionsChart.axisLabelFontSize = 13f;
 
-        sessionsChart.ApplyInsetFillLayout(
-            chartAreaPaddingLeft,
-            chartAreaPaddingBottom,
-            chartAreaPaddingRight,
-            chartAreaPaddingTop,
-            0f);
+        if (!preserveManualMySessionsLayout)
+        {
+            sessionsChart.ApplyInsetFillLayout(
+                chartAreaPaddingLeft,
+                chartAreaPaddingBottom,
+                chartAreaPaddingRight,
+                chartAreaPaddingTop,
+                0f);
+        }
     }
 
     private void ApplyChartAreaRect()
     {
+        if (preserveManualMySessionsLayout)
+            return;
+
         RectTransform chartArea = sessionsChartRoot != null
             ? sessionsChartRoot.transform as RectTransform
             : sessionsChart != null
@@ -319,7 +436,7 @@ public class UserProfileController : MonoBehaviour
 
     private void ScheduleChartRefreshAfterLayout(string captionText)
     {
-        if (!isActiveAndEnabled)
+        if (!isActiveAndEnabled || preserveManualMySessionsLayout)
             return;
 
         if (_refreshChartRoutine != null)
@@ -348,9 +465,7 @@ public class UserProfileController : MonoBehaviour
             values = new List<float> { values[0], values[0] };
 
         if (values.Count > 0)
-        {
             sessionsChart.SetFromValues(values, sessionsChart.maxSciDisplay);
-        }
 
         _refreshChartRoutine = null;
     }
