@@ -674,7 +674,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -325, y: -59}
+  m_AnchoredPosition: {x: -333, y: -59}
   m_SizeDelta: {x: 620, y: 420}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7245191
@@ -11504,8 +11504,8 @@ MonoBehaviour:
   m_VerticalScrollbarEventHandler: {fileID: 0}
   m_LayoutGroup: {fileID: 0}
   m_ScrollSensitivity: 1
-  m_ContentType: 0
-  m_InputType: 0
+  m_ContentType: 7
+  m_InputType: 2
   m_AsteriskChar: 42
   m_KeyboardType: 0
   m_LineType: 0
@@ -23031,8 +23031,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 99.00014, y: -228}
-  m_SizeDelta: {x: 640, y: 290}
+  m_AnchoredPosition: {x: 99.00014, y: -232}
+  m_SizeDelta: {x: 680, y: 290}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &401578777
 MonoBehaviour:
@@ -28323,48 +28323,28 @@ MonoBehaviour:
 
     We are calibrating
     your heart-rate metrics.'
-  missionBriefingBody: 'Simulation 1: ....... Emergency Preparedness
+  missionBriefingBody: 'Simulation 1: Emergency Preparedness
 
 
-    Collect
-    5 essential supplies inside the house.
-
-
-
+    Collect 5 essential
+    supplies inside the house.
 
 
 
-    Turn off lights, close the door
-    and enter the Mamad shelter.'
-  learnBriefingBody: 'Environment Learning:
 
 
-    Explore important locations and
-    objects in the training environment.
 
-
-    Use the left sidebar to jump to each
-    item and read the labels in the world.
-
-
-    Movement controls:
-
-    W - Move
-    forward
-
-    A / D - Strafe left / right
-
-    S - Move backward
-
-    Mouse
-    - Look around
-
-
-    When you are ready, press Start learn.'
-  sim2BriefingBody: "Simulation 2 : ...... First Aid Under Pressure\n\nCollect the
-    first aid kit\nFind the wounded person\nGo to the public telephone:\n    Open
-    the door. then Insert coin. then Lift the phone. then Dial 1, 0, 1\nReturn to
-    the wounded person:\nStart treatment, then press 1, then 2, then 3"
+    Turn off lights, close the door and enter
+    the Mamad shelter.'
+  learnBriefingBody: "Environment Learning:\n\nExplore important locations and objects
+    in the training \nenvironment.\n\nUse the left sidebar to jump to each item and
+    read the labels \nin the world.\n\nMovement controls:\nW - Move forward\nA /
+    D - Strafe left / right\nS - Move backward\nMouse - Look around\n\nWhen you are
+    ready, press Start learn."
+  sim2BriefingBody: "Simulation 2 : First Aid Under Pressure\n\nCollect the first
+    aid kit\nFind the wounded person\nGo to the public telephone:\n    Open the door.
+    then Insert coin. then Lift the phone. then Dial 1, 0, 1\nReturn to the wounded
+    person:\nStart treatment, then press 1, then 2, then 3"
   sim1AllItemsCollectedCompleted: All supplies collected.
   sim1LightsOffCompleted: Lights turned off.
   sim1DoorClosedCompleted: Door closed.
@@ -54350,7 +54330,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: -20.253601, y: -157.97852, z: 38.481995, w: -151.90245}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -56076,8 +56056,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 99, y: -6}
-  m_SizeDelta: {x: 640, y: 100}
+  m_AnchoredPosition: {x: 99, y: -9.999997}
+  m_SizeDelta: {x: 680, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &970397371
 MonoBehaviour:
@@ -65405,8 +65385,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -227, y: -171.19275}
-  m_SizeDelta: {x: 1464.5659, y: 700}
+  m_AnchoredPosition: {x: -219, y: -171.19275}
+  m_SizeDelta: {x: 1500, y: 700}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1131081532
 MonoBehaviour:
@@ -103279,7 +103259,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -328, y: -20}
+  m_AnchoredPosition: {x: -328, y: -20.9}
   m_SizeDelta: {x: 235, y: 33}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!114 &1864486544

@@ -1633,11 +1633,12 @@ public class TrainingFlowController : MonoBehaviour
 
     private void PlayLearnBriefingNarration()
     {
+        // Keep the full learn-briefing body visible; narration plays per sentence without replacing the text.
         _narrationPlayer?.Play(
             learnBriefingNarrationClip,
             learnBriefingNarrationSentenceClips,
             learnBriefingBody,
-            learnBriefingBodyText,
+            null,
             null);
     }
 

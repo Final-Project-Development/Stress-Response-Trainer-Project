@@ -4,6 +4,8 @@
 *.unity merge=unityyamlmerge eol=lf
 *.prefab merge=unityyamlmerge eol=lf
 *.asset merge=unityyamlmerge eol=lf
+# TerrainData assets are binary — must not get LF normalization (corrupts heightmap/details).
+*Terrain*.asset -text
 *.meta text eol=lf
 *.cs text diff=csharp
 *.shader text

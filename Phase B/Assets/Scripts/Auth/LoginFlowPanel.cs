@@ -50,6 +50,17 @@ public class LoginFlowPanel : MonoBehaviour
             showLoginButton.onClick.AddListener(() => ShowRegister(false));
         if (cancelButton != null)
             cancelButton.onClick.AddListener(OnCancelClicked);
+
+        ConfigurePasswordMask(loginPassword);
+    }
+
+    static void ConfigurePasswordMask(TMP_InputField field)
+    {
+        if (field == null)
+            return;
+
+        field.contentType = TMP_InputField.ContentType.Password;
+        field.asteriskChar = '*';
     }
 
     void OnEnable()
