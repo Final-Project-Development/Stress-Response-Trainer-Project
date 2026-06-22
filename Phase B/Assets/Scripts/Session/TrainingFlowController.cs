@@ -209,6 +209,12 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("Which lines appear on the Result and Recommendations tabs for Simulation 2.")]
     public SimulationResultsPanelsConfig sim2ResultsPanels = SimulationResultsPanelsConfig.DefaultSim2();
 
+    [Header("Results panel manual layout")]
+    [Tooltip("When on, Sim 1 Result/Recommendations TMP font size, alignment, and RectTransform are not changed at runtime.")]
+    public bool preserveManualSim1ResultsLayout = true;
+    [Tooltip("When on, Sim 2 Result/Recommendations TMP font size, alignment, and RectTransform are not changed at runtime.")]
+    public bool preserveManualSim2ResultsLayout = true;
+
     public TextMeshProUGUI simulationActiveHudText;
 
     [Header("Per-task timer (Sim 1 & 2 active only)")]
@@ -1016,7 +1022,7 @@ public class TrainingFlowController : MonoBehaviour
                 sb.AppendLine();
                 sb.AppendLine("Recommendations:");
                 sb.AppendLine(sim1Recommendations);
-                PrepareResultsPanelText(resultsSummaryText);
+                PrepareResultsPanelText(resultsSummaryText, preserveManualSim1ResultsLayout);
                 resultsSummaryText.text = sb.ToString();
             }
         }
@@ -2214,7 +2220,7 @@ public class TrainingFlowController : MonoBehaviour
             sb.AppendLine();
             sb.AppendLine("Recommendations:");
             sb.AppendLine(sim2Recommendations);
-            PrepareResultsPanelText(sim2ResultsSummaryText);
+            PrepareResultsPanelText(sim2ResultsSummaryText, preserveManualSim2ResultsLayout);
             sim2ResultsSummaryText.text = sb.ToString();
         }
         else if (sim2BriefingBodyText != null)
@@ -2553,29 +2559,35 @@ public class TrainingFlowController : MonoBehaviour
 
     void LayoutSim1ResultsPanels()
     {
-        PrepareResultsPanelText(sim1ResultsMetricsText);
-        PrepareResultsPanelText(sim1ResultsRecommendationsText);
+        if (!preserveManualSim1ResultsLayout)
+        {
+            PrepareResultsPanelText(sim1ResultsMetricsText, false);
+            PrepareResultsPanelText(sim1ResultsRecommendationsText, false);
 
-        GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
-        if (graphRoot == null && resultsGraph != null)
-            graphRoot = resultsGraph.gameObject;
-        PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+            GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
+            if (graphRoot == null && resultsGraph != null)
+                graphRoot = resultsGraph.gameObject;
+            PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+        }
     }
 
     void LayoutSim2ResultsPanels()
     {
-        PrepareResultsPanelText(sim2ResultsMetricsText);
-        PrepareResultsPanelText(sim2ResultsRecommendationsText);
+        if (!preserveManualSim2ResultsLayout)
+        {
+            PrepareResultsPanelText(sim2ResultsMetricsText, false);
+            PrepareResultsPanelText(sim2ResultsRecommendationsText, false);
 
-        GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
-        if (graphRoot == null && sim2SciResultsGraph != null)
-            graphRoot = sim2SciResultsGraph.gameObject;
-        PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+            GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
+            if (graphRoot == null && sim2SciResultsGraph != null)
+                graphRoot = sim2SciResultsGraph.gameObject;
+            PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+        }
     }
 
-    static void PrepareResultsPanelText(TextMeshProUGUI tmp)
+    void PrepareResultsPanelText(TextMeshProUGUI tmp, bool preserveManualLayout)
     {
-        if (tmp == null)
+        if (tmp == null || preserveManualLayout)
             return;
 
         tmp.enableWordWrapping = true;

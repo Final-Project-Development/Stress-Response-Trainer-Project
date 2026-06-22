@@ -24,7 +24,7 @@ public static class StressRecommendations
     public static string BuildStatsSummary(IReadOnlyList<float> sciHistory)
     {
         if (sciHistory == null || sciHistory.Count == 0)
-            return "No SCI samples recorded for this session.";
+            return "No SCI samples recorded for this session.\n";
 
         float peak = sciHistory.Max();
         float mean = sciHistory.Average();
@@ -38,7 +38,7 @@ public static class StressRecommendations
     public static string BuildBehavioralTips(IReadOnlyList<float> sciHistory)
     {
         if (sciHistory == null || sciHistory.Count == 0)
-            return "Complete another session to receive tailored feedback.";
+            return "Complete another session to receive tailored feedback.\n";
 
         float peak = sciHistory.Max();
         var peakBand = StressChangeIndexCalculator.Classify(peak);
@@ -46,17 +46,17 @@ public static class StressRecommendations
         var sb = new StringBuilder();
         if (peakBand == StressChangeIndexCalculator.StressBand.High)
         {
-            sb.AppendLine("Under high load, try box breathing (4s in, 4s hold, 4s out) between tasks.");
-            sb.AppendLine("Practice naming three objects you see. This can help re-engage prefrontal control.");
+            sb.AppendLine("Try box breathing (4s in, 4s hold, 4s out) between tasks.\n");
+            sb.AppendLine("Practice naming three objects you see. \n This can help re-engage prefrontal control.\n");
         }
         else if (peakBand == StressChangeIndexCalculator.StressBand.Moderate)
         {
-            sb.AppendLine("Moderate stress response: keep a steady pace. prioritize one clear action at a time.");
-            sb.AppendLine("Short grounding breaks after alarms can speed recovery toward baseline HRV.");
+            sb.AppendLine("Moderate stress response: keep a steady pace. \n prioritize one clear action at a time.\n");
+            sb.AppendLine("Short grounding breaks after alarms can speed recovery toward baseline HRV.\n");
         }
         else
         {
-            sb.AppendLine("Stress profile stayed relatively low — good regulation. Add time pressure in future runs to train harder scenarios.");
+            sb.AppendLine("Stress profile stayed relatively low: good regulation. \n");
         }
 
         return sb.ToString().TrimEnd();
@@ -65,7 +65,7 @@ public static class StressRecommendations
     public static string BuildFromSciHistory(IReadOnlyList<float> sciHistory)
     {
         if (sciHistory == null || sciHistory.Count == 0)
-            return "Complete another session to receive tailored feedback.";
+            return "Complete another session to receive tailored feedback.\n";
 
         return $"{BuildStatsSummary(sciHistory)}\n\n{BuildBehavioralTips(sciHistory)}".TrimEnd();
     }
@@ -125,7 +125,7 @@ public static class StressRecommendations
         bool sim2Before = priorSim2 != null;
 
         if (!sim1ThisSession && !sim2ThisSession && !sim1Before && !sim2Before)
-            return "Start with an Environment Learning tour, then try Simulation 1.";
+            return "Start with an Environment Learning tour, then try Simulation 1.\n";
 
         if (sim2ThisSession && (sim1ThisSession || sim1Before))
             return BuildBothStagesCompletedGuidance(
@@ -135,40 +135,40 @@ public static class StressRecommendations
                 sim2Outcome: SessionHistoryStore.BuildOutcomeFromRecord(current, SimulationStage.Sim2));
 
         if (sim1ThisSession && current.sim1Disqualified)
-            return "Simulation 1 ended in disqualification — restart and finish each step within its time limit.";
+            return "Simulation 1 ended in disqualification: \n restart and finish each step within its time limit.\n";
 
         if (sim2ThisSession && current.sim2Disqualified)
-            return "Simulation 2 ended in disqualification — restart and keep a steady pace on every task.";
+            return "Simulation 2 ended in disqualification: \n restart and keep a steady pace on every task.\n";
 
         if (sim1ThisSession && current.sim1TimedOut)
-            return "Simulation 1 timed out: retry with a steady pace and finish all steps before the clock runs out.";
+            return "Simulation 1 timed out: \n retry and finish all steps before the clock runs out.\n";
 
         if (sim2ThisSession && current.sim2TimedOut)
-            return "Simulation 2 timed out: repeat it and prioritize kit, contact and treatment in order.";
+            return "Simulation 2 timed out: \nrepeat it and prioritize kit, contact and treatment in order.\n";
 
         if (sim1ThisSession && current.sim1MissionCompleted && current.sim1DurationSeconds > 0f &&
             current.sim1TimeLimitSeconds > 0f &&
             current.sim1DurationSeconds <= current.sim1TimeLimitSeconds * 0.5f)
-            return "Strong pace on Simulation 1: continue to Simulation 2 when ready.";
+            return "Strong pace on Simulation 1: \ncontinue to Simulation 2 when ready.";
 
         if (sim2Before && sim1Before)
         {
             float peakDelta = priorSim2.sim2PeakSci - priorSim1.sim1PeakSci;
             if (peakDelta > TrendThresholdPercent)
-                return "In your last full session, stress rose in Simulation 2. Take a breathing break between stages on the next run.";
+                return "In your last full session, stress rose in Simulation 2. \n Take a breathing break between stages on the next run.\n";
             if (priorSim2.sim2PeakSci < priorSim1.sim1PeakSci - TrendThresholdPercent)
-                return "You recovered well in your last full session. Repeat Simulation 2 to reinforce that pattern.";
-            return "You have completed both simulations before. Repeat either stage or take an Environment Learning tour.";
+                return "You recovered well in your last full session. \n Repeat Simulation 2 to reinforce that pattern.\n";
+            return "You have completed both simulations before. \n Repeat either stage or take an Environment Learning tour.\n";
         }
 
         float latestSim1Peak = sim1ThisSession ? current.sim1PeakSci : priorSim1?.sim1PeakSci ?? 0f;
         if (latestSim1Peak >= 50f)
-            return "Your last Simulation 1 showed high stress. Take an Environment Learning tour, then retry with calming breaths.";
+            return "Your last Simulation 1 showed high stress. \n Take an Environment Learning tour, then retry with calming breaths.\n";
 
         if (sim1ThisSession || sim1Before)
-            return "Good progress on Simulation 1. Continue to Simulation 2.";
+            return "Good progress on Simulation 1. \n Continue to Simulation 2.\n";
 
-        return "Pick the stage you have practiced least recently, or take an Environment Learning tour to refresh.";
+        return "Pick the stage you have practiced least recently, \n or take an Environment Learning tour to refresh.\n";
     }
 
     static string BuildBothStagesCompletedGuidance(
@@ -181,18 +181,18 @@ public static class StressRecommendations
         string when = sameSession ? "today" : "recently";
 
         if (sim2Outcome != null && sim2Outcome.timedOut)
-            return $"Simulation 2 {when} ran out of time — repeat it with a clearer step-by-step plan.";
+            return $"Simulation 2 {when} ran out of time: \n repeat it with a clearer step-by-step plan.\n";
 
         if (sim2Outcome != null && sim2Outcome.WasFast)
-            return $"You finished both stages {when} with good pace — repeat either simulation to reinforce the pattern.";
+            return $"You finished both stages {when} with good pace: \n repeat either simulation to reinforce the pattern.\n";
 
         if (peakDelta > TrendThresholdPercent)
-            return $"You finished both stages {when}. Stress rose in Simulation 2 — take breathing breaks between stages, or repeat either simulation.";
+            return $"You finished both stages {when}. Stress rose in Simulation 2: \n take breathing breaks between stages, or repeat either simulation.\n";
 
         if (sim2PeakSci < sim1PeakSci - TrendThresholdPercent)
-            return $"You finished both stages {when} with strong recovery. Repeat Simulation 2 or refresh with Environment Learning.";
+            return $"You finished both stages {when} with strong recovery. \n Repeat Simulation 2 or refresh with Environment Learning.\n";
 
-        return $"You finished both stages {when}. Repeat either simulation to practice, or take an Environment Learning tour.";
+        return $"You finished both stages {when}. \n Repeat either simulation to practice, or take an Environment Learning tour.\n";
     }
 
     static bool HasSim1Data(SessionHistoryStore.SessionRecord record) =>
@@ -368,7 +368,7 @@ public static class StressRecommendations
         float recoverySeconds = -1f)
     {
         if (sciHistory == null || sciHistory.Count == 0)
-            return "Complete another session to receive tailored feedback.";
+            return "Complete another session to receive tailored feedback.\n";
 
         float peak = sciHistory.Max();
         float mean = sciHistory.Average();
@@ -409,7 +409,7 @@ public static class StressRecommendations
     }
 
     public static string ResultsTabFooterLine() =>
-        "Use Choose Simulation to pick your next scenario.";
+        "Use Choose Simulation to pick your next scenario.\n";
 
     static string FirstLine(string text)
     {
@@ -436,7 +436,7 @@ public static class StressRecommendations
 
     public static string BeforeNextStageBreathingTip()
     {
-        return "Before the next stage: breathe deeply through the nose, lengthen the exhale, and try to bring arousal down toward your baseline.";
+        return "Before the next stage: \n breathe deeply through the nose, lengthen the exhale, \n and try to bring arousal down toward your baseline.\n";
     }
 
     static string BuildProgressSummary(
@@ -448,22 +448,22 @@ public static class StressRecommendations
     {
         int priorCount = SessionHistoryStore.CountPriorSessions();
         if (priorCount == 0)
-            return "First saved session for this profile — future runs will compare against today's baseline.";
+            return "First saved session for this profile: \n future runs will compare against today's baseline.\n";
 
         var prior = stage == SimulationStage.Sim1
             ? SessionHistoryStore.GetLatestPriorSim1()
             : SessionHistoryStore.GetLatestPriorSim2();
 
         if (prior == null)
-            return $"You have {priorCount} earlier session(s), but no prior {StageLabel(stage)} data yet — this run sets your personal benchmark.";
+            return $"You have {priorCount} earlier session(s)\n, but no prior {StageLabel(stage)} data yet: \n this run sets your personal benchmark.\n";
 
         var sb = new StringBuilder();
         float peakDelta = peakSci - priorPeak(prior, stage);
         string direction = peakDelta switch
         {
-            < -TrendThresholdPercent => $"Peak SCI improved by {Math.Abs(peakDelta):F1}% compared to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% → {peakSci:F1}%).",
-            > TrendThresholdPercent => $"Peak SCI rose by {peakDelta:F1}% compared to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% → {peakSci:F1}%).",
-            _ => $"Peak SCI is similar to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% vs {peakSci:F1}% now)."
+            < -TrendThresholdPercent => $"Peak SCI improved by {Math.Abs(peakDelta):F1}% compared to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% → {peakSci:F1}%).\n",
+            > TrendThresholdPercent => $"Peak SCI rose by {peakDelta:F1}% compared to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% → {peakSci:F1}%).\n",
+            _ => $"Peak SCI is similar to your last {StageLabel(stage)} ({priorPeak(prior, stage):F1}% vs {peakSci:F1}% now).\n"
         };
         sb.AppendLine(direction);
 
@@ -474,8 +474,8 @@ public static class StressRecommendations
             if (Math.Abs(meanDelta) >= TrendThresholdPercent)
             {
                 sb.AppendLine(meanDelta < 0f
-                    ? $"Average stress load also dropped ({priorMean:F1}% → {meanSci:F1}%)."
-                    : $"Average stress load increased ({priorMean:F1}% → {meanSci:F1}%).");
+                    ? $"Average stress load also dropped ({priorMean:F1}% → {meanSci:F1}%).\n"
+                    : $"Average stress load increased ({priorMean:F1}% → {meanSci:F1}%).\n");
             }
         }
 
@@ -488,9 +488,9 @@ public static class StressRecommendations
         {
             float highStressDelta = outcome.highStressSeconds - priorHighStress;
             if (highStressDelta <= -TimeTrendThresholdSeconds)
-                sb.AppendLine($"High-stress exposure dropped ({priorHighStress:F0}s → {outcome.highStressSeconds:F0}s at SCI ≥ {HighStressSciThreshold:F0}%).");
+                sb.AppendLine($"High-stress exposure dropped ({priorHighStress:F0}s → {outcome.highStressSeconds:F0}s at SCI ≥ {HighStressSciThreshold:F0}%).\n");
             else if (highStressDelta >= TimeTrendThresholdSeconds)
-                sb.AppendLine($"High-stress exposure lasted longer ({priorHighStress:F0}s → {outcome.highStressSeconds:F0}s).");
+                sb.AppendLine($"High-stress exposure lasted longer ({priorHighStress:F0}s → {outcome.highStressSeconds:F0}s).\n");
         }
 
         float priorRecovery = stage == SimulationStage.Sim1 ? prior.sim1RecoverySeconds : prior.sim2RecoverySeconds;
@@ -498,15 +498,15 @@ public static class StressRecommendations
         {
             float recoveryDelta = recoverySeconds - priorRecovery;
             if (recoveryDelta <= -RecoveryTrendThresholdSeconds)
-                sb.AppendLine($"Recovery to low stress was faster ({priorRecovery:F0}s → {recoverySeconds:F0}s).");
+                sb.AppendLine($"Recovery to low stress was faster ({priorRecovery:F0}s → {recoverySeconds:F0}s).\n");
             else if (recoveryDelta >= RecoveryTrendThresholdSeconds)
-                sb.AppendLine($"Recovery took longer ({priorRecovery:F0}s → {recoverySeconds:F0}s) — try a short breathing reset after alarms.");
+                sb.AppendLine($"Recovery took longer ({priorRecovery:F0}s → {recoverySeconds:F0}s):\n try a short breathing reset after alarms.\n");
         }
 
         var recentHighRuns = SessionHistoryStore.GetPriorSessions(null, 5)
             .Count(s => PeakForStage(s, stage) >= 50f);
         if (recentHighRuns >= 2 && peakSci >= 50f)
-            sb.AppendLine("High stress appeared in several recent runs — prioritize grounding before starting the next mission.");
+            sb.AppendLine("High stress appeared in several recent runs: \n prioritize grounding before starting the next mission.\n");
 
         return sb.ToString().TrimEnd();
     }
@@ -543,28 +543,28 @@ public static class StressRecommendations
         float priorProgress = PriorMissionProgress(prior, stage);
 
         if (outcome.timedOut && priorCompleted)
-            return "Mission pace: did not finish this time (you completed it last run).";
+            return "Mission pace: did not finish this time (you completed it last run)\n";
 
         if (outcome.missionCompleted && priorTimedOut)
-            return "Mission pace: finished this time (last run timed out).";
+            return "Mission pace: finished this time (last run timed out)\n";
 
         if (outcome.timedOut && priorTimedOut)
         {
             float delta = outcome.completionRatio - priorProgress;
             if (delta >= 0.1f)
-                return $"Mission pace: reached {Mathf.RoundToInt(outcome.completionRatio * 100f)}% vs {Mathf.RoundToInt(priorProgress * 100f)}% last run before time ran out.";
+                return $"Mission pace: reached {Mathf.RoundToInt(outcome.completionRatio * 100f)}% vs {Mathf.RoundToInt(priorProgress * 100f)}% last run before time ran out.\n";
             if (delta <= -0.1f)
-                return "Mission pace: less progress than last run before time ran out.";
-            return "Mission pace: similar progress to your last timed-out run.";
+                return "Mission pace: less progress than last run before time ran out.\n";
+            return "Mission pace: similar progress to your last timed-out run.\n";
         }
 
         if (outcome.missionCompleted && priorCompleted && priorDuration > 0f)
         {
             float delta = outcome.elapsedSeconds - priorDuration;
             if (delta <= -TimeTrendThresholdSeconds)
-                return $"Mission pace: {FormatDuration(Mathf.Abs(delta))} faster than last run.";
+                return $"Mission pace: {FormatDuration(Mathf.Abs(delta))} faster than last run.\n";
             if (delta >= TimeTrendThresholdSeconds)
-                return $"Mission pace: {FormatDuration(delta)} slower than last run.";
+                return $"Mission pace: {FormatDuration(delta)} slower than last run.\n";
         }
 
         return string.Empty;
@@ -595,22 +595,22 @@ public static class StressRecommendations
         if (outcome != null && outcome.disqualified)
         {
             if (stage == SimulationStage.Sim1)
-                return "Restart Simulation 1 — each task has its own time limit; 3 slow steps end the run.";
-            return "Restart Simulation 2 — work step by step and stay within each task time limit.";
+                return "Restart Simulation 1: each task has its own time limit.\n 3 slow steps end the run.\n";
+            return "Restart Simulation 2: work step by step and stay within each task time limit.\n";
         }
 
         if (outcome != null && outcome.timedOut)
         {
             if (stage == SimulationStage.Sim1)
-                return "Retry Simulation 1 — map the route first, then collect items and reach shelter before time runs out.";
-            return "Retry Simulation 2 — kit first, then contact and report, then complete treatment steps.";
+                return "Retry Simulation 1: map the route first, then collect items and \n reach shelter before time runs out.\n";
+            return "Retry Simulation 2: kit first, then contact and report,\n then complete treatment steps.\n";
         }
 
         if (outcome != null && outcome.WasSlow && outcome.missionCompleted && outcome.timeLimitSeconds > 0f)
         {
             if (stage == SimulationStage.Sim1)
-                return "You finished, but used most of the time — practice Simulation 1 again for a smoother, faster run.";
-            return "Practice Simulation 2 again to build speed without skipping safety steps.";
+                return "You finished, but used most of the time:\n practice Simulation 1 again for a smoother, faster run.\n";
+            return "Practice Simulation 2 again to build speed without skipping safety steps.\n";
         }
 
         var peakBand = StressChangeIndexCalculator.Classify(peakSci);
@@ -618,26 +618,26 @@ public static class StressRecommendations
         if (stage == SimulationStage.Sim1)
         {
             if (outcome != null && outcome.WasFast && outcome.timeLimitSeconds > 0f)
-                return "Good pace and regulation — proceed to Simulation 2 for the outdoor first-aid stage.";
+                return "Good pace and regulation: \n proceed to Simulation 2 for the outdoor first-aid stage.\n";
             if (peakBand == StressChangeIndexCalculator.StressBand.High)
-                return "Take a short Environment Learning tour to orient yourself, then retry Simulation 1 with box breathing between tasks.";
+                return "Take a short Environment Learning tour to orient yourself, \n then retry Simulation 1 with box breathing between tasks.\n";
             if (peakBand == StressChangeIndexCalculator.StressBand.Moderate)
-                return "When ready, move to Simulation 2 — use the breathing tip before starting the outdoor stage.";
-            return "You regulated well — proceed to Simulation 2 for a harder sustained-stress scenario.";
+                return "When ready, move to Simulation 2: \n use the breathing tip before starting the outdoor stage.\n";
+            return "You regulated well: \n proceed to Simulation 2 for a harder sustained-stress scenario.\n";
         }
 
         if (peakBand == StressChangeIndexCalculator.StressBand.High)
-            return "Repeat Simulation 2 after a recovery break, or run Environment Learning to reduce cognitive load from navigation.";
+            return "Repeat Simulation 2 after a recovery break, \n or run Environment Learning to reduce cognitive load from navigation.\n";
 
         var priorSim1 = SessionHistoryStore.GetLatestPriorSim1();
         SessionHistoryStore.TryGetCurrentSession(out var current);
         if (current != null && priorSim1 == null && current.sim1PeakSci >= 50f)
-            return "Simulation 1 peak was high earlier today — consider repeating it with breathing practice before another full session.";
+            return "Simulation 1 peak was high earlier today: \nconsider repeating it with breathing practice before another full session.\n";
 
         if (outcome != null && outcome.WasFast && outcome.timeLimitSeconds > 0f)
-            return "Strong finish — schedule another full session later this week to track progress.";
+            return "Strong finish: schedule another full session later this week to track progress.\n";
 
-        return "Schedule another full session later this week to track whether peak SCI and recovery keep improving.";
+        return "Schedule another full session later this week to track whether peak SCI \n and recovery keep improving.\n";
     }
 
     static string BuildTimeMetricsLine(SimulationRunOutcome outcome)
@@ -664,7 +664,7 @@ public static class StressRecommendations
             {
                 if (sb.Length > 0)
                     sb.AppendLine();
-                sb.Append("All tasks completed on time");
+                sb.Append("All tasks completed on time\n");
             }
 
             return sb.ToString().TrimEnd();
@@ -697,16 +697,16 @@ public static class StressRecommendations
         if (outcome.timedOut)
         {
             int pct = Mathf.RoundToInt(outcome.completionRatio * 100f);
-            return $"Time: {elapsed} / {limit} — not finished ({pct}% done)";
+            return $"Time: {elapsed} / {limit} : not finished ({pct}% done)";
         }
 
         if (outcome.WasFast)
-            return $"Time: {elapsed} / {limit} — finished early";
+            return $"Time: {elapsed} / {limit} : finished early";
 
         if (outcome.WasSlow)
-            return $"Time: {elapsed} / {limit} — slow finish";
+            return $"Time: {elapsed} / {limit} : slow finish";
 
-        return $"Time: {elapsed} / {limit} — completed";
+        return $"Time: {elapsed} / {limit}: completed";
     }
 
     static string BuildTimeAdvice(SimulationRunOutcome outcome, SimulationStage stage)
@@ -715,27 +715,27 @@ public static class StressRecommendations
             return string.Empty;
 
         if (outcome.disqualified)
-            return "Simulation stopped — too many task steps exceeded their time limit. Start the simulation again from the beginning.";
+            return "Simulation stopped: too many task steps exceeded their time limit.\n Start the simulation again from the beginning.\n";
 
         if (outcome.taskStrikeCount > 0 && !outcome.disqualified)
-            return $"Warning: {outcome.taskStrikeCount}/3 task time violations — move faster on the current objective.";
+            return $"Warning: {outcome.taskStrikeCount}/3 task time violations:\n move faster on the current objective.\n";
 
         if (outcome.timedOut)
         {
             int pct = Mathf.RoundToInt(outcome.completionRatio * 100f);
             return stage == SimulationStage.Sim1
-                ? $"Mission not finished in time ({pct}% done) — retry with one clear task at a time."
-                : "Mission not finished in time — follow kit → contact → report → treatment in order.";
+                ? $"Mission not finished in time ({pct}% done): retry with one clear task at a time.\n"
+                : "Mission not finished in time: follow kit → contact → report → treatment in order.\n";
         }
 
         if (outcome.missionCompleted && outcome.taskStrikeCount == 0)
-            return "All task steps completed within their time limits — good pace.";
+            return "All task steps completed within their time limits: good pace.\n";
 
         if (outcome.WasFast)
-            return "Strong pace — you finished with time to spare while staying focused.";
+            return "Strong pace: you finished with time to spare while staying focused.\n";
 
         if (outcome.WasSlow)
-            return "You completed the mission, but used most of the allowed time — plan your next moves before moving.";
+            return "You completed the mission, but used most of the allowed time :\n plan your next moves before moving.\n";
 
         return string.Empty;
     }
@@ -753,7 +753,7 @@ public static class StressRecommendations
         if (options.showTimeAdvice && outcome != null && outcome.timedOut)
             return BuildTimeAdvice(outcome, stage);
 
-        return "Run the simulation again to get feedback.";
+        return "Run the simulation again to get feedback.\n";
     }
 
     static string FormatDuration(float seconds)
