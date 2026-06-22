@@ -209,6 +209,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _sim1Phase = Sim1MissionPhase.RunToShelter;
+        SimulationChartMarkers.Record("Close entrance door");
         PlayObjectiveSuccessCue();
         PlayAllItemsCollectedVoice();
         if (UsesMissionStatusPanel())
@@ -509,6 +510,7 @@ public class GameManager : MonoBehaviour
 
         _lightsTurnedOff = true;
         _sim1Phase = Sim1MissionPhase.CloseDoor;
+        SimulationChartMarkers.Record("Turn off lights");
         PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
@@ -531,6 +533,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _firstAidKitCollected = true;
+        SimulationChartMarkers.Record("Collect first aid kit");
         PlayObjectiveSuccessCue();
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
@@ -544,6 +547,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _casualtyContacted = true;
+        SimulationChartMarkers.Record("Contact casualty");
         PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
@@ -563,6 +567,7 @@ public class GameManager : MonoBehaviour
             return;
 
         _emergencyReported = true;
+        SimulationChartMarkers.Record("Dial 101");
         PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
@@ -647,6 +652,7 @@ public class GameManager : MonoBehaviour
         {
             _itemsCollectionComplete = true;
             _sim1Phase = Sim1MissionPhase.TurnOffLights;
+            SimulationChartMarkers.Record("Collect supplies");
             if (UsesMissionStatusPanel())
             {
                 SetMissionCompletedLine(
@@ -831,6 +837,7 @@ public class GameManager : MonoBehaviour
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
+        SimulationChartMarkers.Record("Treat casualty");
         PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
@@ -975,6 +982,7 @@ public class GameManager : MonoBehaviour
 
         _exitDoorClosed = true;
         _shelterReached = true;
+        SimulationChartMarkers.Record("Reach Mamad shelter");
         PlayObjectiveSuccessCue();
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();

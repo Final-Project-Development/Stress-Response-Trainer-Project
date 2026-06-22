@@ -274,6 +274,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
         _receiverLifted = true;
         _step = BoothStep.Dial101;
         _dialedDigits = "";
+        SimulationChartMarkers.Record("Lift receiver");
         ShowBoothStep(
             _flow != null ? _flow.sim2PhoneReceiverLiftedCompleted : "Receiver lifted.",
             FormatPhoneDialRemaining(0));
@@ -611,6 +612,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
                 }
 
                 _step = BoothStep.TakeHandset;
+                SimulationChartMarkers.Record("Insert coin");
                 ShowBoothStep(
                     _flow != null ? _flow.sim2PhoneCoinInsertedCompleted : "Coin inserted.",
                     _flow != null ? _flow.sim2PhoneCoinInsertedObjective : "Press E on the receiver.");
@@ -635,6 +637,7 @@ public class PublicPhoneBoothMission : MonoBehaviour
             Debug.LogWarning("PublicPhoneBoothMission: DSUKPhoneBox missing on telephone root.");
 
         _step = BoothStep.InsertCoin;
+        SimulationChartMarkers.Record("Open phone booth door");
         SetPassageAllowsWalk(true);
         StartCoroutine(EnablePassageAfterDoorOpens());
         ShowBoothStep(

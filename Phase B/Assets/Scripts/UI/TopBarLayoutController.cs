@@ -25,8 +25,15 @@ public class TopBarLayoutController : MonoBehaviour
     [SerializeField] private float rightPadding = 26f;
     [SerializeField] private float rightSpacing = 92f;
     [SerializeField] private float watchStatusGapFromButtons = 28f;
+    [Tooltip("When enabled, BtnProfile keeps its RectTransform from the Editor.")]
+    [SerializeField] private bool preserveManualProfileLayout = true;
+    [Tooltip("When enabled, status_watch keeps its RectTransform from the Editor.")]
+    [SerializeField] private bool preserveManualWatchStatusLayout = true;
     [SerializeField] private bool applyInStart = true;
     [SerializeField] private bool applyInLateUpdateOnce = true;
+
+    public bool PreserveManualProfileLayout => preserveManualProfileLayout;
+    public bool PreserveManualWatchStatusLayout => preserveManualWatchStatusLayout;
 
     bool _appliedLate;
     string _lastDisplayedName;
@@ -89,8 +96,10 @@ public class TopBarLayoutController : MonoBehaviour
         PlaceRightButton(helpButton, 0f);
         PlaceRightButton(backButton, rightSpacing);
         PlaceRightButton(pauseButton, rightSpacing * 2f);
-        PlaceRightButton(profileButton, rightSpacing * 3f);
-        PlaceWatchStatusLeftOfButtons();
+        if (!preserveManualProfileLayout)
+            PlaceRightButton(profileButton, rightSpacing * 3f);
+        if (!preserveManualWatchStatusLayout)
+            PlaceWatchStatusLeftOfButtons();
     }
 
     void ResolveCharacterNameText()

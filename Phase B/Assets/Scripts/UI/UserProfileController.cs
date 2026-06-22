@@ -223,7 +223,7 @@ public class UserProfileController : MonoBehaviour
 
         if (sessionsChart != null)
         {
-            sessionsChart.SetFromValues(sciValues, sessionsChart.maxSciDisplay);
+            sessionsChart.SetFromSciPoints(sciValues);
             if (preserveManualMySessionsLayout)
                 ScheduleManualChartRefresh();
             else
@@ -465,7 +465,7 @@ public class UserProfileController : MonoBehaviour
             values = new List<float> { values[0], values[0] };
 
         if (values.Count > 0)
-            sessionsChart.SetFromValues(values, sessionsChart.maxSciDisplay);
+            sessionsChart.SetFromSciPoints(values);
 
         _refreshChartRoutine = null;
     }

@@ -211,110 +211,151 @@ public static class StressRecommendations
         float maxHrvMs = 0f,
         float avgHrvMs = 0f,
         IReadOnlyList<float> sciHistory = null,
-        float sampleIntervalSeconds = 0.4f)
+        float sampleIntervalSeconds = 0.4f,
+        SimulationResultsPanelsConfig display = null)
     {
+        ResultsPanelDisplayOptions options = display?.results ?? ResultsPanelDisplayOptions.AllEnabled();
         var peakBand = StressChangeIndexCalculator.Classify(peakSci);
         string band = StressChangeIndexCalculator.BandLabel(peakBand);
-        string timeLine = BuildTimeMetricsLine(outcome);
         var sb = new StringBuilder();
 
-        if (!string.IsNullOrEmpty(timeLine))
-            sb.AppendLine(timeLine);
-
-        var prior = stage == SimulationStage.Sim1
-            ? SessionHistoryStore.GetLatestPriorSim1()
-            : SessionHistoryStore.GetLatestPriorSim2();
-        string paceLine = BuildTimeProgressComparison(outcome, prior, stage);
-        if (!string.IsNullOrEmpty(paceLine))
-            sb.AppendLine(paceLine);
-
-        float highStressSeconds = outcome != null && outcome.highStressSeconds > 0f
-            ? outcome.highStressSeconds
-            : ComputeHighStressSeconds(sciHistory, sampleIntervalSeconds);
-        if (highStressSeconds > 0f)
+        if (options.showRunTimeAndStatus)
         {
-            string stressTimeLine = $"High-stress time: {highStressSeconds:F0}s (SCI ≥ {HighStressSciThreshold:F0}%)";
-            if (prior != null)
+            string timeLine = BuildTimeMetricsLine(outcome);
+            if (!string.IsNullOrEmpty(timeLine))
+                sb.AppendLine(timeLine);
+        }
+
+        if (options.showMissionPaceComparison)
+        {
+            var prior = stage == SimulationStage.Sim1
+                ? SessionHistoryStore.GetLatestPriorSim1()
+                : SessionHistoryStore.GetLatestPriorSim2();
+            string paceLine = BuildTimeProgressComparison(outcome, prior, stage);
+            if (!string.IsNullOrEmpty(paceLine))
+                sb.AppendLine(paceLine);
+        }
+
+        if (options.showHighStressTime)
+        {
+            float highStressSeconds = outcome != null && outcome.highStressSeconds > 0f
+                ? outcome.highStressSeconds
+                : ComputeHighStressSeconds(sciHistory, sampleIntervalSeconds);
+            if (highStressSeconds > 0f)
             {
-                float priorHighStress = PriorHighStressSeconds(prior, stage);
-                if (priorHighStress > 0f)
+                string stressTimeLine = $"High-stress time: {highStressSeconds:F0}s (SCI ≥ {HighStressSciThreshold:F0}%)";
+                var prior = stage == SimulationStage.Sim1
+                    ? SessionHistoryStore.GetLatestPriorSim1()
+                    : SessionHistoryStore.GetLatestPriorSim2();
+                if (prior != null)
                 {
-                    float delta = highStressSeconds - priorHighStress;
-                    if (Mathf.Abs(delta) >= TimeTrendThresholdSeconds)
+                    float priorHighStress = PriorHighStressSeconds(prior, stage);
+                    if (priorHighStress > 0f)
                     {
-                        stressTimeLine += delta < 0f
-                            ? $" — {delta:F0}s vs last run"
-                            : $" — +{delta:F0}s vs last run";
+                        float delta = highStressSeconds - priorHighStress;
+                        if (Mathf.Abs(delta) >= TimeTrendThresholdSeconds)
+                        {
+                            stressTimeLine += delta < 0f
+                                ? $" — {delta:F0}s vs last run"
+                                : $" — +{delta:F0}s vs last run";
+                        }
                     }
                 }
-            }
 
-            sb.AppendLine(stressTimeLine);
+                sb.AppendLine(stressTimeLine);
+            }
         }
 
         if (stage == SimulationStage.Sim1)
         {
-            sb.Append($"Baseline HRV: {baselineHrvMs:F0} ms\n");
-            sb.Append($"Peak SCI: {peakSci:F0}% ({band})\n");
-            sb.Append($"Avg SCI: {meanSci:F0}%");
+            if (options.showBaselineHrv)
+                sb.AppendLine($"Baseline HRV: {baselineHrvMs:F0} ms");
+            if (options.showPeakSci)
+                sb.AppendLine($"Peak SCI: {peakSci:F0}% ({band})");
+            if (options.showAvgSci)
+                sb.AppendLine($"Avg SCI: {meanSci:F0}%");
             return sb.ToString().TrimEnd();
         }
 
-        if (minHrvMs > 0f && maxHrvMs > 0f)
-        {
-            sb.Append($"Peak SCI: {peakSci:F0}% ({band})\n");
-            sb.Append($"Avg SCI: {meanSci:F0}%\n");
-            sb.Append($"HRV: {minHrvMs:F0}–{maxHrvMs:F0} ms (avg {avgHrvMs:F0})");
-            return sb.ToString().TrimEnd();
-        }
+        if (options.showPeakSci)
+            sb.AppendLine($"Peak SCI: {peakSci:F0}% ({band})");
+        if (options.showAvgSci)
+            sb.AppendLine($"Avg SCI: {meanSci:F0}%");
+        if (options.showHrvRange && minHrvMs > 0f && maxHrvMs > 0f)
+            sb.AppendLine($"HRV: {minHrvMs:F0}–{maxHrvMs:F0} ms (avg {avgHrvMs:F0})");
 
-        sb.Append($"Peak SCI: {peakSci:F0}% ({band})\n");
-        sb.Append($"Avg SCI: {meanSci:F0}%");
         return sb.ToString().TrimEnd();
     }
 
-    /// <summary>Recommendations tab only — one tip and one next step. No headers or footers.</summary>
+    /// <summary>Recommendations tab only — configurable tips and next steps.</summary>
     public static string BuildRecommendationsTabOnly(
         IReadOnlyList<float> sciHistory,
         SimulationStage stage,
-        SimulationRunOutcome outcome = null)
+        SimulationRunOutcome outcome = null,
+        SimulationResultsPanelsConfig display = null)
     {
+        RecommendationsPanelDisplayOptions options =
+            display?.recommendations ?? RecommendationsPanelDisplayOptions.AllEnabled();
+
         if (sciHistory == null || sciHistory.Count == 0)
-            return BuildEmptyRunFeedback(outcome, stage);
+            return BuildEmptyRunFeedback(outcome, stage, options);
 
         float peak = sciHistory.Max();
+        float mean = sciHistory.Average();
         var sb = new StringBuilder();
 
-        string timeTip = BuildTimeAdvice(outcome, stage);
-        if (!string.IsNullOrEmpty(timeTip))
-            sb.AppendLine(timeTip);
-
-        float mean = sciHistory.Average();
-        string progressHint = FirstLine(BuildProgressSummary(peak, mean, -1f, stage, outcome));
-        if (!string.IsNullOrEmpty(progressHint) &&
-            (progressHint.IndexOf("pace", StringComparison.OrdinalIgnoreCase) >= 0 ||
-             progressHint.IndexOf("stress", StringComparison.OrdinalIgnoreCase) >= 0 ||
-             progressHint.IndexOf("SCI", StringComparison.Ordinal) >= 0))
+        if (options.showTimeAdvice)
         {
-            if (sb.Length > 0)
-                sb.AppendLine();
-            sb.AppendLine(progressHint);
+            string timeTip = BuildTimeAdvice(outcome, stage);
+            if (!string.IsNullOrEmpty(timeTip))
+                sb.AppendLine(timeTip);
         }
 
-        string firstTip = FirstLine(BuildBehavioralTips(sciHistory));
-        if (!string.IsNullOrEmpty(firstTip))
+        if (options.showProgressHint)
         {
-            if (sb.Length > 0)
-                sb.AppendLine();
-            sb.AppendLine(firstTip);
+            string progressHint = FirstLine(BuildProgressSummary(peak, mean, -1f, stage, outcome));
+            if (!string.IsNullOrEmpty(progressHint) &&
+                (progressHint.IndexOf("pace", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 progressHint.IndexOf("stress", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 progressHint.IndexOf("SCI", StringComparison.Ordinal) >= 0))
+            {
+                if (sb.Length > 0)
+                    sb.AppendLine();
+                sb.AppendLine(progressHint);
+            }
         }
 
-        string next = BuildNextStepAdvice(peak, stage, outcome);
-        if (!string.IsNullOrEmpty(next))
+        if (options.showBehavioralTip)
         {
-            if (sb.Length > 0)
-                sb.AppendLine();
-            sb.AppendLine(next);
+            string firstTip = FirstLine(BuildBehavioralTips(sciHistory));
+            if (!string.IsNullOrEmpty(firstTip))
+            {
+                if (sb.Length > 0)
+                    sb.AppendLine();
+                sb.AppendLine(firstTip);
+            }
+        }
+
+        if (options.showSessionComparison && stage == SimulationStage.Sim2)
+        {
+            string comparison = FirstLine(SessionHistoryStore.BuildPhysiologicalRecoverySummary(peak, mean));
+            if (!string.IsNullOrEmpty(comparison))
+            {
+                if (sb.Length > 0)
+                    sb.AppendLine();
+                sb.AppendLine(comparison);
+            }
+        }
+
+        if (options.showNextStep)
+        {
+            string next = BuildNextStepAdvice(peak, stage, outcome);
+            if (!string.IsNullOrEmpty(next))
+            {
+                if (sb.Length > 0)
+                    sb.AppendLine();
+                sb.AppendLine(next);
+            }
         }
 
         return sb.ToString().TrimEnd();
@@ -699,12 +740,17 @@ public static class StressRecommendations
         return string.Empty;
     }
 
-    static string BuildEmptyRunFeedback(SimulationRunOutcome outcome, SimulationStage stage)
+    static string BuildEmptyRunFeedback(
+        SimulationRunOutcome outcome,
+        SimulationStage stage,
+        RecommendationsPanelDisplayOptions options = null)
     {
-        if (outcome != null && outcome.disqualified)
+        options ??= RecommendationsPanelDisplayOptions.AllEnabled();
+
+        if (options.showTimeAdvice && outcome != null && outcome.disqualified)
             return BuildTimeAdvice(outcome, stage);
 
-        if (outcome != null && outcome.timedOut)
+        if (options.showTimeAdvice && outcome != null && outcome.timedOut)
             return BuildTimeAdvice(outcome, stage);
 
         return "Run the simulation again to get feedback.";

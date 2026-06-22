@@ -20,6 +20,13 @@ public static class TextureLineChartRenderer
         public int plotRight;
         public int plotTop;
         public int plotBottom;
+        public bool useStressBandLineColors;
+        public bool drawStressBandZones;
+        public Color stressBandLowColor;
+        public Color stressBandModerateColor;
+        public Color stressBandHighColor;
+        public float stressBandModerateThreshold;
+        public float stressBandHighThreshold;
 
         public static Style Default => new Style
         {
@@ -32,8 +39,29 @@ public static class TextureLineChartRenderer
             plotLeft = 60,
             plotRight = 20,
             plotTop = 20,
-            plotBottom = 50
+            plotBottom = 50,
+            useStressBandLineColors = false,
+            drawStressBandZones = false,
+            stressBandLowColor = new Color(0.35f, 0.88f, 0.48f, 1f),
+            stressBandModerateColor = new Color(0.98f, 0.82f, 0.22f, 1f),
+            stressBandHighColor = new Color(0.95f, 0.32f, 0.28f, 1f),
+            stressBandModerateThreshold = 20f,
+            stressBandHighThreshold = 50f
         };
+    }
+
+    public readonly struct MissionMarker
+    {
+        public readonly int SampleIndex;
+        public readonly float SecondsFromStart;
+        public readonly string Label;
+
+        public MissionMarker(int sampleIndex, float secondsFromStart, string label)
+        {
+            SampleIndex = sampleIndex;
+            SecondsFromStart = secondsFromStart;
+            Label = label ?? string.Empty;
+        }
     }
 
     public readonly struct TimeValuePoint
@@ -99,6 +127,19 @@ public static class TextureLineChartRenderer
         float yMin,
         float yMax)
     {
+        return RenderTimeSeries(points, durationSeconds, width, height, style, yMin, yMax, null);
+    }
+
+    public static Texture2D RenderTimeSeries(
+        IReadOnlyList<TimeValuePoint> points,
+        double durationSeconds,
+        int width,
+        int height,
+        Style style,
+        float yMin,
+        float yMax,
+        IReadOnlyList<MissionMarker> missionMarkers)
+    {
         if (points == null || points.Count < 2 || width < 8 || height < 8)
             return RenderEmpty(width, height, style);
 
@@ -113,6 +154,9 @@ public static class TextureLineChartRenderer
         int plotTop = height - style.plotTop;
         int plotWidth = plotRight - plotLeft;
         int plotHeight = plotTop - plotBottom;
+
+        if (style.drawStressBandZones)
+            DrawStressBandZones(texture, plotLeft, plotRight, plotBottom, plotTop, yMin, yMax, style);
 
         DrawGrid(texture, plotLeft, plotRight, plotBottom, plotTop, style.gridColor);
         DrawLine(texture, plotLeft, plotBottom, plotRight, plotBottom, style.axisColor);
@@ -130,11 +174,23 @@ public static class TextureLineChartRenderer
             var current = new Vector2Int(x, y);
 
             if (previous.HasValue)
-                DrawThickLine(texture, previous.Value.x, previous.Value.y, current.x, current.y, style.lineColor, style.chartLineWidth);
+            {
+                float segmentValue = Mathf.Max(points[i - 1].Value, point.Value);
+                Color32 lineColor = style.useStressBandLineColors
+                    ? ResolveStressBandColor(segmentValue, style)
+                    : style.lineColor;
+                DrawThickLine(texture, previous.Value.x, previous.Value.y, current.x, current.y, lineColor, style.chartLineWidth);
+            }
 
-            DrawSmallPoint(texture, x, y, style.pointColor);
+            Color32 pointColor = style.useStressBandLineColors
+                ? ResolveStressBandColor(point.Value, style)
+                : style.pointColor;
+            DrawMarkerPoint(texture, x, y, pointColor);
             previous = current;
         }
+
+        if (missionMarkers != null && missionMarkers.Count > 0)
+            DrawMissionMarkers(texture, points, missionMarkers, durationSeconds, plotLeft, plotRight, plotBottom, plotTop, yMin, yMax);
 
         texture.Apply();
         return texture;
@@ -217,11 +273,122 @@ public static class TextureLineChartRenderer
 
     private static void DrawSmallPoint(Texture2D texture, int centerX, int centerY, Color32 color)
     {
-        for (int y = centerY - 1; y <= centerY + 1; y++)
+        DrawMarkerPoint(texture, centerX, centerY, color, 1);
+    }
+
+    private static void DrawMarkerPoint(Texture2D texture, int centerX, int centerY, Color32 color, int radius = 3)
+    {
+        for (int y = centerY - radius; y <= centerY + radius; y++)
         {
-            for (int x = centerX - 1; x <= centerX + 1; x++)
-                SetPixelSafe(texture, x, y, color);
+            for (int x = centerX - radius; x <= centerX + radius; x++)
+            {
+                if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= radius * radius + radius)
+                    SetPixelSafe(texture, x, y, color);
+            }
         }
+    }
+
+    private static Color32 ResolveStressBandColor(float sciValue, Style style)
+    {
+        if (sciValue >= style.stressBandHighThreshold)
+            return style.stressBandHighColor;
+        if (sciValue >= style.stressBandModerateThreshold)
+            return style.stressBandModerateColor;
+        return style.stressBandLowColor;
+    }
+
+    private static void DrawStressBandZones(
+        Texture2D texture,
+        int plotLeft,
+        int plotRight,
+        int plotBottom,
+        int plotTop,
+        float yMin,
+        float yMax,
+        Style style)
+    {
+        FillBandZone(texture, plotLeft, plotRight, plotBottom, plotTop, yMin, yMax, yMin, style.stressBandModerateThreshold, WithAlpha(style.stressBandLowColor, 0.12f));
+        FillBandZone(texture, plotLeft, plotRight, plotBottom, plotTop, yMin, yMax, style.stressBandModerateThreshold, style.stressBandHighThreshold, WithAlpha(style.stressBandModerateColor, 0.12f));
+        FillBandZone(texture, plotLeft, plotRight, plotBottom, plotTop, yMin, yMax, style.stressBandHighThreshold, yMax, WithAlpha(style.stressBandHighColor, 0.14f));
+    }
+
+    private static void FillBandZone(
+        Texture2D texture,
+        int plotLeft,
+        int plotRight,
+        int plotBottom,
+        int plotTop,
+        float yMin,
+        float yMax,
+        float bandMinValue,
+        float bandMaxValue,
+        Color32 fill)
+    {
+        float lowNorm = Mathf.Clamp01((bandMinValue - yMin) / (yMax - yMin));
+        float highNorm = Mathf.Clamp01((bandMaxValue - yMin) / (yMax - yMin));
+        int yLow = plotBottom + Mathf.RoundToInt(lowNorm * (plotTop - plotBottom));
+        int yHigh = plotBottom + Mathf.RoundToInt(highNorm * (plotTop - plotBottom));
+        int bottom = Mathf.Min(yLow, yHigh);
+        int top = Mathf.Max(yLow, yHigh);
+
+        for (int y = bottom; y <= top; y++)
+        {
+            for (int x = plotLeft; x <= plotRight; x++)
+                SetPixelSafe(texture, x, y, fill);
+        }
+    }
+
+    private static Color32 WithAlpha(Color color, float alpha)
+    {
+        color.a = alpha;
+        return color;
+    }
+
+    private static void DrawMissionMarkers(
+        Texture2D texture,
+        IReadOnlyList<TimeValuePoint> points,
+        IReadOnlyList<MissionMarker> missionMarkers,
+        double durationSeconds,
+        int plotLeft,
+        int plotRight,
+        int plotBottom,
+        int plotTop,
+        float yMin,
+        float yMax)
+    {
+        int plotWidth = plotRight - plotLeft;
+        int plotHeight = plotTop - plotBottom;
+        var markerLine = new Color32(255, 220, 120, 140);
+        var markerRing = new Color32(20, 24, 32, 230);
+        var markerDot = new Color32(255, 196, 64, 255);
+
+        for (int i = 0; i < missionMarkers.Count; i++)
+        {
+            MissionMarker marker = missionMarkers[i];
+            int sampleIndex = Mathf.Clamp(marker.SampleIndex, 0, points.Count - 1);
+            TimeValuePoint point = points[sampleIndex];
+
+            float seconds = marker.SecondsFromStart > 0f
+                ? marker.SecondsFromStart
+                : (float)point.SecondsFromStart;
+            float xNorm = Mathf.Clamp01((float)(seconds / durationSeconds));
+            float yNorm = Mathf.Clamp01((point.Value - yMin) / (yMax - yMin));
+            int x = plotLeft + Mathf.RoundToInt(xNorm * plotWidth);
+            int y = plotBottom + Mathf.RoundToInt(yNorm * plotHeight);
+
+            DrawDashedVerticalLine(texture, x, plotBottom, plotTop, markerLine);
+            DrawMarkerPoint(texture, x, y, markerRing, 6);
+            DrawMarkerPoint(texture, x, y, markerDot, 4);
+        }
+    }
+
+    private static void DrawDashedVerticalLine(Texture2D texture, int x, int y0, int y1, Color32 color)
+    {
+        if (y1 < y0)
+            (y0, y1) = (y1, y0);
+
+        for (int y = y0; y <= y1; y += 4)
+            DrawLine(texture, x, y, x, Mathf.Min(y + 2, y1), color);
     }
 
     private static void DrawLine(Texture2D texture, int x0, int y0, int x1, int y1, Color32 color)

@@ -36,4 +36,16 @@ public static class StressChangeIndexCalculator
             _ => "-"
         };
     }
+
+    public static Color GetBandColor(StressBand band)
+    {
+        return band switch
+        {
+            StressBand.High => new Color(0.95f, 0.32f, 0.28f, 1f),
+            StressBand.Moderate => new Color(0.98f, 0.82f, 0.22f, 1f),
+            _ => new Color(0.35f, 0.88f, 0.48f, 1f)
+        };
+    }
+
+    public static Color GetBandColor(float sciPercent) => GetBandColor(Classify(sciPercent));
 }

@@ -202,6 +202,13 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("Optional: when both Sim 2 metrics + recommendations are set, the summary is split into two columns.")]
     public TextMeshProUGUI sim2ResultsMetricsText;
     public TextMeshProUGUI sim2ResultsRecommendationsText;
+
+    [Header("Results panel lines (choose per simulation)")]
+    [Tooltip("Which lines appear on the Result and Recommendations tabs for Simulation 1.")]
+    public SimulationResultsPanelsConfig sim1ResultsPanels = SimulationResultsPanelsConfig.DefaultSim1();
+    [Tooltip("Which lines appear on the Result and Recommendations tabs for Simulation 2.")]
+    public SimulationResultsPanelsConfig sim2ResultsPanels = SimulationResultsPanelsConfig.DefaultSim2();
+
     public TextMeshProUGUI simulationActiveHudText;
 
     [Header("Per-task timer (Sim 1 & 2 active only)")]
@@ -956,7 +963,7 @@ public class TrainingFlowController : MonoBehaviour
 
         var outcome = BuildSim1RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation1Results;
-        ApplySimulation1ResultGraphs();
+        SafeApplySimulation1ResultGraphs();
 
         if (physiology != null && recorder != null)
         {
@@ -971,7 +978,8 @@ public class TrainingFlowController : MonoBehaviour
             string sim1Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
                 recorder.SciHistory,
                 StressRecommendations.SimulationStage.Sim1,
-                outcome);
+                outcome,
+                sim1ResultsPanels);
 
             if (UseSim1SplitColumns())
             {
@@ -985,7 +993,8 @@ public class TrainingFlowController : MonoBehaviour
                     outcome,
                     baselineHrvMs: physiology.HrvBaselineMs,
                     sciHistory: recorder.SciHistory,
-                    sampleIntervalSeconds: recorder.sampleIntervalSeconds);
+                    sampleIntervalSeconds: recorder.sampleIntervalSeconds,
+                    display: sim1ResultsPanels);
 
                 LayoutSim1ResultsPanels();
                 sim1ResultsMetricsText.text = metrics;
@@ -2152,11 +2161,13 @@ public class TrainingFlowController : MonoBehaviour
             ? StressRecommendations.BuildRecommendationsTabOnly(
                 recorder.SciHistory,
                 StressRecommendations.SimulationStage.Sim2,
-                outcome)
+                outcome,
+                sim2ResultsPanels)
             : StressRecommendations.BuildRecommendationsTabOnly(
                 null,
                 StressRecommendations.SimulationStage.Sim2,
-                outcome);
+                outcome,
+                sim2ResultsPanels);
         float minHrv = 0f;
         float maxHrv = 0f;
         float avgHrv = 0f;
@@ -2181,7 +2192,8 @@ public class TrainingFlowController : MonoBehaviour
                 maxHrvMs: maxHrv,
                 avgHrvMs: avgHrv,
                 sciHistory: recorder?.SciHistory,
-                sampleIntervalSeconds: recorder?.sampleIntervalSeconds ?? 0.4f);
+                sampleIntervalSeconds: recorder?.sampleIntervalSeconds ?? 0.4f,
+                display: sim2ResultsPanels);
 
             LayoutSim2ResultsPanels();
             sim2ResultsMetricsText.text = metrics;
@@ -2211,10 +2223,38 @@ public class TrainingFlowController : MonoBehaviour
             sim2BriefingBodyText.text = string.Empty;
         }
 
-        ApplySimulation2ResultGraphs();
+        SafeApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
         ApplySim2ResultsTab(ResultsTab.Result);
+    }
+
+    private void SafeApplySimulation1ResultGraphs()
+    {
+        try
+        {
+            ApplySimulation1ResultGraphs();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Simulation 1 results graphs failed: {ex.Message}\n{ex.StackTrace}");
+            resultsGraph?.Clear();
+            sim1HrvResultsGraph?.Clear();
+        }
+    }
+
+    private void SafeApplySimulation2ResultGraphs()
+    {
+        try
+        {
+            ApplySimulation2ResultGraphs();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Simulation 2 results graphs failed: {ex.Message}\n{ex.StackTrace}");
+            sim2SciResultsGraph?.Clear();
+            sim2HrvResultsGraph?.Clear();
+        }
     }
 
     // Wire these to the three tab buttons in the Inspector (Simulation 1 panel).
@@ -2223,7 +2263,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_ShowSim1PressureGraphTab()
     {
         ApplySim1ResultsTab(ResultsTab.PressureGraph);
-        ApplySimulation1ResultGraphs();
+        SafeApplySimulation1ResultGraphs();
     }
 
     // Wire these to the three tab buttons in the Inspector (Simulation 2 panel).
@@ -2232,7 +2272,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_ShowSim2PressureGraphTab()
     {
         ApplySim2ResultsTab(ResultsTab.PressureGraph);
-        ApplySimulation2ResultGraphs();
+        SafeApplySimulation2ResultGraphs();
     }
 
     private void ApplySimulation1ResultGraphs()
@@ -2251,8 +2291,12 @@ public class TrainingFlowController : MonoBehaviour
             if (recorder.SciHistory.Count > 0)
             {
                 resultsGraph.chartTitle = "SCI";
-                resultsGraph.SetFromSciPoints(recorder.SciHistory, interval);
+                resultsGraph.useFixedYRange = true;
+                resultsGraph.fixedYMin = 0f;
+                resultsGraph.fixedYMax = resultsGraph.maxSciDisplay;
+                resultsGraph.SetFromSciPointsWithMarkers(recorder.SciHistory, recorder.MissionMarkers, interval);
                 resultsGraph.SetInfoText(string.Empty);
+                resultsGraph.RefreshRenderToFitLayout();
             }
             else
             {
@@ -2291,14 +2335,33 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         float interval = recorder.sampleIntervalSeconds;
+        bool sharedSciAndHrvGraph = sim2SciResultsGraph != null
+            && sim2HrvResultsGraph != null
+            && ReferenceEquals(sim2SciResultsGraph, sim2HrvResultsGraph);
 
         if (sim2SciResultsGraph != null)
         {
             if (recorder.SciHistory.Count > 0)
             {
                 sim2SciResultsGraph.chartTitle = "SCI";
-                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay, interval);
+                sim2SciResultsGraph.useFixedYRange = true;
+                sim2SciResultsGraph.fixedYMin = 0f;
+                sim2SciResultsGraph.fixedYMax = sim2SciGraphMaxDisplay;
+                sim2SciResultsGraph.SetFromSciPointsWithMarkers(
+                    recorder.SciHistory,
+                    sim2SciGraphMaxDisplay,
+                    recorder.MissionMarkers,
+                    interval);
                 sim2SciResultsGraph.SetInfoText(string.Empty);
+                sim2SciResultsGraph.RefreshRenderToFitLayout();
+            }
+            else if (sharedSciAndHrvGraph && recorder.HrvHistory.Count > 0)
+            {
+                sim2SciResultsGraph.chartTitle = "HRV";
+                sim2SciResultsGraph.useFixedYRange = false;
+                sim2SciResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay, interval);
+                sim2SciResultsGraph.SetInfoText(string.Empty);
+                sim2SciResultsGraph.RefreshRenderToFitLayout();
             }
             else
             {
@@ -2308,6 +2371,12 @@ public class TrainingFlowController : MonoBehaviour
 
         if (sim2HrvResultsGraph != null)
         {
+            if (sharedSciAndHrvGraph)
+            {
+                // Single results chart object — SCI (with mission markers) already applied above.
+                return;
+            }
+
             if (recorder.HrvHistory.Count > 0)
             {
                 sim2HrvResultsGraph.chartTitle = "HRV";

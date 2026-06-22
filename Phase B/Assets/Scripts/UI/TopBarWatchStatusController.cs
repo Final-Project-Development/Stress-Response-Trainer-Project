@@ -60,7 +60,7 @@ public class TopBarWatchStatusController : MonoBehaviour
     {
         ApplyRuntimeTextDefaults();
         Refresh(true);
-        _layout?.ApplyLayout();
+        RequestToolbarLayoutRefresh();
     }
 
     void Start()
@@ -159,7 +159,15 @@ public class TopBarWatchStatusController : MonoBehaviour
             };
         }
 
-        _layout?.ApplyLayout();
+        RequestToolbarLayoutRefresh();
+    }
+
+    void RequestToolbarLayoutRefresh()
+    {
+        if (_layout == null || _layout.PreserveManualWatchStatusLayout)
+            return;
+
+        _layout.ApplyLayout();
     }
 
     void ResizeContainerToText()

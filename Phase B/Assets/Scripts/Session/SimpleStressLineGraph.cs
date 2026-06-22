@@ -51,6 +51,22 @@ public class SimpleStressLineGraph : MonoBehaviour
     public float fixedYMax = 0f;
     public AxisXLabelMode xAxisLabelMode = AxisXLabelMode.RunIndex;
 
+    [Header("SCI stress bands")]
+    [Tooltip("Color line segments green / yellow / red by SCI thresholds.")]
+    public bool useStressBandLineColors;
+    [Tooltip("Draw faint background bands for low / moderate / high SCI.")]
+    public bool drawStressBandZones;
+    public Color stressBandLowColor = new Color(0.35f, 0.88f, 0.48f, 1f);
+    public Color stressBandModerateColor = new Color(0.98f, 0.82f, 0.22f, 1f);
+    public Color stressBandHighColor = new Color(0.95f, 0.32f, 0.28f, 1f);
+    public float stressBandModerateThreshold = 20f;
+    public float stressBandHighThreshold = 50f;
+
+    [Header("Mission markers (results graphs)")]
+    public bool showMissionMarkers;
+    public Color missionMarkerLabelColor = new Color(1f, 0.95f, 0.75f, 0.95f);
+    public float missionMarkerLabelFontSize = 11f;
+
     public enum AxisXLabelMode
     {
         RunIndex,
@@ -63,6 +79,9 @@ public class SimpleStressLineGraph : MonoBehaviour
     private readonly List<float> cachedValues = new List<float>(256);
     private readonly List<TextMeshProUGUI> yAxisLabels = new List<TextMeshProUGUI>(6);
     private readonly List<TextMeshProUGUI> xAxisLabels = new List<TextMeshProUGUI>(6);
+    private readonly List<TextureLineChartRenderer.MissionMarker> cachedMissionMarkers =
+        new List<TextureLineChartRenderer.MissionMarker>(8);
+    private readonly List<TextMeshProUGUI> missionMarkerLabels = new List<TextMeshProUGUI>(8);
     private RectTransform axisLabelsRoot;
     private bool hasCachedValues;
 
@@ -92,12 +111,55 @@ public class SimpleStressLineGraph : MonoBehaviour
 
     public void SetFromSciPoints(IReadOnlyList<float> sciPoints, float intervalSeconds = 0.4f)
     {
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = false;
+        cachedMissionMarkers.Clear();
         SetFromValues(sciPoints, maxSciDisplay, intervalSeconds);
+    }
+
+    public void SetFromSciPointsWithMarkers(
+        IReadOnlyList<float> sciPoints,
+        IReadOnlyList<SessionStressRecorder.MissionMarker> markers,
+        float intervalSeconds = 0.4f)
+    {
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = true;
+        CopyMissionMarkers(markers);
+        SetFromValuesInternal(sciPoints, maxSciDisplay, intervalSeconds, clearMissionMarkers: false);
+    }
+
+    public void SetFromSciPointsWithMarkers(
+        IReadOnlyList<float> sciPoints,
+        float maxDisplayValue,
+        IReadOnlyList<SessionStressRecorder.MissionMarker> markers,
+        float intervalSeconds = 0.4f)
+    {
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = true;
+        CopyMissionMarkers(markers);
+        SetFromValuesInternal(sciPoints, maxDisplayValue, intervalSeconds, clearMissionMarkers: false);
     }
 
     public void SetFromValues(IReadOnlyList<float> values, float maxDisplayValue, float intervalSeconds = 0.4f)
     {
+        SetFromValuesInternal(values, maxDisplayValue, intervalSeconds, clearMissionMarkers: true);
+    }
+
+    private void SetFromValuesInternal(
+        IReadOnlyList<float> values,
+        float maxDisplayValue,
+        float intervalSeconds,
+        bool clearMissionMarkers)
+    {
         sampleIntervalSeconds = Mathf.Max(0.001f, intervalSeconds);
+        if (clearMissionMarkers)
+        {
+            showMissionMarkers = false;
+            cachedMissionMarkers.Clear();
+        }
         ResolveDesignerReferences();
 
         if (values == null || values.Count == 0)
@@ -178,10 +240,28 @@ public class SimpleStressLineGraph : MonoBehaviour
     {
         hasCachedValues = false;
         cachedValues.Clear();
+        cachedMissionMarkers.Clear();
         DrawEmptyChart();
         chartInfo = string.Empty;
         ApplyInfo(string.Empty);
         HideAxisValueLabels();
+        HideMissionMarkerLabels();
+    }
+
+    private void CopyMissionMarkers(IReadOnlyList<SessionStressRecorder.MissionMarker> markers)
+    {
+        cachedMissionMarkers.Clear();
+        if (markers == null)
+            return;
+
+        for (int i = 0; i < markers.Count; i++)
+        {
+            SessionStressRecorder.MissionMarker marker = markers[i];
+            cachedMissionMarkers.Add(new TextureLineChartRenderer.MissionMarker(
+                marker.sampleIndex,
+                marker.secondsFromStart,
+                marker.label));
+        }
     }
 
     private void RenderCachedValues()
@@ -209,6 +289,9 @@ public class SimpleStressLineGraph : MonoBehaviour
             points.Add(new TextureLineChartRenderer.TimeValuePoint(i * sampleIntervalSeconds, cachedValues[i]));
 
         double duration = Mathf.Max(1f, (cachedValues.Count - 1) * sampleIntervalSeconds);
+        IReadOnlyList<TextureLineChartRenderer.MissionMarker> markers =
+            showMissionMarkers && cachedMissionMarkers.Count > 0 ? cachedMissionMarkers : null;
+
         chartTexture = TextureLineChartRenderer.RenderTimeSeries(
             points,
             duration,
@@ -216,12 +299,22 @@ public class SimpleStressLineGraph : MonoBehaviour
             renderHeight,
             style,
             yMin,
-            yMax);
+            yMax,
+            markers);
 
         if (chartImage != null)
             chartImage.texture = chartTexture;
 
         UpdateAxisValueLabels(yMin, yMax, cachedValues.Count, duration);
+        try
+        {
+            UpdateMissionMarkerLabels(points, duration, yMin, yMax);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"Mission marker labels could not be drawn: {ex.Message}");
+            HideMissionMarkerLabels();
+        }
         ApplyChartLabels();
     }
 
@@ -351,6 +444,8 @@ public class SimpleStressLineGraph : MonoBehaviour
         }
         else
             HideAxisValueLabels();
+
+        HideMissionMarkerLabels();
     }
 
     private TextureLineChartRenderer.Style BuildStyle()
@@ -362,6 +457,13 @@ public class SimpleStressLineGraph : MonoBehaviour
         style.gridColor = gridColor;
         style.axisColor = axisColor;
         style.pointColor = pointColor;
+        style.useStressBandLineColors = useStressBandLineColors;
+        style.drawStressBandZones = drawStressBandZones;
+        style.stressBandLowColor = stressBandLowColor;
+        style.stressBandModerateColor = stressBandModerateColor;
+        style.stressBandHighColor = stressBandHighColor;
+        style.stressBandModerateThreshold = stressBandModerateThreshold;
+        style.stressBandHighThreshold = stressBandHighThreshold;
         return style;
     }
 
@@ -564,6 +666,108 @@ public class SimpleStressLineGraph : MonoBehaviour
             yAxisLabels[i].gameObject.SetActive(false);
         for (int i = 0; i < xAxisLabels.Count; i++)
             xAxisLabels[i].gameObject.SetActive(false);
+    }
+
+    private void EnsureMissionMarkerLabels(int count)
+    {
+        if (chartImage == null)
+            return;
+
+        EnsureAxisValueLabels();
+
+        TMP_FontAsset font = chartInfoText != null
+            ? chartInfoText.font
+            : chartTitleText != null
+                ? chartTitleText.font
+                : TMP_Settings.defaultFontAsset;
+        if (font == null)
+            return;
+
+        while (missionMarkerLabels.Count < count)
+        {
+            int index = missionMarkerLabels.Count;
+            var go = new GameObject($"MissionMarkerLabel_{index}", typeof(RectTransform));
+            go.transform.SetParent(axisLabelsRoot, false);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.raycastTarget = false;
+            label.font = font;
+            label.fontSize = missionMarkerLabelFontSize;
+            label.color = missionMarkerLabelColor;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 8f;
+            label.fontSizeMax = missionMarkerLabelFontSize;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.fontStyle = FontStyles.Bold;
+
+            var rt = label.rectTransform;
+            rt.sizeDelta = new Vector2(118f, 42f);
+            missionMarkerLabels.Add(label);
+        }
+    }
+
+    private void UpdateMissionMarkerLabels(
+        IReadOnlyList<TextureLineChartRenderer.TimeValuePoint> points,
+        double durationSeconds,
+        float yMin,
+        float yMax)
+    {
+        if (!showMissionMarkers || cachedMissionMarkers.Count == 0 || chartImage == null)
+        {
+            HideMissionMarkerLabels();
+            return;
+        }
+
+        EnsureMissionMarkerLabels(cachedMissionMarkers.Count);
+
+        var style = BuildStyle();
+        Rect chartRect = chartImage.rectTransform.rect;
+        float plotLeft = style.plotLeft;
+        float plotBottom = style.plotBottom;
+        float plotWidth = chartRect.width - style.plotLeft - style.plotRight;
+        float plotHeight = chartRect.height - style.plotBottom - style.plotTop;
+        float scaledFont = Mathf.Clamp(missionMarkerLabelFontSize, 8f, Mathf.Max(8f, chartRect.height * 0.04f));
+
+        for (int i = 0; i < missionMarkerLabels.Count; i++)
+        {
+            if (i >= cachedMissionMarkers.Count)
+            {
+                missionMarkerLabels[i].gameObject.SetActive(false);
+                continue;
+            }
+
+            TextureLineChartRenderer.MissionMarker marker = cachedMissionMarkers[i];
+            int sampleIndex = Mathf.Clamp(marker.SampleIndex, 0, points.Count - 1);
+            TextureLineChartRenderer.TimeValuePoint point = points[sampleIndex];
+
+            float seconds = marker.SecondsFromStart > 0f
+                ? marker.SecondsFromStart
+                : (float)point.SecondsFromStart;
+            float xNorm = Mathf.Clamp01((float)(seconds / durationSeconds));
+            float yNorm = Mathf.Clamp01((point.Value - yMin) / (yMax - yMin));
+            float xPos = plotLeft + plotWidth * xNorm;
+            float yPos = plotBottom + plotHeight * yNorm;
+            float labelOffsetY = 14f + (i % 3) * 16f;
+            float labelOffsetX = ((i % 2) == 0 ? -1f : 1f) * 8f;
+
+            TextMeshProUGUI label = missionMarkerLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = missionMarkerLabelColor;
+            label.text = marker.Label;
+            label.gameObject.SetActive(!string.IsNullOrEmpty(marker.Label));
+            PlaceAxisLabel(label, xPos + labelOffsetX, yPos + labelOffsetY, new Vector2(0.5f, 0f));
+        }
+
+        axisLabelsRoot.SetAsLastSibling();
+    }
+
+    private void HideMissionMarkerLabels()
+    {
+        for (int i = 0; i < missionMarkerLabels.Count; i++)
+            missionMarkerLabels[i].gameObject.SetActive(false);
     }
 
     private void ScheduleChartLayoutRefresh()

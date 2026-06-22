@@ -6,6 +6,20 @@ using UnityEngine;
 /// </summary>
 public class SessionStressRecorder : MonoBehaviour
 {
+    public struct MissionMarker
+    {
+        public int sampleIndex;
+        public float secondsFromStart;
+        public string label;
+
+        public MissionMarker(int sampleIndex, float secondsFromStart, string label)
+        {
+            this.sampleIndex = sampleIndex;
+            this.secondsFromStart = secondsFromStart;
+            this.label = label;
+        }
+    }
+
     public float sampleIntervalSeconds = 0.4f;
 
     private float _timer;
@@ -13,13 +27,16 @@ public class SessionStressRecorder : MonoBehaviour
 
     public IReadOnlyList<float> SciHistory => _sci;
     public IReadOnlyList<float> HrvHistory => _hrv;
+    public IReadOnlyList<MissionMarker> MissionMarkers => _missionMarkers;
     private readonly List<float> _sci = new List<float>(256);
     private readonly List<float> _hrv = new List<float>(256);
+    private readonly List<MissionMarker> _missionMarkers = new List<MissionMarker>(8);
 
     public void BeginRecording()
     {
         _sci.Clear();
         _hrv.Clear();
+        _missionMarkers.Clear();
         _timer = 0f;
         _recording = true;
     }
@@ -33,8 +50,22 @@ public class SessionStressRecorder : MonoBehaviour
     {
         _sci.Clear();
         _hrv.Clear();
+        _missionMarkers.Clear();
         _recording = false;
         _timer = 0f;
+    }
+
+    public void RecordMissionMarker(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+            return;
+
+        if (!_recording && _sci.Count == 0)
+            return;
+
+        int sampleIndex = _sci.Count > 0 ? _sci.Count - 1 : 0;
+        float secondsFromStart = sampleIndex * sampleIntervalSeconds;
+        _missionMarkers.Add(new MissionMarker(sampleIndex, secondsFromStart, label.Trim()));
     }
 
     void Update()
