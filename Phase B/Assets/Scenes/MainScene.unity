@@ -14675,7 +14675,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 98.37091, y: -40.09876, z: -2.4890745, w: -23.261581}
+  m_margin: {x: 36.645447, y: -25.401981, z: -20.124817, w: -23.261581}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -18636,8 +18636,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: You have completed both simulations before. Repeat either stage or take
-    an Environment Learning tour.
+  m_text: "You finished both stages today with good pace: \n repeat either simulation
+    to reinforce the pattern."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
   m_sharedMaterial: {fileID: -5571592025542048100, guid: b633915a7eab00342a258e5c2f50a75f, type: 2}
@@ -30341,7 +30341,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 3}
   m_SizeDelta: {x: -48, y: -48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &521943442
@@ -42261,8 +42261,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -48, y: -48}
+  m_AnchoredPosition: {x: -3, y: 3}
+  m_SizeDelta: {x: -54, y: -118}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &740979082
 MonoBehaviour:
@@ -42279,7 +42279,7 @@ MonoBehaviour:
   chartImage: {fileID: 0}
   chartTitleText: {fileID: 0}
   chartInfoText: {fileID: 0}
-  chartTitle: Stress Change Index (SCI)
+  chartTitle: 
   chartInfo: 
   maxSciDisplay: 80
   manualDesignMode: 1
@@ -74205,8 +74205,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -239, y: -214}
-  m_SizeDelta: {x: 1300, y: 500}
+  m_AnchoredPosition: {x: -230, y: -214}
+  m_SizeDelta: {x: 1500, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1261588454
 MonoBehaviour:
@@ -76848,7 +76848,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 67.75842, y: -40.09876, z: -15.830872, w: -23.261887}
+  m_margin: {x: 44.243835, y: -31.280827, z: -15.830872, w: -23.261887}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -85507,7 +85507,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 114.174774, y: -30.663776, z: -34.46173, w: -34.65027}
+  m_margin: {x: 40.691925, y: -18.90636, z: -22.70465, w: -19.953629}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -102007,7 +102007,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 96.226494, y: -30.663776, z: -7.77771, w: -21.30809}
+  m_margin: {x: 31.561638, y: -30.663776, z: -7.77771, w: -21.30809}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -115435,8 +115435,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -239, y: -214}
-  m_SizeDelta: {x: 1300, y: 500}
+  m_AnchoredPosition: {x: -227, y: -214}
+  m_SizeDelta: {x: 1500, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2046599734
 MonoBehaviour:

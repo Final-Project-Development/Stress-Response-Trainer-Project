@@ -25,6 +25,11 @@
 .DS_Store
 Thumbs.db
 
+# Local Unity recovery / editor logs (do not commit)
+**/_Recovery/
+*.log
+briefing*.log
+
 # VoiceGPT model weights (too large for GitHub — keep locally after Asset Store import)
 **/VoiceGPT/Models/*.pth
 **/VoiceGPT/Models/*.t7

@@ -271,13 +271,13 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string hubConnectionStatusDemo =
-        "Smartwatch: Not connected (simulated HR/HRV)\nAndroid gateway: Not in use";
+        "Training mode: simulated HR/HRV (no watch required)\nSmartwatch + VR: partner integration pending";
 
     [TextArea]
     public string introNarrationText =
         "In recent years, many of us have experienced stress and pressure due to emergency situations and war...\n\n" +
         "This training experience is designed to help improve your ability to function under stress...\n\n" +
-        "Please connect your smartwatch - in each simulation, your physiological response is measured, and at the end you receive practical recommendations for next time...";
+        "You can play the full training now with simulated heart-rate data. A smartwatch can be connected later for live measurements. After each simulation you receive practical recommendations for next time...";
 
     [Header("Intro subtitles (one paragraph at a time)")]
     [TextArea]
@@ -288,7 +288,7 @@ public class TrainingFlowController : MonoBehaviour
         "This training experience is designed to help improve your ability to function under stress.";
     [TextArea]
     public string introParagraph3 =
-        "Please connect your smartwatch.";
+        "You can complete the full training now. Simulated heart-rate data is used until a smartwatch is connected.";
     [TextArea]
     public string introParagraph4 =
         "In each simulation, your physiological response is measured and at the end you receive practical recommendations for next time.";
