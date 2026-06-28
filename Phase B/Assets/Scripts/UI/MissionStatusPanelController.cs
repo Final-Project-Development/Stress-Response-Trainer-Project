@@ -39,6 +39,7 @@ public class MissionStatusPanelController : MonoBehaviour
 
     GameManager _gameManager;
     TrainingFlowController _flow;
+    bool _lastHintActive;
 
     public bool IsConfigured =>
         panelRoot != null && completedText != null && objectiveText != null;
@@ -76,6 +77,16 @@ public class MissionStatusPanelController : MonoBehaviour
         WirePlayerCursorRegion();
         SetPanelVisible(false);
         ClearLines();
+    }
+
+    void Update()
+    {
+        bool active = hintService != null && hintService.IsHintActive;
+        if (active == _lastHintActive)
+            return;
+
+        _lastHintActive = active;
+        UpdateHintButtonLabel();
     }
 
     public RectTransform GetPanelScreenRegion()
@@ -160,7 +171,7 @@ public class MissionStatusPanelController : MonoBehaviour
         if (completedText == null)
             return;
 
-        completedText.text = string.IsNullOrWhiteSpace(text) ? string.Empty : text;
+        completedText.text = string.IsNullOrWhiteSpace(text) ? string.Empty : VrInputPrompts.Localize(text);
     }
 
     public void SetObjectiveLine(string text)
@@ -168,11 +179,19 @@ public class MissionStatusPanelController : MonoBehaviour
         if (objectiveText == null)
             return;
 
-        objectiveText.text = string.IsNullOrWhiteSpace(text) ? string.Empty : text;
+        objectiveText.text = string.IsNullOrWhiteSpace(text) ? string.Empty : VrInputPrompts.Localize(text);
     }
 
     public void OnHintButtonClicked()
     {
+        // Toggle: if a hint is already showing, the button closes it.
+        if (hintService != null && hintService.IsHintActive)
+        {
+            hintService.HideActiveHint();
+            UpdateHintButtonLabel();
+            return;
+        }
+
         if (_gameManager == null)
             _gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
 
@@ -180,7 +199,10 @@ public class MissionStatusPanelController : MonoBehaviour
             _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
 
         if (TryShowSimulation1PickupHints())
+        {
+            UpdateHintButtonLabel();
             return;
+        }
 
         IReadOnlyList<string> targets = MissionHintResolver.ResolveCurrentHintObjectNames(_gameManager, _flow);
         if (targets == null || targets.Count == 0)
@@ -191,6 +213,16 @@ public class MissionStatusPanelController : MonoBehaviour
         }
 
         hintService?.ShowHintsForObjects(targets);
+        UpdateHintButtonLabel();
+    }
+
+    void UpdateHintButtonLabel()
+    {
+        if (hintButtonLabel == null)
+            return;
+
+        bool active = hintService != null && hintService.IsHintActive;
+        hintButtonLabel.text = active ? "Hide Hint" : hintButtonDefaultLabel;
     }
 
     bool TryShowSimulation1PickupHints()

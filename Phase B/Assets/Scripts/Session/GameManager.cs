@@ -35,6 +35,16 @@ public class GameManager : MonoBehaviour
     public AudioSource voiceAudioSource;
     [Tooltip("Played once when all pre-shelter steps are complete — run to Mamad instruction.")]
     public AudioClip allItemsCollectedRunToMamadClip;
+    [Header("Success feedback (Sim 1 & Sim 2)")]
+    [Tooltip("Played when the player completes a mission step correctly.")]
+    public AudioClip objectiveSuccessClip;
+    [Tooltip("Optional dedicated source for success SFX. Empty = fallback to voice source / auto-created 2D source.")]
+    public AudioSource objectiveSuccessAudioSource;
+    [Range(0f, 1f)] public float objectiveSuccessVolume = 1f;
+    [Tooltip("Temporarily lower siren/background volume while success SFX plays.")]
+    [Range(0f, 1f)] public float backgroundDuckMultiplierOnSuccess = 0.75f;
+    [Tooltip("How long the background stays lowered after success SFX.")]
+    public float backgroundDuckSecondsOnSuccess = 0.45f;
 
     /// <summary>Raised once when Simulation 1 is fully complete (items + lights + door + shelter).</summary>
     public event Action OnAllItemsCollected;
@@ -59,6 +69,9 @@ public class GameManager : MonoBehaviour
     private SimulationMissionBootstrap _missionBootstrap;
     private TrainingFlowController _flow;
     private Door _missionExitDoor;
+    private Coroutine _successDuckRoutine;
+    private bool _backgroundDuckedForSuccess;
+    private float _backgroundVolumeBeforeSuccessDuck;
     private const float Sim2HintDuration = 8f;
     private const string Sim2GoToPhoneObjective =
         "Go to the public telephone and open the door.";
@@ -196,6 +209,8 @@ public class GameManager : MonoBehaviour
             return;
 
         _sim1Phase = Sim1MissionPhase.RunToShelter;
+        SimulationChartMarkers.Record("Close entrance door");
+        PlayObjectiveSuccessCue();
         PlayAllItemsCollectedVoice();
         if (UsesMissionStatusPanel())
         {
@@ -247,7 +262,174 @@ public class GameManager : MonoBehaviour
 
     public bool IsSim2TreatmentComplete() => firstAidDone;
 
+    /// <summary>Stable key for the player's current mission step (used by task time limits).</summary>
+    public string GetCurrentMissionTaskKey()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        if (_flow == null)
+            return string.Empty;
+
+        var phase = _flow.CurrentPhase;
+        if (phase == TrainingFlowController.Phase.Simulation1Active)
+            return GetSim1MissionTaskKey();
+
+        if (phase == TrainingFlowController.Phase.Simulation2Active)
+            return GetSim2MissionTaskKey();
+
+        return string.Empty;
+    }
+
+    string GetSim1MissionTaskKey()
+    {
+        switch (_sim1Phase)
+        {
+            case Sim1MissionPhase.CollectItems:
+                return "sim1_collect";
+            case Sim1MissionPhase.TurnOffLights:
+                return "sim1_lights";
+            case Sim1MissionPhase.CloseDoor:
+                return "sim1_door";
+            case Sim1MissionPhase.RunToShelter:
+                return "sim1_shelter";
+            default:
+                return string.Empty;
+        }
+    }
+
+    string GetSim2MissionTaskKey()
+    {
+        if (firstAidDone)
+            return string.Empty;
+
+        if (!_firstAidKitCollected)
+            return "sim2_kit";
+
+        if (!_casualtyContacted)
+            return "sim2_contact";
+
+        if (!_emergencyReported)
+            return GetSim2PhoneTaskKey();
+
+        return "sim2_treatment";
+    }
+
+    string GetSim2PhoneTaskKey()
+    {
+        var booth = FindFirstObjectByType<PublicPhoneBoothMission>(FindObjectsInactive.Include);
+        if (booth == null)
+            return "sim2_phone_door";
+
+        switch (booth.CurrentStep)
+        {
+            case PublicPhoneBoothMission.BoothStep.OpenDoor:
+                return "sim2_phone_door";
+            case PublicPhoneBoothMission.BoothStep.InsertCoin:
+                return "sim2_phone_coin";
+            case PublicPhoneBoothMission.BoothStep.TakeHandset:
+                return "sim2_phone_handset";
+            case PublicPhoneBoothMission.BoothStep.Dial101:
+                return "sim2_phone_dial";
+            default:
+                return "sim2_phone_dial";
+        }
+    }
+
     public int GetSim1ItemsCollected() => itemCollected;
+
+    public int GetSim1ItemsTarget() => itemToCollect;
+
+    public const int Sim1MissionStepCount = 4;
+    public const int Sim2MissionStepCount = 7;
+
+    public int GetSim1TotalMissionCount() => Sim1MissionStepCount;
+
+    public int GetSim2TotalMissionCount() => Sim2MissionStepCount;
+
+    /// <summary>Discrete Sim 1 steps: collect, lights, door, shelter.</summary>
+    public int GetSim1CompletedMissionCount()
+    {
+        int completed = 0;
+        if (_itemsCollectionComplete) completed++;
+        if (_lightsTurnedOff) completed++;
+        if (_exitDoorClosed) completed++;
+        if (_shelterReached) completed++;
+        return completed;
+    }
+
+    /// <summary>Discrete Sim 2 steps aligned with MissionTaskStrikeTracker (kit, contact, 4 phone steps, treatment).</summary>
+    public int GetSim2CompletedMissionCount()
+    {
+        int completed = 0;
+        if (_firstAidKitCollected) completed++;
+        if (_casualtyContacted) completed++;
+        completed += GetSim2PhoneSubStepsCompleted();
+        if (firstAidDone) completed++;
+        return Mathf.Clamp(completed, 0, Sim2MissionStepCount);
+    }
+
+    int GetSim2PhoneSubStepsCompleted()
+    {
+        if (_emergencyReported)
+            return 4;
+
+        if (!_casualtyContacted)
+            return 0;
+
+        var booth = FindFirstObjectByType<PublicPhoneBoothMission>(FindObjectsInactive.Include);
+        if (booth == null)
+            return 0;
+
+        switch (booth.CurrentStep)
+        {
+            case PublicPhoneBoothMission.BoothStep.OpenDoor:
+                return 0;
+            case PublicPhoneBoothMission.BoothStep.InsertCoin:
+                return 1;
+            case PublicPhoneBoothMission.BoothStep.TakeHandset:
+                return 2;
+            case PublicPhoneBoothMission.BoothStep.Dial101:
+            case PublicPhoneBoothMission.BoothStep.CallComplete:
+                return 3;
+            default:
+                return 0;
+        }
+    }
+
+    /// <summary>Estimated mission progress 0–1 for timeout / partial results.</summary>
+    public float GetSim1MissionProgress01()
+    {
+        if (_allItemsCollectedRaised)
+            return 1f;
+
+        float progress = Mathf.Clamp01((float)itemCollected / Mathf.Max(1, itemToCollect)) * 0.35f;
+        if (_itemsCollectionComplete || _sim1Phase != Sim1MissionPhase.CollectItems)
+            progress = Mathf.Max(progress, 0.35f);
+        if (_lightsTurnedOff)
+            progress += 0.15f;
+        if (_exitDoorClosed)
+            progress += 0.2f;
+        if (_shelterReached)
+            progress += 0.3f;
+        return Mathf.Clamp01(progress);
+    }
+
+    /// <summary>Estimated mission progress 0–1 for timeout / partial results.</summary>
+    public float GetSim2MissionProgress01()
+    {
+        if (firstAidDone)
+            return 1f;
+
+        float progress = 0f;
+        if (_firstAidKitCollected)
+            progress += 0.25f;
+        if (_casualtyContacted)
+            progress += 0.25f;
+        if (_emergencyReported)
+            progress += 0.25f;
+        return Mathf.Clamp01(progress);
+    }
 
     public Door GetMissionExitDoor() => _missionExitDoor;
 
@@ -328,6 +510,8 @@ public class GameManager : MonoBehaviour
 
         _lightsTurnedOff = true;
         _sim1Phase = Sim1MissionPhase.CloseDoor;
+        SimulationChartMarkers.Record("Turn off lights");
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -349,6 +533,8 @@ public class GameManager : MonoBehaviour
             return;
 
         _firstAidKitCollected = true;
+        SimulationChartMarkers.Record("Collect first aid kit");
+        PlayObjectiveSuccessCue();
         _missionBootstrap?.RevealWounded();
         ShowPickupFeedback(itemName);
         UpdateSimulation2ObjectiveText();
@@ -361,6 +547,8 @@ public class GameManager : MonoBehaviour
             return;
 
         _casualtyContacted = true;
+        SimulationChartMarkers.Record("Contact casualty");
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -379,6 +567,8 @@ public class GameManager : MonoBehaviour
             return;
 
         _emergencyReported = true;
+        SimulationChartMarkers.Record("Dial 101");
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionCompletedLine(
@@ -453,6 +643,7 @@ public class GameManager : MonoBehaviour
             return;
 
         itemCollected++;
+        PlayObjectiveSuccessCue();
 
         ShowPickupFeedback(itemName);
         UpdateObjectiveText();
@@ -461,6 +652,7 @@ public class GameManager : MonoBehaviour
         {
             _itemsCollectionComplete = true;
             _sim1Phase = Sim1MissionPhase.TurnOffLights;
+            SimulationChartMarkers.Record("Collect supplies");
             if (UsesMissionStatusPanel())
             {
                 SetMissionCompletedLine(
@@ -645,6 +837,8 @@ public class GameManager : MonoBehaviour
     public void OnFirstAidFinished()
     {
         firstAidDone = true;
+        SimulationChartMarkers.Record("Treat casualty");
+        PlayObjectiveSuccessCue();
         if (UsesMissionStatusPanel())
         {
             SetMissionPanelProgress(
@@ -676,7 +870,7 @@ public class GameManager : MonoBehaviour
         if (remaining.Count == 0)
             return "Turn off the lights using the light switch inside the home.";
 
-        return $"Collect supplies inside the home (press E). Remaining: {string.Join(", ", remaining)}. Progress: {itemCollected}/{itemToCollect}.";
+        return $"Collect supplies inside the home (press E).\nRemaining: {string.Join(", ", remaining)}. Progress: {itemCollected}/{itemToCollect}.";
     }
 
     public void UpdateObjectiveText()
@@ -788,9 +982,76 @@ public class GameManager : MonoBehaviour
 
         _exitDoorClosed = true;
         _shelterReached = true;
+        SimulationChartMarkers.Record("Reach Mamad shelter");
+        PlayObjectiveSuccessCue();
         UpdateObjectiveText();
         TryCompleteSimulation1Goals();
         return true;
+    }
+
+    private void PlayObjectiveSuccessCue()
+    {
+        if (objectiveSuccessClip == null)
+            return;
+
+        AudioSource source = ResolveObjectiveSuccessAudioSource();
+        if (source == null)
+            return;
+
+        source.PlayOneShot(objectiveSuccessClip, Mathf.Clamp01(objectiveSuccessVolume));
+        DuckBackgroundForSuccessCue();
+    }
+
+    private AudioSource ResolveObjectiveSuccessAudioSource()
+    {
+        if (objectiveSuccessAudioSource != null)
+            return objectiveSuccessAudioSource;
+
+        if (voiceAudioSource != null)
+            return voiceAudioSource;
+
+        objectiveSuccessAudioSource = GetComponent<AudioSource>();
+        if (objectiveSuccessAudioSource == null)
+            objectiveSuccessAudioSource = gameObject.AddComponent<AudioSource>();
+
+        objectiveSuccessAudioSource.playOnAwake = false;
+        objectiveSuccessAudioSource.loop = false;
+        objectiveSuccessAudioSource.spatialBlend = 0f;
+        return objectiveSuccessAudioSource;
+    }
+
+    private void DuckBackgroundForSuccessCue()
+    {
+        if (_flow == null)
+            _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+
+        if (_flow == null || _flow.sirenLoop == null || !_flow.sirenLoop.isPlaying)
+            return;
+
+        if (!_backgroundDuckedForSuccess)
+        {
+            _backgroundVolumeBeforeSuccessDuck = _flow.sirenLoop.volume;
+            _flow.sirenLoop.volume = Mathf.Clamp01(_backgroundVolumeBeforeSuccessDuck * backgroundDuckMultiplierOnSuccess);
+            _backgroundDuckedForSuccess = true;
+        }
+
+        if (_successDuckRoutine != null)
+            StopCoroutine(_successDuckRoutine);
+        _successDuckRoutine = StartCoroutine(RestoreBackgroundAfterSuccessCue());
+    }
+
+    private IEnumerator RestoreBackgroundAfterSuccessCue()
+    {
+        AudioSource background = _flow != null ? _flow.sirenLoop : null;
+        if (background == null || !_backgroundDuckedForSuccess)
+            yield break;
+        yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, backgroundDuckSecondsOnSuccess));
+
+        if (background != null)
+            background.volume = _backgroundVolumeBeforeSuccessDuck;
+
+        _backgroundDuckedForSuccess = false;
+        _successDuckRoutine = null;
     }
 
     private void TryCompleteSimulation1Goals()

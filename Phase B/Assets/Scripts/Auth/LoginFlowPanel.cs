@@ -38,6 +38,9 @@ public class LoginFlowPanel : MonoBehaviour
         if (trainingFlow == null)
             trainingFlow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
 
+        if (GetComponent<VrLoginInputSupport>() == null)
+            gameObject.AddComponent<VrLoginInputSupport>();
+
         if (loginSubmitButton != null)
             loginSubmitButton.onClick.AddListener(OnLoginClicked);
         if (forgotPasswordButton != null)
@@ -50,6 +53,17 @@ public class LoginFlowPanel : MonoBehaviour
             showLoginButton.onClick.AddListener(() => ShowRegister(false));
         if (cancelButton != null)
             cancelButton.onClick.AddListener(OnCancelClicked);
+
+        ConfigurePasswordMask(loginPassword);
+    }
+
+    static void ConfigurePasswordMask(TMP_InputField field)
+    {
+        if (field == null)
+            return;
+
+        field.contentType = TMP_InputField.ContentType.Password;
+        field.asteriskChar = '*';
     }
 
     void OnEnable()
@@ -95,6 +109,7 @@ public class LoginFlowPanel : MonoBehaviour
             LocalAuthStore.ClearLastLoggedInEmail();
 
         SetStatus("", false);
+        FindFirstObjectByType<UserProfileController>(FindObjectsInactive.Include)?.RefreshProfileButtonVisibility();
         trainingFlow?.UI_CompleteLoginAndStartIntro();
     }
 

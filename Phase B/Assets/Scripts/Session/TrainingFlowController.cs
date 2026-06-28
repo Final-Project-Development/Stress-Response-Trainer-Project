@@ -69,6 +69,8 @@ public class TrainingFlowController : MonoBehaviour
     public MockPhysiologySource physiology;
     public SessionStressRecorder recorder;
     public GameManager gameManager;
+    [Tooltip("Per-task time limits and 3-strike disqualification. Auto-added to GameManager if empty.")]
+    public MissionTaskStrikeTracker missionTaskStrikeTracker;
     public EnvironmentLearningController environmentLearningController;
     public UDPReceiver udpReceiver;
 
@@ -89,7 +91,11 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject sim2ResultsPanel;
     public GameObject safetyWarningPanel;
     public TextMeshProUGUI safetyWarningText;
+    public TextMeshProUGUI safetyWarningContinueWithAlarmText;
+    public TextMeshProUGUI safetyWarningContinueWithoutAlarmText;
     [TextArea] public string stressWarningMessage = "Warning: this simulation contains stress stimuli (alarm audio, time pressure, emergency context). You can pause at any time with Esc and quit safely.";
+    public string continueWithAlarmButtonLabel = "Continue with alarm";
+    public string continueWithoutAlarmButtonLabel = "Continue without alarm";
 
     [Header("Optional: hide gameplay until mission starts")]
     public GameObject simulation1GameplayRoot;
@@ -130,20 +136,41 @@ public class TrainingFlowController : MonoBehaviour
 
     [Header("Optional feedback")]
     public AudioSource sirenLoop;
+    [Tooltip("Calm loop played when the user chooses Continue without alarm on the safety warning panel.")]
+    public AudioClip calmBackgroundInsteadOfAlarmClip;
+    [Tooltip("Very quiet background loop for baseline calibration (Baseline_Panel). Leave empty to reuse calmBackgroundInsteadOfAlarmClip.")]
+    public AudioClip baselineCalibrationBackgroundClip;
+    [Range(0f, 1f)] public float baselineCalibrationBackgroundVolume = 0.08f;
     public AudioSource narrationAudioSource;
     [Tooltip("Optional bundle of VoiceGPT clips (Window → VoiceGPT → Panel Narration Setup). Fills empty clip slots at Start.")]
     public PanelNarrationLibrary narrationLibrary;
     public AudioClip introNarrationClip;
     [Tooltip("Optional voice-over for the baseline calibration screen.")]
     public AudioClip calibrationNarrationClip;
+    [Tooltip("Optional voice-over for Environment Learning briefing (LearnBriefing_Panel).")]
+    public AudioClip learnBriefingNarrationClip;
     [Tooltip("Optional voice-over for Simulation 1 mission briefing (instructions before Start mission).")]
     public AudioClip missionBriefingNarrationClip;
     [Tooltip("Optional voice-over for Simulation 2 briefing panel.")]
     public AudioClip sim2BriefingNarrationClip;
+
+    [Header("Narration pacing")]
+    [Tooltip("Short pause after each spoken sentence so narration feels more natural.")]
+    [Range(0.2f, 1.5f)]
+    public float narrationPauseBetweenSentences = 0.55f;
+
+    [Header("Per-sentence voice-over clips (VoiceGPT → Panel Narration Setup)")]
+    public AudioClip[] introNarrationSentenceClips;
+    public AudioClip[] calibrationNarrationSentenceClips;
+    public AudioClip[] learnBriefingNarrationSentenceClips;
+    public AudioClip[] missionBriefingNarrationSentenceClips;
+    public AudioClip[] sim2BriefingNarrationSentenceClips;
+
     public UnityEvent onSimulation1Started;
     public UnityEvent onSimulation1Ended;
 
     [Header("Live stress / link")]
+    [Tooltip("Optional in-simulation high-stress banner. Must NOT be the same object as Safety Warning Panel.")]
     public GameObject highStressWarningRoot;
     public GameObject gatewayDisconnectWarningRoot;
     public float gatewayStaleSeconds = 2.5f;
@@ -175,23 +202,33 @@ public class TrainingFlowController : MonoBehaviour
     [Tooltip("Optional: when both Sim 2 metrics + recommendations are set, the summary is split into two columns.")]
     public TextMeshProUGUI sim2ResultsMetricsText;
     public TextMeshProUGUI sim2ResultsRecommendationsText;
+
+    [Header("Results panel lines (choose per simulation)")]
+    [Tooltip("Which lines appear on the Result and Recommendations tabs for Simulation 1.")]
+    public SimulationResultsPanelsConfig sim1ResultsPanels = SimulationResultsPanelsConfig.DefaultSim1();
+    [Tooltip("Which lines appear on the Result and Recommendations tabs for Simulation 2.")]
+    public SimulationResultsPanelsConfig sim2ResultsPanels = SimulationResultsPanelsConfig.DefaultSim2();
+
+    [Header("Results panel manual layout")]
+    [Tooltip("When on, Sim 1 Result/Recommendations TMP font size, alignment, and RectTransform are not changed at runtime.")]
+    public bool preserveManualSim1ResultsLayout = true;
+    [Tooltip("When on, Sim 2 Result/Recommendations TMP font size, alignment, and RectTransform are not changed at runtime.")]
+    public bool preserveManualSim2ResultsLayout = true;
+
     public TextMeshProUGUI simulationActiveHudText;
 
-    [Header("Simulation stress timer (Sim 1 & 2 active only)")]
-    [Tooltip("timer_panel on Canvas — shown only during active simulations.")]
+    [Header("Per-task timer (Sim 1 & 2 active only)")]
+    [Tooltip("timer_panel on Canvas — shows countdown for the current mission step only.")]
     public GameObject timerPanel;
-    [Tooltip("TimeText TMP under timer_panel.")]
+    [Tooltip("TimeText TMP under timer_panel — remaining seconds for the active task.")]
     public TextMeshProUGUI simulationTimerText;
     [Tooltip("Optional title TMP (e.g. Timer label on timer_panel).")]
     public TextMeshProUGUI simulationTimerTitleText;
+    [Tooltip("Title above the countdown (e.g. Timer). Task name is shown in the mission panel, not here.")]
     public string simulationTimerTitle = "Timer";
-    [Tooltip("Count down for time pressure, or count up elapsed stress time.")]
-    public bool simulationTimerCountDown = true;
-    public float simulation1TimerSeconds = 300f;
-    public float simulation2TimerSeconds = 600f;
-    [Tooltip("Timer text color when remaining time is at or below urgent threshold.")]
+    [Tooltip("Timer text color when task remaining time is at or below urgent threshold.")]
     public bool simulationTimerUrgentColorEnabled = true;
-    public float simulationTimerUrgentBelowSeconds = 60f;
+    public float simulationTimerUrgentBelowSeconds = 15f;
     public Color simulationTimerNormalColor = Color.white;
     public Color simulationTimerUrgentColor = new Color(1f, 0.4f, 0.35f, 1f);
 
@@ -234,13 +271,13 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string hubConnectionStatusDemo =
-        "Smartwatch: Not connected (simulated HR/HRV)\nAndroid gateway: Not in use";
+        "Training mode: simulated HR/HRV (no watch required)\nSmartwatch + VR: partner integration pending";
 
     [TextArea]
     public string introNarrationText =
-        "In recent years, many of us have experienced stress and pressure due to emergency situations and war.\n\n" +
-        "This training experience is designed to help improve your ability to function under stress.\n\n" +
-        "Please connect your smartwatch. In each simulation, your physiological response is measured and at the end you receive practical recommendations for next time.";
+        "In recent years, many of us have experienced stress and pressure due to emergency situations and war...\n\n" +
+        "This training experience is designed to help improve your ability to function under stress...\n\n" +
+        "You can play the full training now with simulated heart-rate data. A smartwatch can be connected later for live measurements. After each simulation you receive practical recommendations for next time...";
 
     [Header("Intro subtitles (one paragraph at a time)")]
     [TextArea]
@@ -251,7 +288,7 @@ public class TrainingFlowController : MonoBehaviour
         "This training experience is designed to help improve your ability to function under stress.";
     [TextArea]
     public string introParagraph3 =
-        "Please connect your smartwatch.";
+        "You can complete the full training now. Simulated heart-rate data is used until a smartwatch is connected.";
     [TextArea]
     public string introParagraph4 =
         "In each simulation, your physiological response is measured and at the end you receive practical recommendations for next time.";
@@ -262,40 +299,31 @@ public class TrainingFlowController : MonoBehaviour
 
     [TextArea]
     public string calibrationInstruction =
-        "Stand still and relax for 15 seconds.\n\n" +
-        "We are calibrating your heart-rate metrics.\n\n" +
-        "No alarm will play during this step.";
+        "Stand still and relax for 15 seconds...\n\n" +
+        "We are calibrating your heart-rate metrics...\n\n" +
+        "No alarm will play during this step - just breathe slowly and stay comfortable...";
 
     [TextArea]
     public string missionBriefingBody =
-        "Simulation 1 — Emergency preparedness\n\n" +
-        "A loud continuous siren will start when the mission begins.\n\n" +
-        "1) Enter the home and collect 5 items (press E on each):\n" +
-        "   • Water bottle\n" +
-        "   • Flash light\n" +
-        "   • Radio\n" +
-        "   • Compass\n" +
-        "   • Map\n\n" +
-        "2) Turn off the lights — switch: PFB_Lightswitch (1)\n" +
-        "3) Close the entrance door — PFB_DoorDouble\n" +
-        "4) Run to the Mamad (shelter) outside\n\n" +
-        "When you are ready, press Start mission.";
+        "Simulation 1: Emergency Preparedness\n\n" +
+        "Collect 5 essential supplies inside the house.\n\n" +
+        "Turn off lights, close the door, and enter the Mamad shelter.";
 
     [TextArea]
     public string learnBriefingBody =
-        "Environment Learning — City tour\n\n" +
-        "Explore important locations and objects in the training environment.\n\n" +
-        "Use the left sidebar to jump to each item and read the labels in the world.\n\n" +
-        "When you are ready, press Start learn.";
+        "Environment Learning - City tour...\n\n" +
+        "Explore important locations and objects in the training environment...\n\n" +
+        "Use the left sidebar to jump to each item and read the labels in the world...\n\n" +
+        "When you are ready, press Start learn...";
 
     [TextArea]
     public string sim2BriefingBody =
-        "Simulation 2 — First aid under pressure\n\n" +
-        "1) Collect the first aid kit (press E)\n" +
-        "2) Find the wounded person and press E — go to the public telephone and call for first aid help\n" +
-        "3) Public telephone: E open door (once) → E insert coin → E pick up receiver → dial 1, then 0, then 1\n" +
-        "4) Return to the wounded person: press E on the casualty, then press 1, then 2, then 3 for treatment\n\n" +
-        "Press Start Mission when you are ready.";
+        "Simulation 2 - First aid under pressure...\n\n" +
+        "1) Collect the first aid kit (press E)...\n" +
+        "2) Find the wounded person and press E - then go to the public telephone and call for first aid help...\n" +
+        "3) Public telephone - E open door (once), E insert coin, E pick up receiver, dial 1 then 0 then 1...\n" +
+        "4) Return to the wounded person - press E on the casualty, then press 1, then 2, then 3 for treatment...\n\n" +
+        "Press Start Mission when you are ready...";
 
     [Header("Simulation 1 — mission panel copy")]
     [TextArea] public string sim1AllItemsCollectedCompleted =
@@ -393,9 +421,9 @@ public class TrainingFlowController : MonoBehaviour
 
         string remaining = string.Join(", ", remainingDisplayNames);
         if (collected <= 0)
-            return $"Collect {total} supplies inside the home. Remaining: {remaining}.";
+            return $"Collect {total} supplies inside the home.\nRemaining: {remaining}.";
 
-        return $"Collect supplies inside the home. Remaining: {remaining}. Progress: {collected}/{total}.";
+        return $"Collect supplies inside the home.\nRemaining: {remaining}. Progress: {collected}/{total}.";
     }
 
     public string BuildSim1CollectActionObjective(string itemDisplayName)
@@ -412,6 +440,7 @@ public class TrainingFlowController : MonoBehaviour
 
     public Phase CurrentPhase { get; private set; } = Phase.Gate;
     public bool IsPaused => _paused;
+    public bool IsSafetyWarningVisible => safetyWarningPanel != null && safetyWarningPanel.activeSelf;
 
     /// <summary>Elapsed seconds in the current Sim 1/2 run (pauses with game pause).</summary>
     public float SimulationStressElapsedSeconds => _simulationStressTimer;
@@ -419,8 +448,13 @@ public class TrainingFlowController : MonoBehaviour
     private float _calibrationTimer;
     private float _simulationStressTimer;
     private Phase _simulationStressTimerPhase = Phase.Gate;
+    private bool _simulationFinishHandled;
     private bool _sim2Subscribed;
     private bool _paused;
+    private bool _useCalmBackgroundInsteadOfAlarm;
+    private AudioClip _sirenDefaultClip;
+    private float _sirenVolumeBeforeBaseline;
+    private bool _baselineCalibrationBackgroundPlaying;
     private PendingStart _pendingStart = PendingStart.None;
     private ResultsTab _currentSim1ResultsTab = ResultsTab.Result;
     private ResultsTab _currentSim2ResultsTab = ResultsTab.Result;
@@ -429,12 +463,19 @@ public class TrainingFlowController : MonoBehaviour
     {
         None,
         Simulation1,
-        Simulation2
+        Simulation2,
+        Simulation1FromTour,
+        Simulation2FromTour
     }
+
+    private bool _tourAlarmActive;
+    private PanelNarrationSequencePlayer _narrationPlayer;
 
     void Awake()
     {
         Instance = this;
+        if (sirenLoop != null)
+            _sirenDefaultClip = sirenLoop.clip;
         if (environmentLearningController == null)
             environmentLearningController = FindFirstObjectByType<EnvironmentLearningController>(FindObjectsInactive.Include);
 
@@ -450,11 +491,34 @@ public class TrainingFlowController : MonoBehaviour
         if (gameManager != null && missionStatusPanel != null)
             gameManager.missionStatusPanel = missionStatusPanel;
 
+        EnsureMissionTaskStrikeTracker();
         HideEnvironmentLearningTourSidebar();
+    }
+
+    void EnsureMissionTaskStrikeTracker()
+    {
+        if (gameManager == null)
+            return;
+
+        if (missionTaskStrikeTracker == null)
+            missionTaskStrikeTracker = gameManager.GetComponent<MissionTaskStrikeTracker>();
+
+        if (missionTaskStrikeTracker == null)
+            missionTaskStrikeTracker = gameManager.gameObject.AddComponent<MissionTaskStrikeTracker>();
+    }
+
+    void EnsureNarrationPlayer()
+    {
+        _narrationPlayer = new PanelNarrationSequencePlayer(
+            this,
+            narrationAudioSource,
+            narrationPauseBetweenSentences);
     }
 
     void OnDestroy()
     {
+        StopBaselineCalibrationBackgroundIfPlaying();
+
         if (Instance == this)
             Instance = null;
     }
@@ -462,6 +526,7 @@ public class TrainingFlowController : MonoBehaviour
     void Start()
     {
         ApplyNarrationFromLibrary();
+        EnsureNarrationPlayer();
 
         ApplyCurrentResultsTabs();
 
@@ -493,7 +558,7 @@ public class TrainingFlowController : MonoBehaviour
         RefreshHubConnectionStatusText();
         if (introBodyText != null)
             introBodyText.text = introNarrationText;
-        if (missionBriefingBodyText != null)
+        if (missionBriefingBodyText != null && !UsesVisualSim1Briefing())
             missionBriefingBodyText.text = missionBriefingBody;
         if (learnBriefingBodyText != null)
             learnBriefingBodyText.text = learnBriefingBody;
@@ -619,12 +684,55 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_EndEnvironmentLearning()
     {
         if (CurrentPhase != Phase.EnvironmentLearning) return;
+        StopTourAlarmIfPlaying();
         environmentLearningController?.EndLearning();
         gameManager?.RestoreExitDoorAfterEnvironmentLearning();
         CurrentPhase = Phase.SimulationPick;
         SetEnvironmentLearningTourPropsVisible(false);
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
+    }
+
+    /// <summary>Tour sidebar — toggle siren while exploring the city.</summary>
+    public void UI_ToggleEnvironmentLearningAlarm()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (_tourAlarmActive)
+            StopTourAlarmIfPlaying();
+        else
+        {
+            _useCalmBackgroundInsteadOfAlarm = false;
+            PlaySiren();
+            _tourAlarmActive = true;
+        }
+
+        environmentLearningController?.tourGuide?.RefreshOptionsMenuPresentation();
+    }
+
+    /// <summary>Tour sidebar — start Simulation 1 from the player's current position.</summary>
+    public void UI_StartSimulation1FromTour()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (ShowSafetyWarningFor(PendingStart.Simulation1FromTour))
+            return;
+
+        BeginSimulation1FromTourNow();
+    }
+
+    /// <summary>Tour sidebar — start Simulation 2 from the player's current position.</summary>
+    public void UI_StartSimulation2FromTour()
+    {
+        if (CurrentPhase != Phase.EnvironmentLearning)
+            return;
+
+        if (ShowSafetyWarningFor(PendingStart.Simulation2FromTour))
+            return;
+
+        BeginSimulation2FromTourNow();
     }
 
     public void UI_StartIntro()
@@ -675,6 +783,9 @@ public class TrainingFlowController : MonoBehaviour
         if (calibrationStatusText == null)
             return;
 
+        if (_narrationPlayer != null && _narrationPlayer.IsPlaying)
+            return;
+
         if (splitTimer && splitHrv)
         {
             calibrationStatusText.text = calibrationInstruction;
@@ -682,18 +793,11 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         string timePart = $"Time remaining: {remainingSeconds:F0} s";
-        string livePart =
-            $"Live (demo) — HR: {physiology.CurrentHeartRate:F0} bpm | HRV: {physiology.CurrentHrvMs:F1} ms";
 
-        if (splitTimer)
-            calibrationStatusText.text = $"{calibrationInstruction}\n\n{livePart}";
-        else if (splitHrv)
-            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
+        if (splitTimer || splitHrv)
+            calibrationStatusText.text = calibrationInstruction;
         else
-        {
-            calibrationStatusText.text =
-                $"{calibrationInstruction}\n\n{timePart}\n{livePart}";
-        }
+            calibrationStatusText.text = $"{calibrationInstruction}\n\n{timePart}";
     }
 
     private string FormatCalibrationRemainingDisplay(float remainingSeconds)
@@ -729,17 +833,11 @@ public class TrainingFlowController : MonoBehaviour
     private void ShowSimulation1MissionBriefingAfterCalibration()
     {
         CurrentPhase = Phase.Simulation1MissionBriefing;
-        if (missionBriefingBodyText != null)
-        {
+        if (missionBriefingBodyText != null && !UsesVisualSim1Briefing())
             missionBriefingBodyText.text = missionBriefingBody.TrimEnd();
-            if (physiology != null)
-            {
-                missionBriefingBodyText.text +=
-                    $"\n\nBaseline locked — HRV baseline: {physiology.HrvBaselineMs:F1} ms";
-            }
-        }
 
         ApplyPhaseUI();
+        RefreshVisualBriefingPanels();
         PlayMissionBriefingNarration();
     }
 
@@ -756,6 +854,7 @@ public class TrainingFlowController : MonoBehaviour
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
+        RefreshVisualBriefingPanels();
         PlaySim2BriefingNarration();
     }
 
@@ -773,6 +872,7 @@ public class TrainingFlowController : MonoBehaviour
             learnBriefingBodyText.text = learnBriefingBody.TrimEnd();
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
+        PlayLearnBriefingNarration();
     }
 
     public void UI_BeginSimulation1()
@@ -785,10 +885,29 @@ public class TrainingFlowController : MonoBehaviour
 
     private void BeginSimulation1Now()
     {
+        BeginSimulation1Core(teleportToSpawn: true);
+    }
+
+    private void BeginSimulation1FromTourNow()
+    {
+        BeginSimulation1Core(teleportToSpawn: false);
+    }
+
+    private void BeginSimulation1Core(bool teleportToSpawn)
+    {
         StopAllNarration();
+        if (!teleportToSpawn)
+        {
+            StopTourAlarmIfPlaying();
+            environmentLearningController?.EndLearning();
+            SetActiveSafe(environmentLearningHudPanel, false);
+        }
+
         CurrentPhase = Phase.Simulation1Active;
         SetSimulationGameplayState(true, false);
-        MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        if (teleportToSpawn)
+            MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+
         recorder?.BeginRecording();
         if (physiology != null)
             physiology.StressorActive = true;
@@ -798,14 +917,41 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(true);
 
         gameManager?.PrepareSimulation1Mission();
+        ResetSimulationRunState();
+        missionTaskStrikeTracker?.BeginTracking(simulation2: false);
 
         if (gameManager != null)
             gameManager.OnAllItemsCollected += HandleSim1Complete;
     }
 
-    private void HandleSim1Complete()
+    public void FinishSim1Disqualified(string lastTaskDisplayName)
     {
-        if (CurrentPhase != Phase.Simulation1Active) return;
+        string reason = string.IsNullOrEmpty(lastTaskDisplayName)
+            ? "Disqualified after 3 task time violations."
+            : $"Disqualified after 3 task time violations (last: {lastTaskDisplayName}).";
+        FinishSim1Run(missionCompleted: false, timedOut: false, disqualified: true, disqualificationReason: reason);
+    }
+
+    public void FinishSim2Disqualified(string lastTaskDisplayName)
+    {
+        string reason = string.IsNullOrEmpty(lastTaskDisplayName)
+            ? "Disqualified after 3 task time violations."
+            : $"Disqualified after 3 task time violations (last: {lastTaskDisplayName}).";
+        FinishSim2Run(missionCompleted: false, timedOut: false, disqualified: true, disqualificationReason: reason);
+    }
+
+    private void HandleSim1Complete() => FinishSim1Run(missionCompleted: true, timedOut: false);
+
+    private void FinishSim1Run(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        if (CurrentPhase != Phase.Simulation1Active || _simulationFinishHandled)
+            return;
+
+        _simulationFinishHandled = true;
 
         if (gameManager != null)
             gameManager.OnAllItemsCollected -= HandleSim1Complete;
@@ -817,77 +963,132 @@ public class TrainingFlowController : MonoBehaviour
         onSimulation1Ended?.Invoke();
         SetActiveSafe(highStressWarningRoot, false);
         SetHudVisible(false);
+        SetSimulationGameplayState(false, false);
+        gameManager?.ClearMissionMessages();
+        missionTaskStrikeTracker?.EndTracking();
 
+        var outcome = BuildSim1RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation1Results;
-        ApplySimulation1ResultGraphs();
+        SafeApplySimulation1ResultGraphs();
 
         if (physiology != null && recorder != null)
         {
             float peakSci = recorder.SciHistory.Count > 0 ? MaxSci(recorder.SciHistory) : 0f;
             float meanSci = recorder.SciHistory.Count > 0 ? MeanSci(recorder.SciHistory) : 0f;
             var peakBand = StressChangeIndexCalculator.Classify(peakSci);
-            SessionHistoryStore.UpdateAfterSim1(recorder.SciHistory, physiology.HrvBaselineMs, recorder.sampleIntervalSeconds);
-            string nextStage = StressRecommendations.BeforeNextStageBreathingTip();
+            SessionHistoryStore.UpdateAfterSim1(
+                recorder.SciHistory,
+                physiology.HrvBaselineMs,
+                outcome,
+                recorder.sampleIntervalSeconds);
+            string sim1Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
+                recorder.SciHistory,
+                StressRecommendations.SimulationStage.Sim1,
+                outcome,
+                sim1ResultsPanels);
 
             if (UseSim1SplitColumns())
             {
                 if (resultsSummaryText != null)
                     resultsSummaryText.gameObject.SetActive(false);
 
-                var metrics = new StringBuilder();
-                metrics.AppendLine("<b>Results</b>");
-                metrics.AppendLine();
-                metrics.AppendLine("<color=#B8D4EE>Simulation 1</color>");
-                metrics.AppendLine();
-                metrics.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
-                metrics.AppendLine(
-                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
-                metrics.AppendLine();
-                metrics.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
-                metrics.AppendLine($"Average SCI: {meanSci:F1}%");
-                metrics.AppendLine($"Samples: {recorder.SciHistory.Count}");
+                string metrics = StressRecommendations.BuildResultsTabMetrics(
+                    StressRecommendations.SimulationStage.Sim1,
+                    peakSci,
+                    meanSci,
+                    outcome,
+                    baselineHrvMs: physiology.HrvBaselineMs,
+                    sciHistory: recorder.SciHistory,
+                    sampleIntervalSeconds: recorder.sampleIntervalSeconds,
+                    display: sim1ResultsPanels);
 
-                var rec = new StringBuilder();
-                rec.AppendLine("<b>Recommendations</b>");
-                rec.AppendLine();
-                rec.AppendLine(StressRecommendations.BuildBehavioralTips(recorder.SciHistory));
-                rec.AppendLine();
-                rec.AppendLine(nextStage);
-                AppendSimulationPickFooter(rec);
-
-                PrepareResultsTextForManualBox(sim1ResultsMetricsText);
-                PrepareResultsTextForManualBox(sim1ResultsRecommendationsText);
-                sim1ResultsMetricsText.text = metrics.ToString().TrimEnd();
-                sim1ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+                LayoutSim1ResultsPanels();
+                sim1ResultsMetricsText.text = metrics;
+                sim1ResultsRecommendationsText.text = sim1Recommendations;
             }
             else if (resultsSummaryText != null)
             {
                 resultsSummaryText.gameObject.SetActive(true);
-                string tips = StressRecommendations.BuildFromSciHistory(recorder.SciHistory);
-
                 var sb = new StringBuilder();
                 sb.AppendLine("Simulation 1 — Results");
                 sb.AppendLine();
-                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms (your calm reference).");
-                sb.AppendLine(
-                    "SCI (Stress Change Index) measures how far current HRV drifts below that baseline — higher % means a larger stress shift.");
-                sb.AppendLine();
+                if (outcome != null && outcome.disqualified)
+                    sb.AppendLine("Disqualified — too many task time violations.");
+                else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
+                    sb.AppendLine("Mission not finished in time.");
+                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms");
                 sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
                 sb.AppendLine($"Average SCI: {meanSci:F1}%");
-                sb.AppendLine($"Samples: {recorder.SciHistory.Count}");
                 sb.AppendLine();
                 sb.AppendLine("Recommendations:");
-                sb.AppendLine(tips);
-                sb.AppendLine();
-                sb.AppendLine(nextStage);
-                AppendSimulationPickFooter(sb);
-                PrepareResultsTextForManualBox(resultsSummaryText);
+                sb.AppendLine(sim1Recommendations);
+                PrepareResultsPanelText(resultsSummaryText, preserveManualSim1ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
                 resultsSummaryText.text = sb.ToString();
             }
         }
 
         ApplyPhaseUI();
         ApplySim1ResultsTab(ResultsTab.Result);
+    }
+
+    private SimulationRunOutcome BuildSim1RunOutcome(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        float elapsed = _simulationStressTimer;
+        float progress = missionCompleted ? 1f : gameManager?.GetSim1MissionProgress01() ?? 0f;
+        float highStressSeconds = recorder != null
+            ? StressRecommendations.ComputeHighStressSeconds(recorder.SciHistory, recorder.sampleIntervalSeconds)
+            : 0f;
+        int strikes = missionTaskStrikeTracker != null ? missionTaskStrikeTracker.StrikeCount : 0;
+        if (disqualified && string.IsNullOrEmpty(disqualificationReason) && missionTaskStrikeTracker != null)
+            disqualificationReason = missionTaskStrikeTracker.GetDisqualificationSummary();
+        return SimulationRunOutcome.Create(
+            elapsed,
+            timeLimitSeconds: 0f,
+            missionCompleted,
+            timedOut: false,
+            progress,
+            highStressSeconds,
+            disqualified,
+            strikes,
+            disqualificationReason);
+    }
+
+    private SimulationRunOutcome BuildSim2RunOutcome(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
+    {
+        float elapsed = _simulationStressTimer;
+        float progress = missionCompleted ? 1f : gameManager?.GetSim2MissionProgress01() ?? 0f;
+        float highStressSeconds = recorder != null
+            ? StressRecommendations.ComputeHighStressSeconds(recorder.SciHistory, recorder.sampleIntervalSeconds)
+            : 0f;
+        int strikes = missionTaskStrikeTracker != null ? missionTaskStrikeTracker.StrikeCount : 0;
+        if (disqualified && string.IsNullOrEmpty(disqualificationReason) && missionTaskStrikeTracker != null)
+            disqualificationReason = missionTaskStrikeTracker.GetDisqualificationSummary();
+        return SimulationRunOutcome.Create(
+            elapsed,
+            timeLimitSeconds: 0f,
+            missionCompleted,
+            timedOut: false,
+            progress,
+            highStressSeconds,
+            disqualified,
+            strikes,
+            disqualificationReason);
+    }
+
+    private void ResetSimulationRunState()
+    {
+        _simulationFinishHandled = false;
+        _simulationStressTimer = 0f;
+        _simulationStressTimerPhase = CurrentPhase;
+        missionTaskStrikeTracker?.EndTracking();
     }
 
     private static float MaxSci(System.Collections.Generic.IReadOnlyList<float> list)
@@ -919,6 +1120,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_ReturnToSimulationPickFromResults()
     {
         StopAllNarration();
+        StopActiveSimulationAudio();
         if (simulationPickPanel != null)
         {
             CurrentPhase = Phase.SimulationPick;
@@ -949,6 +1151,7 @@ public class TrainingFlowController : MonoBehaviour
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         SetSimulation2Status(sim2BriefingBody);
+        RefreshVisualBriefingPanels();
         PlaySim2BriefingNarration();
     }
 
@@ -976,6 +1179,7 @@ public class TrainingFlowController : MonoBehaviour
     public void UI_BackToHub()
     {
         StopAllNarration();
+        StopActiveSimulationAudio();
         environmentLearningController?.EndLearning();
         CurrentPhase = Phase.Gate;
         recorder?.Clear();
@@ -993,6 +1197,18 @@ public class TrainingFlowController : MonoBehaviour
 
     public void UI_ConfirmSafetyWarning()
     {
+        _useCalmBackgroundInsteadOfAlarm = false;
+        ConfirmSafetyWarningAndStart();
+    }
+
+    public void UI_ConfirmSafetyWarningWithoutAlarm()
+    {
+        _useCalmBackgroundInsteadOfAlarm = true;
+        ConfirmSafetyWarningAndStart();
+    }
+
+    private void ConfirmSafetyWarningAndStart()
+    {
         SetSafetyWarningVisible(false);
         var action = _pendingStart;
         _pendingStart = PendingStart.None;
@@ -1001,17 +1217,41 @@ public class TrainingFlowController : MonoBehaviour
             BeginSimulation1Now();
         else if (action == PendingStart.Simulation2)
             StartSimulation2Now();
+        else if (action == PendingStart.Simulation1FromTour)
+            BeginSimulation1FromTourNow();
+        else if (action == PendingStart.Simulation2FromTour)
+            BeginSimulation2FromTourNow();
     }
 
     public void UI_CancelSafetyWarning()
     {
         _pendingStart = PendingStart.None;
+        _useCalmBackgroundInsteadOfAlarm = false;
         SetSafetyWarningVisible(false);
     }
 
     public void UI_TogglePause() => SetPaused(!_paused);
     public void UI_Resume() => SetPaused(false);
     public void UI_SetPause(bool paused) => SetPaused(paused);
+
+    /// <summary>Stops narration, siren/background loops, and brief gameplay voice lines.</summary>
+    public void UI_StopAllAudio()
+    {
+        StopAllNarration();
+        StopSiren();
+        StopBaselineCalibrationBackgroundIfPlaying();
+
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+
+        if (gameManager != null)
+        {
+            if (gameManager.voiceAudioSource != null)
+                gameManager.voiceAudioSource.Stop();
+            if (gameManager.objectiveSuccessAudioSource != null)
+                gameManager.objectiveSuccessAudioSource.Stop();
+        }
+    }
 
     public void UI_QuitApplication()
     {
@@ -1033,6 +1273,18 @@ public class TrainingFlowController : MonoBehaviour
         recorder.TickRecord(sci, physiology.CurrentHrvMs);
 
         var band = StressChangeIndexCalculator.Classify(sci);
+        UpdateHighStressWarningUi(band);
+    }
+
+    private void UpdateHighStressWarningUi(StressChangeIndexCalculator.StressBand band)
+    {
+        if (highStressWarningRoot == null)
+            return;
+
+        // Inspector miswire: same panel as pre-simulation safety consent must not pop mid-mission.
+        if (highStressWarningRoot == safetyWarningPanel)
+            return;
+
         SetActiveSafe(highStressWarningRoot, band == StressChangeIndexCalculator.StressBand.High);
     }
 
@@ -1076,33 +1328,49 @@ public class TrainingFlowController : MonoBehaviour
         if (!_paused)
             _simulationStressTimer += Time.deltaTime;
 
-        RefreshSimulationStressTimerDisplay();
+        RefreshPerTaskTimerDisplay();
     }
 
-    private void RefreshSimulationStressTimerDisplay()
+    private void RefreshPerTaskTimerDisplay()
     {
         if (simulationTimerText == null)
             return;
 
-        float limit = CurrentPhase == Phase.Simulation2Active
-            ? simulation2TimerSeconds
-            : simulation1TimerSeconds;
+        EnsureMissionTaskStrikeTracker();
+        var tracker = missionTaskStrikeTracker;
+        bool showTaskTimer = tracker != null &&
+                             tracker.trackingEnabled &&
+                             tracker.IsTrackingActive &&
+                             !string.IsNullOrEmpty(tracker.CurrentTaskKey);
 
-        float displaySeconds = simulationTimerCountDown
-            ? Mathf.Max(0f, limit - _simulationStressTimer)
-            : _simulationStressTimer;
-
-        simulationTimerText.text = FormatMmSs(displaySeconds);
-
-        if (!simulationTimerUrgentColorEnabled || !simulationTimerCountDown)
+        if (showTaskTimer)
         {
-            simulationTimerText.color = simulationTimerNormalColor;
+            float remaining = tracker.CurrentTaskRemainingSeconds;
+            simulationTimerText.text = FormatMmSs(remaining);
+
+            if (simulationTimerTitleText != null)
+                simulationTimerTitleText.text = simulationTimerTitle;
+
+            if (!simulationTimerUrgentColorEnabled)
+            {
+                simulationTimerText.color = simulationTimerNormalColor;
+                return;
+            }
+
+            float urgentThreshold = Mathf.Min(
+                simulationTimerUrgentBelowSeconds,
+                tracker.CurrentTaskLimitSeconds * 0.25f);
+            simulationTimerText.color = remaining <= urgentThreshold
+                ? simulationTimerUrgentColor
+                : simulationTimerNormalColor;
             return;
         }
 
-        simulationTimerText.color = displaySeconds <= simulationTimerUrgentBelowSeconds
-            ? simulationTimerUrgentColor
-            : simulationTimerNormalColor;
+        simulationTimerText.text = "--:--";
+        if (simulationTimerTitleText != null)
+            simulationTimerTitleText.text = simulationTimerTitle;
+
+        simulationTimerText.color = simulationTimerNormalColor;
     }
 
     private static string FormatMmSs(float seconds)
@@ -1146,18 +1414,65 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
         SetActiveSafe(sim2ResultsPanel, CurrentPhase == Phase.Simulation2Results);
         bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
+        bool showHrChartReceiver = CurrentPhase == Phase.Simulation1Calibration || showStressTimer;
         SetActiveSafe(timerPanel, showStressTimer);
         SetActiveSafe(watchHrChartPanel, showStressTimer);
         if (missionStatusPanel != null)
             missionStatusPanel.SetPanelVisible(showStressTimer);
         if (showStressTimer)
-            RefreshSimulationStressTimerDisplay();
-        SetWorkoutHeartRateChartActive(showStressTimer);
+            RefreshPerTaskTimerDisplay();
+        SetWorkoutHeartRateChartActive(showHrChartReceiver);
+        UpdateBaselineCalibrationBackgroundAudio();
         ApplyPlayerInteractionMode();
+        QuestVrRigBridge.ForceRefreshCanvases();
+    }
+
+    private void UpdateBaselineCalibrationBackgroundAudio()
+    {
+        bool inBaselineCalibration = CurrentPhase == Phase.Simulation1Calibration;
+        if (inBaselineCalibration)
+            PlayBaselineCalibrationBackground();
+        else
+            StopBaselineCalibrationBackgroundIfPlaying();
+    }
+
+    private void PlayBaselineCalibrationBackground()
+    {
+        if (sirenLoop == null || _baselineCalibrationBackgroundPlaying)
+            return;
+
+        AudioClip calibrationClip = baselineCalibrationBackgroundClip != null
+            ? baselineCalibrationBackgroundClip
+            : calmBackgroundInsteadOfAlarmClip;
+        if (calibrationClip == null)
+            return;
+
+        _sirenVolumeBeforeBaseline = sirenLoop.volume;
+        sirenLoop.clip = calibrationClip;
+        sirenLoop.loop = true;
+        sirenLoop.volume = Mathf.Clamp01(baselineCalibrationBackgroundVolume);
+        if (!sirenLoop.isPlaying)
+            sirenLoop.Play();
+
+        _baselineCalibrationBackgroundPlaying = true;
+    }
+
+    private void StopBaselineCalibrationBackgroundIfPlaying()
+    {
+        if (sirenLoop == null || !_baselineCalibrationBackgroundPlaying)
+            return;
+
+        sirenLoop.Stop();
+        sirenLoop.volume = _sirenVolumeBeforeBaseline;
+        if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+        _baselineCalibrationBackgroundPlaying = false;
     }
 
     void OnDisable()
     {
+        StopBaselineCalibrationBackgroundIfPlaying();
+
         if (playerFpsController != null)
             playerFpsController.SetUiMenuMode(true);
     }
@@ -1202,6 +1517,14 @@ public class TrainingFlowController : MonoBehaviour
 
         if (workoutHeartRateChart.enabled != on)
             workoutHeartRateChart.enabled = on;
+
+        if (!on)
+            return;
+
+        workoutHeartRateChart.SetChartUiMode(
+            CurrentPhase == Phase.Simulation1Calibration
+                ? WorkoutHeartRateChartReceiver.ChartUiMode.Baseline
+                : WorkoutHeartRateChartReceiver.ChartUiMode.Simulation);
     }
 
     void HideEnvironmentLearningTourSidebar()
@@ -1252,6 +1575,12 @@ public class TrainingFlowController : MonoBehaviour
     private void PlaySiren()
     {
         if (sirenLoop == null) return;
+
+        if (_useCalmBackgroundInsteadOfAlarm && calmBackgroundInsteadOfAlarmClip != null)
+            sirenLoop.clip = calmBackgroundInsteadOfAlarmClip;
+        else if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+
         sirenLoop.loop = true;
         if (!sirenLoop.isPlaying)
             sirenLoop.Play();
@@ -1261,6 +1590,23 @@ public class TrainingFlowController : MonoBehaviour
     {
         if (sirenLoop == null) return;
         sirenLoop.Stop();
+        if (_sirenDefaultClip != null)
+            sirenLoop.clip = _sirenDefaultClip;
+        _useCalmBackgroundInsteadOfAlarm = false;
+    }
+
+    private void StopActiveSimulationAudio()
+    {
+        if (CurrentPhase == Phase.Simulation1Active && gameManager != null)
+            gameManager.OnAllItemsCollected -= HandleSim1Complete;
+
+        if (CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active)
+        {
+            if (physiology != null)
+                physiology.StressorActive = false;
+        }
+
+        StopSiren();
     }
 
     private void ApplyNarrationFromLibrary()
@@ -1272,27 +1618,122 @@ public class TrainingFlowController : MonoBehaviour
             introNarrationClip = narrationLibrary.introClip;
         if (calibrationNarrationClip == null && narrationLibrary.calibrationClip != null)
             calibrationNarrationClip = narrationLibrary.calibrationClip;
+        if (learnBriefingNarrationClip == null && narrationLibrary.learnBriefingClip != null)
+            learnBriefingNarrationClip = narrationLibrary.learnBriefingClip;
         if (missionBriefingNarrationClip == null && narrationLibrary.sim1MissionBriefingClip != null)
             missionBriefingNarrationClip = narrationLibrary.sim1MissionBriefingClip;
         if (sim2BriefingNarrationClip == null && narrationLibrary.sim2BriefingClip != null)
             sim2BriefingNarrationClip = narrationLibrary.sim2BriefingClip;
+
+        if ((introNarrationSentenceClips == null || introNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.introSentenceClips != null && narrationLibrary.introSentenceClips.Length > 0)
+            introNarrationSentenceClips = narrationLibrary.introSentenceClips;
+        if ((calibrationNarrationSentenceClips == null || calibrationNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.calibrationSentenceClips != null && narrationLibrary.calibrationSentenceClips.Length > 0)
+            calibrationNarrationSentenceClips = narrationLibrary.calibrationSentenceClips;
+        if ((learnBriefingNarrationSentenceClips == null || learnBriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.learnBriefingSentenceClips != null && narrationLibrary.learnBriefingSentenceClips.Length > 0)
+            learnBriefingNarrationSentenceClips = narrationLibrary.learnBriefingSentenceClips;
+        if ((missionBriefingNarrationSentenceClips == null || missionBriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.sim1MissionBriefingSentenceClips != null && narrationLibrary.sim1MissionBriefingSentenceClips.Length > 0)
+            missionBriefingNarrationSentenceClips = narrationLibrary.sim1MissionBriefingSentenceClips;
+        if ((sim2BriefingNarrationSentenceClips == null || sim2BriefingNarrationSentenceClips.Length == 0) &&
+            narrationLibrary.sim2BriefingSentenceClips != null && narrationLibrary.sim2BriefingSentenceClips.Length > 0)
+            sim2BriefingNarrationSentenceClips = narrationLibrary.sim2BriefingSentenceClips;
     }
 
-    private void PlayIntroNarration() => PlayNarrationClip(introNarrationClip);
+    private void PlayIntroNarration()
+    {
+        _narrationPlayer?.Play(
+            introNarrationClip,
+            introNarrationSentenceClips,
+            introNarrationText,
+            introBodyText,
+            GetIntroSubtitleLines());
+    }
 
-    private void StopIntroNarration() => StopNarrationIfPlaying(introNarrationClip, stopAnyClip: true);
+    private void StopIntroNarration() => StopPanelNarration(stopAnyClip: true);
 
-    private void PlayCalibrationNarration() => PlayNarrationClip(calibrationNarrationClip);
+    private void PlayCalibrationNarration()
+    {
+        _narrationPlayer?.Play(
+            calibrationNarrationClip,
+            calibrationNarrationSentenceClips,
+            calibrationInstruction,
+            calibrationStatusText,
+            null);
+    }
 
-    private void StopCalibrationNarration() => StopNarrationIfPlaying(calibrationNarrationClip);
+    private void StopCalibrationNarration() => StopPanelNarration(calibrationNarrationClip);
 
-    private void PlayMissionBriefingNarration() => PlayNarrationClip(missionBriefingNarrationClip);
+    private void PlayLearnBriefingNarration()
+    {
+        // Keep the full learn-briefing body visible; narration plays per sentence without replacing the text.
+        _narrationPlayer?.Play(
+            learnBriefingNarrationClip,
+            learnBriefingNarrationSentenceClips,
+            learnBriefingBody,
+            null,
+            null);
+    }
 
-    private void StopMissionBriefingNarration() => StopNarrationIfPlaying(missionBriefingNarrationClip);
+    private void StopLearnBriefingNarration() => StopPanelNarration(learnBriefingNarrationClip);
 
-    private void PlaySim2BriefingNarration() => PlayNarrationClip(sim2BriefingNarrationClip);
+    private void RefreshVisualBriefingPanels()
+    {
+        if (sim1MissionBriefingPanel != null)
+        {
+            var sim1Briefing = sim1MissionBriefingPanel.GetComponent<SimulationBriefingPanelController>();
+            if (sim1Briefing != null)
+                sim1Briefing.Refresh();
+        }
 
-    private void StopSim2BriefingNarration() => StopNarrationIfPlaying(sim2BriefingNarrationClip);
+        if (sim2BriefingPanel != null)
+        {
+            var sim2Briefing = sim2BriefingPanel.GetComponent<SimulationBriefingPanelController>();
+            if (sim2Briefing != null)
+                sim2Briefing.Refresh();
+        }
+    }
+
+    bool UsesVisualSim1Briefing() =>
+        sim1MissionBriefingPanel != null &&
+        sim1MissionBriefingPanel.GetComponent<SimulationBriefingPanelController>() != null;
+
+    private void PlayMissionBriefingNarration()
+    {
+        _narrationPlayer?.Play(
+            missionBriefingNarrationClip,
+            missionBriefingNarrationSentenceClips,
+            missionBriefingBody,
+            missionBriefingBodyText,
+            null);
+    }
+
+    private void StopMissionBriefingNarration() => StopPanelNarration(missionBriefingNarrationClip);
+
+    private void PlaySim2BriefingNarration()
+    {
+        _narrationPlayer?.Play(
+            sim2BriefingNarrationClip,
+            sim2BriefingNarrationSentenceClips,
+            sim2BriefingBody,
+            sim2BriefingBodyText,
+            null);
+    }
+
+    private void StopSim2BriefingNarration() => StopPanelNarration(sim2BriefingNarrationClip);
+
+    private void StopPanelNarration(AudioClip clip = null, bool stopAnyClip = false)
+    {
+        if (_narrationPlayer != null && (_narrationPlayer.IsPlaying || stopAnyClip))
+        {
+            _narrationPlayer.Stop();
+            return;
+        }
+
+        StopNarrationIfPlaying(clip, stopAnyClip);
+    }
 
     private void PlayNarrationClip(AudioClip clip)
     {
@@ -1315,14 +1756,16 @@ public class TrainingFlowController : MonoBehaviour
 
     private void StopAllNarration()
     {
-        StopIntroNarration();
-        StopCalibrationNarration();
-        StopMissionBriefingNarration();
-        StopSim2BriefingNarration();
+        _narrationPlayer?.Stop();
+        if (narrationAudioSource != null)
+            narrationAudioSource.Stop();
     }
 
     private void UpdateIntroSubtitleByNarrationTime()
     {
+        if (UsesIntroSentenceNarration())
+            return;
+
         if (introBodyText == null)
             return;
 
@@ -1331,6 +1774,41 @@ public class TrainingFlowController : MonoBehaviour
             t = narrationAudioSource.time;
 
         ShowIntroParagraph(t);
+    }
+
+    private bool UsesIntroSentenceNarration() =>
+        introNarrationSentenceClips != null && introNarrationSentenceClips.Length > 1;
+
+    private string[] GetIntroSubtitleLines()
+    {
+        var raw = new[]
+        {
+            introParagraph1,
+            introParagraph2,
+            introParagraph3,
+            introParagraph4
+        };
+
+        int count = 0;
+        for (int i = 0; i < raw.Length; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(raw[i]))
+                count++;
+        }
+
+        if (count == 0)
+            return raw;
+
+        var lines = new string[count];
+        int index = 0;
+        for (int i = 0; i < raw.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(raw[i]))
+                continue;
+            lines[index++] = raw[i];
+        }
+
+        return lines;
     }
 
     private void ShowIntroParagraph(float timeSeconds)
@@ -1361,6 +1839,7 @@ public class TrainingFlowController : MonoBehaviour
         if (physiology != null)
             physiology.StressorActive = false;
         StopSiren();
+        _tourAlarmActive = false;
         SetHudVisible(false);
         environmentLearningController?.BeginLearning();
         ApplyPhaseUI();
@@ -1443,7 +1922,11 @@ public class TrainingFlowController : MonoBehaviour
         if (levelUi == null)
             levelUi = simulationPickPanel.GetComponentInChildren<LevelSelectUI>(true);
 
-        levelUi?.ScrollToTop();
+        if (levelUi != null)
+        {
+            levelUi.ApplyCopy();
+            levelUi.ScrollToTop();
+        }
     }
 
     /// <summary>
@@ -1485,16 +1968,45 @@ public class TrainingFlowController : MonoBehaviour
 
     private void StartSimulation2InSameScene()
     {
+        StartSimulation2InSameSceneCore(teleportToSpawn: true);
+    }
+
+    private void BeginSimulation2FromTourNow()
+    {
+        if (!runSimulation2InSameScene)
+        {
+            Debug.LogWarning(
+                "Start Simulation 2 from tour keeps your current position only when runSimulation2InSameScene is enabled.");
+            StartSimulation2Now();
+            return;
+        }
+
+        StartSimulation2InSameSceneCore(teleportToSpawn: false);
+    }
+
+    private void StartSimulation2InSameSceneCore(bool teleportToSpawn)
+    {
+        if (!teleportToSpawn)
+        {
+            StopTourAlarmIfPlaying();
+            environmentLearningController?.EndLearning();
+            SetActiveSafe(environmentLearningHudPanel, false);
+        }
+
         CurrentPhase = Phase.Simulation2Active;
         SetSimulationGameplayState(false, true);
-        if (simulation2SpawnPoint != null)
-            MovePlayerToSpawn(simulation2SpawnPoint, false, default, default);
-        else if (simulation2SpawnUseWorldCoordinates)
-            MovePlayerToSpawn(null, true, simulation2SpawnWorldPosition, simulation2SpawnWorldEuler);
-        else if (simulation1SpawnPoint != null)
-            MovePlayerToSpawn(simulation1SpawnPoint, false, default, default);
-        else if (simulation1SpawnUseWorldCoordinates)
-            MovePlayerToSpawn(null, true, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        if (teleportToSpawn)
+        {
+            if (simulation2SpawnPoint != null)
+                MovePlayerToSpawn(simulation2SpawnPoint, false, default, default);
+            else if (simulation2SpawnUseWorldCoordinates)
+                MovePlayerToSpawn(null, true, simulation2SpawnWorldPosition, simulation2SpawnWorldEuler);
+            else if (simulation1SpawnPoint != null)
+                MovePlayerToSpawn(simulation1SpawnPoint, false, default, default);
+            else if (simulation1SpawnUseWorldCoordinates)
+                MovePlayerToSpawn(null, true, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
+        }
+
         recorder?.Clear();
         recorder?.BeginRecording();
         if (physiology != null)
@@ -1503,13 +2015,31 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(true);
         SetSimulation2Status(sim2ObjectiveFindKit);
         gameManager?.PrepareSimulation2Mission();
+        ResetSimulationRunState();
+        missionTaskStrikeTracker?.BeginTracking(simulation2: true);
         SubscribeSimulation2IfNeeded();
         ApplyPhaseUI();
+    }
+
+    public bool IsEnvironmentLearningTourAlarmActive => _tourAlarmActive;
+
+    private void StopTourAlarmIfPlaying()
+    {
+        if (!_tourAlarmActive)
+            return;
+
+        StopSiren();
+        _tourAlarmActive = false;
     }
 
     private void SetSafetyWarningVisible(bool visible)
     {
         SetActiveSafe(safetyWarningPanel, visible);
+        if (playerFpsController != null)
+            playerFpsController.SetOverlayUiOpen(visible);
+
+        var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
+        navigation?.ApplyPlayerCursorMode();
     }
 
     private bool ShowSafetyWarningFor(PendingStart startAction)
@@ -1520,8 +2050,17 @@ public class TrainingFlowController : MonoBehaviour
         _pendingStart = startAction;
         if (safetyWarningText != null)
             safetyWarningText.text = stressWarningMessage;
+        ApplySafetyWarningButtonLabels();
         SetSafetyWarningVisible(true);
         return true;
+    }
+
+    private void ApplySafetyWarningButtonLabels()
+    {
+        if (safetyWarningContinueWithAlarmText != null)
+            safetyWarningContinueWithAlarmText.text = continueWithAlarmButtonLabel;
+        if (safetyWarningContinueWithoutAlarmText != null)
+            safetyWarningContinueWithoutAlarmText.text = continueWithoutAlarmButtonLabel;
     }
 
     private void HandleSafetyKeys()
@@ -1550,7 +2089,7 @@ public class TrainingFlowController : MonoBehaviour
 
     private bool WasPauseKeyPressed()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (VrGameplayInput.PausePressed)
             return true;
 
         return pauseKey != KeyCode.None && pauseKey != KeyCode.Escape && Input.GetKeyDown(pauseKey);
@@ -1566,6 +2105,7 @@ public class TrainingFlowController : MonoBehaviour
 
         var navigation = FindFirstObjectByType<UINavigationManager>(FindObjectsInactive.Include);
         navigation?.ApplyPlayerCursorMode();
+        QuestVrRigBridge.ForceRefreshCanvases();
     }
 
     private void SubscribeSimulation2IfNeeded()
@@ -1586,20 +2126,30 @@ public class TrainingFlowController : MonoBehaviour
         _sim2Subscribed = false;
     }
 
-    private void HandleSimulation2Complete()
+    private void HandleSimulation2Complete() => FinishSim2Run(missionCompleted: true, timedOut: false);
+
+    private void FinishSim2Run(
+        bool missionCompleted,
+        bool timedOut,
+        bool disqualified = false,
+        string disqualificationReason = null)
     {
-        if (CurrentPhase != Phase.Simulation2Active)
+        if (CurrentPhase != Phase.Simulation2Active || _simulationFinishHandled)
             return;
 
+        _simulationFinishHandled = true;
         UnsubscribeSimulation2IfNeeded();
         if (physiology != null)
             physiology.StressorActive = false;
         StopSiren();
         recorder?.EndRecording();
         gameManager?.ClearMissionMessages();
+        missionTaskStrikeTracker?.EndTracking();
         SetSimulationGameplayState(false, false);
         SetHudVisible(false);
         SetActiveSafe(highStressWarningRoot, false);
+
+        var outcome = BuildSim2RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation2Results;
 
         float peakSci = 0f;
@@ -1608,12 +2158,24 @@ public class TrainingFlowController : MonoBehaviour
         {
             peakSci = MaxSci(recorder.SciHistory);
             meanSci = MeanSci(recorder.SciHistory);
-            SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, recorder.sampleIntervalSeconds);
+            SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, outcome, recorder.sampleIntervalSeconds);
+        }
+        else if (timedOut || disqualified)
+        {
+            SessionHistoryStore.FinalizeAfterSim2(null, outcome, recorder?.sampleIntervalSeconds ?? 0.4f);
         }
 
-        string tips = recorder != null && recorder.SciHistory.Count > 0
-            ? StressRecommendations.BuildFromSciHistory(recorder.SciHistory)
-            : "Complete another Simulation 2 run to generate tailored guidance.";
+        string sim2Recommendations = recorder != null && recorder.SciHistory.Count > 0
+            ? StressRecommendations.BuildRecommendationsTabOnly(
+                recorder.SciHistory,
+                StressRecommendations.SimulationStage.Sim2,
+                outcome,
+                sim2ResultsPanels)
+            : StressRecommendations.BuildRecommendationsTabOnly(
+                null,
+                StressRecommendations.SimulationStage.Sim2,
+                outcome,
+                sim2ResultsPanels);
         float minHrv = 0f;
         float maxHrv = 0f;
         float avgHrv = 0f;
@@ -1629,31 +2191,21 @@ public class TrainingFlowController : MonoBehaviour
             if (sim2ResultsSummaryText != null)
                 sim2ResultsSummaryText.gameObject.SetActive(false);
 
-            var metrics = new StringBuilder();
-            metrics.AppendLine("<b>Results</b>");
-            metrics.AppendLine();
-            metrics.AppendLine("<color=#B8D4EE>Simulation 2</color>");
-            metrics.AppendLine();
-            metrics.AppendLine($"Peak SCI: {peakSci:F1}%");
-            metrics.AppendLine($"Average SCI: {meanSci:F1}%");
-            metrics.AppendLine();
-            metrics.AppendLine("HRV summary (this simulation only):");
-            metrics.AppendLine($"Min HRV: {minHrv:F1} ms");
-            metrics.AppendLine($"Max HRV: {maxHrv:F1} ms");
-            metrics.AppendLine($"Avg HRV: {avgHrv:F1} ms");
-            metrics.AppendLine($"Samples: {(recorder != null ? recorder.HrvHistory.Count : 0)}");
+            string metrics = StressRecommendations.BuildResultsTabMetrics(
+                StressRecommendations.SimulationStage.Sim2,
+                peakSci,
+                meanSci,
+                outcome,
+                minHrvMs: minHrv,
+                maxHrvMs: maxHrv,
+                avgHrvMs: avgHrv,
+                sciHistory: recorder?.SciHistory,
+                sampleIntervalSeconds: recorder?.sampleIntervalSeconds ?? 0.4f,
+                display: sim2ResultsPanels);
 
-            var rec = new StringBuilder();
-            rec.AppendLine("<b>Recommendations</b>");
-            rec.AppendLine();
-            rec.AppendLine(tips);
-            rec.AppendLine();
-            rec.AppendLine(Sim2ResultsFooterLine());
-
-            PrepareResultsTextForManualBox(sim2ResultsMetricsText);
-            PrepareResultsTextForManualBox(sim2ResultsRecommendationsText);
-            sim2ResultsMetricsText.text = metrics.ToString().TrimEnd();
-            sim2ResultsRecommendationsText.text = rec.ToString().TrimEnd();
+            LayoutSim2ResultsPanels();
+            sim2ResultsMetricsText.text = metrics;
+            sim2ResultsRecommendationsText.text = sim2Recommendations;
         }
         else if (sim2ResultsSummaryText != null)
         {
@@ -1661,20 +2213,16 @@ public class TrainingFlowController : MonoBehaviour
             var sb = new StringBuilder();
             sb.AppendLine("Simulation 2 — Results");
             sb.AppendLine();
+            if (outcome != null && outcome.disqualified)
+                sb.AppendLine("Disqualified — too many task time violations.");
+            else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
+                sb.AppendLine("Mission not finished in time.");
             sb.AppendLine($"Peak SCI: {peakSci:F1}%");
             sb.AppendLine($"Average SCI: {meanSci:F1}%");
             sb.AppendLine();
-            sb.AppendLine("HRV summary (this simulation only):");
-            sb.AppendLine($"Min HRV: {minHrv:F1} ms");
-            sb.AppendLine($"Max HRV: {maxHrv:F1} ms");
-            sb.AppendLine($"Avg HRV: {avgHrv:F1} ms");
-            sb.AppendLine($"Samples: {(recorder != null ? recorder.HrvHistory.Count : 0)}");
-            sb.AppendLine();
             sb.AppendLine("Recommendations:");
-            sb.AppendLine(tips);
-            sb.AppendLine();
-            sb.AppendLine(Sim2ResultsFooterLinePlain());
-            PrepareResultsTextForManualBox(sim2ResultsSummaryText);
+            sb.AppendLine(sim2Recommendations);
+            PrepareResultsPanelText(sim2ResultsSummaryText, preserveManualSim2ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
             sim2ResultsSummaryText.text = sb.ToString();
         }
         else if (sim2BriefingBodyText != null)
@@ -1683,21 +2231,57 @@ public class TrainingFlowController : MonoBehaviour
             sim2BriefingBodyText.text = string.Empty;
         }
 
-        ApplySimulation2ResultGraphs();
+        SafeApplySimulation2ResultGraphs();
 
         ApplyPhaseUI();
         ApplySim2ResultsTab(ResultsTab.Result);
     }
 
+    private void SafeApplySimulation1ResultGraphs()
+    {
+        try
+        {
+            ApplySimulation1ResultGraphs();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Simulation 1 results graphs failed: {ex.Message}\n{ex.StackTrace}");
+            resultsGraph?.Clear();
+            sim1HrvResultsGraph?.Clear();
+        }
+    }
+
+    private void SafeApplySimulation2ResultGraphs()
+    {
+        try
+        {
+            ApplySimulation2ResultGraphs();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Simulation 2 results graphs failed: {ex.Message}\n{ex.StackTrace}");
+            sim2SciResultsGraph?.Clear();
+            sim2HrvResultsGraph?.Clear();
+        }
+    }
+
     // Wire these to the three tab buttons in the Inspector (Simulation 1 panel).
     public void UI_ShowSim1ResultTab() => ApplySim1ResultsTab(ResultsTab.Result);
     public void UI_ShowSim1RecommendationsTab() => ApplySim1ResultsTab(ResultsTab.Recommendations);
-    public void UI_ShowSim1PressureGraphTab() => ApplySim1ResultsTab(ResultsTab.PressureGraph);
+    public void UI_ShowSim1PressureGraphTab()
+    {
+        ApplySim1ResultsTab(ResultsTab.PressureGraph);
+        SafeApplySimulation1ResultGraphs();
+    }
 
     // Wire these to the three tab buttons in the Inspector (Simulation 2 panel).
     public void UI_ShowSim2ResultTab() => ApplySim2ResultsTab(ResultsTab.Result);
     public void UI_ShowSim2RecommendationsTab() => ApplySim2ResultsTab(ResultsTab.Recommendations);
-    public void UI_ShowSim2PressureGraphTab() => ApplySim2ResultsTab(ResultsTab.PressureGraph);
+    public void UI_ShowSim2PressureGraphTab()
+    {
+        ApplySim2ResultsTab(ResultsTab.PressureGraph);
+        SafeApplySimulation2ResultGraphs();
+    }
 
     private void ApplySimulation1ResultGraphs()
     {
@@ -1708,12 +2292,24 @@ public class TrainingFlowController : MonoBehaviour
             return;
         }
 
+        float interval = recorder.sampleIntervalSeconds;
+
         if (resultsGraph != null)
         {
             if (recorder.SciHistory.Count > 0)
-                resultsGraph.SetFromSciPoints(recorder.SciHistory);
+            {
+                resultsGraph.chartTitle = "SCI";
+                resultsGraph.useFixedYRange = true;
+                resultsGraph.fixedYMin = 0f;
+                resultsGraph.fixedYMax = resultsGraph.maxSciDisplay;
+                resultsGraph.SetFromSciPointsWithMarkers(recorder.SciHistory, recorder.MissionMarkers, interval);
+                resultsGraph.SetInfoText(string.Empty);
+                resultsGraph.RefreshRenderToFitLayout();
+            }
             else
+            {
                 resultsGraph.Clear();
+            }
         }
 
         if (sim1HrvResultsGraph != null)
@@ -1725,9 +2321,15 @@ public class TrainingFlowController : MonoBehaviour
             }
 
             if (recorder.HrvHistory.Count > 0)
-                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay);
+            {
+                sim1HrvResultsGraph.chartTitle = "HRV";
+                sim1HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim1HrvGraphMaxDisplay, interval);
+                sim1HrvResultsGraph.SetInfoText(string.Empty);
+            }
             else
+            {
                 sim1HrvResultsGraph.Clear();
+            }
         }
     }
 
@@ -1740,20 +2342,59 @@ public class TrainingFlowController : MonoBehaviour
             return;
         }
 
+        float interval = recorder.sampleIntervalSeconds;
+        bool sharedSciAndHrvGraph = sim2SciResultsGraph != null
+            && sim2HrvResultsGraph != null
+            && ReferenceEquals(sim2SciResultsGraph, sim2HrvResultsGraph);
+
         if (sim2SciResultsGraph != null)
         {
             if (recorder.SciHistory.Count > 0)
-                sim2SciResultsGraph.SetFromValues(recorder.SciHistory, sim2SciGraphMaxDisplay);
+            {
+                sim2SciResultsGraph.chartTitle = "SCI";
+                sim2SciResultsGraph.useFixedYRange = true;
+                sim2SciResultsGraph.fixedYMin = 0f;
+                sim2SciResultsGraph.fixedYMax = sim2SciGraphMaxDisplay;
+                sim2SciResultsGraph.SetFromSciPointsWithMarkers(
+                    recorder.SciHistory,
+                    sim2SciGraphMaxDisplay,
+                    recorder.MissionMarkers,
+                    interval);
+                sim2SciResultsGraph.SetInfoText(string.Empty);
+                sim2SciResultsGraph.RefreshRenderToFitLayout();
+            }
+            else if (sharedSciAndHrvGraph && recorder.HrvHistory.Count > 0)
+            {
+                sim2SciResultsGraph.chartTitle = "HRV";
+                sim2SciResultsGraph.useFixedYRange = false;
+                sim2SciResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay, interval);
+                sim2SciResultsGraph.SetInfoText(string.Empty);
+                sim2SciResultsGraph.RefreshRenderToFitLayout();
+            }
             else
+            {
                 sim2SciResultsGraph.Clear();
+            }
         }
 
         if (sim2HrvResultsGraph != null)
         {
+            if (sharedSciAndHrvGraph)
+            {
+                // Single results chart object — SCI (with mission markers) already applied above.
+                return;
+            }
+
             if (recorder.HrvHistory.Count > 0)
-                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay);
+            {
+                sim2HrvResultsGraph.chartTitle = "HRV";
+                sim2HrvResultsGraph.SetFromValues(recorder.HrvHistory, sim2HrvGraphMaxDisplay, interval);
+                sim2HrvResultsGraph.SetInfoText(string.Empty);
+            }
             else
+            {
                 sim2HrvResultsGraph.Clear();
+            }
         }
 
         if (recorder.SciHistory.Count == 0 && recorder.HrvHistory.Count == 0)
@@ -1859,38 +2500,30 @@ public class TrainingFlowController : MonoBehaviour
             image.color = active ? config.activeTabButtonColor : config.inactiveTabButtonColor;
     }
 
-    private static void PrepareResultsTextForManualBox(TextMeshProUGUI tmp)
-    {
-        if (tmp == null)
-            return;
-
-        tmp.enableWordWrapping = true;
-        tmp.textWrappingMode = TextWrappingModes.Normal;
-    }
-
-    /// <summary>
-    /// Keeps legacy summary text hidden when Sim 1 uses manual split tabs,
-    /// without overriding the scene's manual visual design.
-    /// </summary>
     private void EnforceSim1ResultsVisibilityForTab(ResultsTab activeTab)
     {
         bool splitColumns = UseSim1SplitColumns();
 
-        // In split mode, never show the legacy combined summary text.
         if (splitColumns && resultsSummaryText != null)
             SetActiveSafe(resultsSummaryText.gameObject, false);
 
-        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
         if (!splitColumns)
             return;
 
         bool showResult = activeTab == ResultsTab.Result;
         bool showRecommendations = activeTab == ResultsTab.Recommendations;
+        bool showGraph = activeTab == ResultsTab.PressureGraph;
 
         if (sim1ResultsMetricsText != null)
             SetActiveSafe(sim1ResultsMetricsText.gameObject, showResult);
         if (sim1ResultsRecommendationsText != null)
             SetActiveSafe(sim1ResultsRecommendationsText.gameObject, showRecommendations);
+
+        GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && resultsGraph != null)
+            graphRoot = resultsGraph.gameObject;
+        if (graphRoot != null)
+            SetActiveSafe(graphRoot, showGraph);
     }
 
     /// <summary>
@@ -1901,20 +2534,85 @@ public class TrainingFlowController : MonoBehaviour
     {
         bool splitColumns = UseSim2SplitColumns();
 
-        // In split mode, never show the legacy combined summary text.
         if (splitColumns && sim2ResultsSummaryText != null)
             SetActiveSafe(sim2ResultsSummaryText.gameObject, false);
 
-        // Keep manual scene sizing/layout, but enforce tab-specific visibility.
         if (!splitColumns)
             return;
 
         bool showResult = activeTab == ResultsTab.Result;
         bool showRecommendations = activeTab == ResultsTab.Recommendations;
+        bool showGraph = activeTab == ResultsTab.PressureGraph;
 
         if (sim2ResultsMetricsText != null)
             SetActiveSafe(sim2ResultsMetricsText.gameObject, showResult);
         if (sim2ResultsRecommendationsText != null)
             SetActiveSafe(sim2ResultsRecommendationsText.gameObject, showRecommendations);
+
+        GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
+        if (graphRoot == null && sim2SciResultsGraph != null)
+            graphRoot = sim2SciResultsGraph.gameObject;
+        if (graphRoot != null)
+            SetActiveSafe(graphRoot, showGraph);
+    }
+
+    const float ResultsPanelFontSize = 30f;
+    const float ResultsPanelPadding = 24f;
+
+    void LayoutSim1ResultsPanels()
+    {
+        if (!preserveManualSim1ResultsLayout || VrGameplayInput.ShouldUseVrControls)
+        {
+            PrepareResultsPanelText(sim1ResultsMetricsText, false);
+            PrepareResultsPanelText(sim1ResultsRecommendationsText, false);
+
+            GameObject graphRoot = sim1ResultsTabs != null ? sim1ResultsTabs.pressureGraphTabContent : null;
+            if (graphRoot == null && resultsGraph != null)
+                graphRoot = resultsGraph.gameObject;
+            PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+        }
+    }
+
+    void LayoutSim2ResultsPanels()
+    {
+        if (!preserveManualSim2ResultsLayout || VrGameplayInput.ShouldUseVrControls)
+        {
+            PrepareResultsPanelText(sim2ResultsMetricsText, false);
+            PrepareResultsPanelText(sim2ResultsRecommendationsText, false);
+
+            GameObject graphRoot = sim2ResultsTabs != null ? sim2ResultsTabs.pressureGraphTabContent : null;
+            if (graphRoot == null && sim2SciResultsGraph != null)
+                graphRoot = sim2SciResultsGraph.gameObject;
+            PrepareResultsPanelRect(graphRoot != null ? graphRoot.transform as RectTransform : null);
+        }
+    }
+
+    void PrepareResultsPanelText(TextMeshProUGUI tmp, bool preserveManualLayout)
+    {
+        if (tmp == null || preserveManualLayout)
+            return;
+
+        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+        tmp.overflowMode = TextOverflowModes.Truncate;
+        tmp.enableAutoSizing = false;
+        tmp.fontSize = ResultsPanelFontSize;
+        tmp.horizontalAlignment = HorizontalAlignmentOptions.Left;
+        tmp.verticalAlignment = VerticalAlignmentOptions.Top;
+        tmp.margin = new Vector4(8f, 8f, 8f, 8f);
+        PrepareResultsPanelRect(tmp.rectTransform);
+    }
+
+    static void PrepareResultsPanelRect(RectTransform rect)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = new Vector2(ResultsPanelPadding, ResultsPanelPadding);
+        rect.offsetMax = new Vector2(-ResultsPanelPadding, -ResultsPanelPadding);
     }
 }

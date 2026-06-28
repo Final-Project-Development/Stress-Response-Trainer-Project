@@ -201,14 +201,39 @@ public class WorldItemLabel : MonoBehaviour
         Transform labelsRoot = ResolveLabelsParent();
         Transform existing = labelsRoot.Find(GetLabelCanvasObjectName());
         if (existing == null)
+            existing = FindLabelCanvasAtAnchor(labelsRoot);
+        if (existing == null)
             return false;
 
         _labelCanvas = existing.gameObject;
         _labelTmp = _labelCanvas.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (existing.name != GetLabelCanvasObjectName())
+            existing.name = GetLabelCanvasObjectName();
         SyncLabelCanvasPosition();
         ApplyTourPanelAppearance(_labelCanvas);
         ApplyText();
         return true;
+    }
+
+    Transform FindLabelCanvasAtAnchor(Transform labelsRoot)
+    {
+        Transform anchor = ResolveLabelAnchorReference();
+        if (anchor == null || labelsRoot == null)
+            return null;
+
+        Vector3 anchorPos = anchor.position;
+        const float maxDistance = 0.25f;
+        for (int i = 0; i < labelsRoot.childCount; i++)
+        {
+            Transform child = labelsRoot.GetChild(i);
+            if (!child.name.EndsWith($"_{LabelCanvasName}"))
+                continue;
+
+            if (Vector3.Distance(child.position, anchorPos) <= maxDistance)
+                return child;
+        }
+
+        return null;
     }
 
     string GetLabelCanvasObjectName() => $"{name}_{LabelCanvasName}";
@@ -333,6 +358,31 @@ public class WorldItemLabel : MonoBehaviour
             Transform child = legacyRoot.transform.GetChild(i);
             if (child.name.StartsWith(name + "_LabelAnchor_Runtime"))
                 DestroyObjectSafe(child.gameObject);
+        }
+
+        CleanupStaleRenamedLabelCanvases(labelsRoot, host);
+    }
+
+    void CleanupStaleRenamedLabelCanvases(Transform labelsRoot, Transform anchor)
+    {
+        if (labelsRoot == null || anchor == null)
+            return;
+
+        string expectedName = GetLabelCanvasObjectName();
+        Vector3 anchorPos = anchor.position;
+        const float maxDistance = 0.25f;
+
+        for (int i = labelsRoot.childCount - 1; i >= 0; i--)
+        {
+            Transform child = labelsRoot.GetChild(i);
+            if (!child.name.EndsWith($"_{LabelCanvasName}"))
+                continue;
+            if (child.name == expectedName)
+                continue;
+            if (Vector3.Distance(child.position, anchorPos) > maxDistance)
+                continue;
+
+            DestroyObjectSafe(child.gameObject);
         }
     }
 

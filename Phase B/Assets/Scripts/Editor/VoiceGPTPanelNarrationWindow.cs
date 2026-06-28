@@ -15,6 +15,7 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
 {
     private const string VoicesFolder = "Assets/VoiceGPT/Voices/Narration";
     private const string ConfigPath = "Assets/VoiceGPT/Models/config.txt";
+    private const string RecommendedVoiceName = "Adrian";
 
     private static readonly string[] VoiceNames =
     {
@@ -29,10 +30,11 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
     private TrainingFlowController _flow;
     private PanelNarrationLibrary _library;
     private int _voiceIndex;
-    private float _cfgScale = 0.7f;
-    private int _steps = 5;
+    private float _cfgScale = 0.65f;
+    private int _steps = 12;
     private bool _genIntro = true;
     private bool _genCalibration = true;
+    private bool _genLearnBriefing = true;
     private bool _genSim1Briefing = true;
     private bool _genSim2Briefing = true;
     private Vector2 _scroll;
@@ -48,6 +50,7 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
     {
         if (_flow == null)
             _flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
+        _voiceIndex = ResolveVoiceIndex(RecommendedVoiceName);
     }
 
     private void OnGUI()
@@ -72,20 +75,33 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
 
         EditorGUILayout.Space(8);
         _voiceIndex = EditorGUILayout.Popup("Voice", _voiceIndex, VoiceNames);
+        if (VoiceNames[_voiceIndex] != RecommendedVoiceName)
+        {
+            EditorGUILayout.HelpBox(
+                $"Recommended single narrator for this project: {RecommendedVoiceName} " +
+                "(calm, clear instructional tone). Use the same voice for every panel.",
+                MessageType.None);
+        }
         _cfgScale = EditorGUILayout.Slider("CFG Scale", _cfgScale, 0f, 1f);
         _steps = EditorGUILayout.IntSlider("Steps", _steps, 2, 30);
 
         EditorGUILayout.Space(8);
         EditorGUILayout.LabelField("Generate clips for", EditorStyles.boldLabel);
-        _genIntro = EditorGUILayout.ToggleLeft("Intro panel", _genIntro);
-        _genCalibration = EditorGUILayout.ToggleLeft("Calibration panel", _genCalibration);
-        _genSim1Briefing = EditorGUILayout.ToggleLeft("Simulation 1 mission briefing", _genSim1Briefing);
-        _genSim2Briefing = EditorGUILayout.ToggleLeft("Simulation 2 briefing", _genSim2Briefing);
+        _genIntro = EditorGUILayout.ToggleLeft("Intro panel (Intro_Panel)", _genIntro);
+        _genCalibration = EditorGUILayout.ToggleLeft("Calibration panel (Baseline_Panel)", _genCalibration);
+        _genLearnBriefing = EditorGUILayout.ToggleLeft("Environment learning briefing (LearnBriefing_Panel)", _genLearnBriefing);
+        _genSim1Briefing = EditorGUILayout.ToggleLeft("Simulation 1 briefing (Sim1Briefing_Panel)", _genSim1Briefing);
+        _genSim2Briefing = EditorGUILayout.ToggleLeft("Simulation 2 briefing (Sim2Briefing_Panel)", _genSim2Briefing);
 
         EditorGUILayout.Space(8);
+        EditorGUILayout.HelpBox(
+            "Each sentence / paragraph is generated as its own clip (e.g. Adrian_Intro_0, Adrian_Intro_1). " +
+            "At runtime the game plays them one by one with a short pause between sentences.",
+            MessageType.None);
         _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(160f));
         DrawTextPreview("Intro", _flow.introNarrationText);
         DrawTextPreview("Calibration", _flow.calibrationInstruction);
+        DrawTextPreview("Learn briefing", _flow.learnBriefingBody);
         DrawTextPreview("Sim 1 briefing", _flow.missionBriefingBody);
         DrawTextPreview("Sim 2 briefing", _flow.sim2BriefingBody);
         EditorGUILayout.EndScrollView();
@@ -103,6 +119,9 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
     {
         EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
         EditorGUILayout.TextArea(text ?? string.Empty, GUILayout.MinHeight(36f));
+        int units = PanelNarrationTextUtil.SplitIntoSpeechUnits(text ?? string.Empty).Count;
+        if (units > 0)
+            EditorGUILayout.LabelField($"Speech units: {units}", EditorStyles.miniLabel);
         EditorGUILayout.Space(4f);
     }
 
@@ -125,17 +144,69 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
         var generated = 0;
 
         if (_genIntro)
-            generated += GenerateOne("Intro", _flow.introNarrationText, voiceName) ? 1 : 0;
+            generated += GenerateSequenceFromLines("Intro", GetIntroSpeechLines(_flow), voiceName);
         if (_genCalibration)
-            generated += GenerateOne("Calibration", _flow.calibrationInstruction, voiceName) ? 1 : 0;
+            generated += GenerateSequence("Calibration", _flow.calibrationInstruction, voiceName);
+        if (_genLearnBriefing)
+            generated += GenerateSequence("LearnBriefing", _flow.learnBriefingBody, voiceName);
         if (_genSim1Briefing)
-            generated += GenerateOne("Sim1Briefing", _flow.missionBriefingBody, voiceName) ? 1 : 0;
+            generated += GenerateSequence("Sim1Briefing", _flow.missionBriefingBody, voiceName);
         if (_genSim2Briefing)
-            generated += GenerateOne("Sim2Briefing", _flow.sim2BriefingBody, voiceName) ? 1 : 0;
+            generated += GenerateSequence("Sim2Briefing", _flow.sim2BriefingBody, voiceName);
 
         AssetDatabase.Refresh();
         AssignExistingClipsFromFolder();
         EditorUtility.DisplayDialog("VoiceGPT", $"Finished generating {generated} clip(s).\nOutput: {VoicesFolder}", "OK");
+    }
+
+    private static string[] GetIntroSpeechLines(TrainingFlowController flow)
+    {
+        return new[]
+        {
+            flow.introParagraph1,
+            flow.introParagraph2,
+            flow.introParagraph3,
+            flow.introParagraph4
+        };
+    }
+
+    private int GenerateSequenceFromLines(string fileStem, string[] lines, string voiceName)
+    {
+        if (lines == null || lines.Length == 0)
+            return 0;
+
+        int generated = 0;
+        int clipIndex = 0;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+                continue;
+
+            if (GenerateOne($"{fileStem}_{clipIndex}", lines[i], voiceName))
+                generated++;
+            clipIndex++;
+        }
+
+        return generated;
+    }
+
+    private int GenerateSequence(string fileStem, string sourceText, string voiceName)
+    {
+        var units = PanelNarrationTextUtil.SplitIntoSpeechUnits(sourceText);
+        if (units.Count == 0)
+        {
+            UnityEngine.Debug.LogWarning($"[VoiceGPT Panel Narration] Skipped {fileStem}: empty text.");
+            return 0;
+        }
+
+        int generated = 0;
+        for (int i = 0; i < units.Count; i++)
+        {
+            if (GenerateOne($"{fileStem}_{i}", units[i], voiceName))
+                generated++;
+        }
+
+        return generated;
     }
 
     private bool GenerateOne(string fileStem, string sourceText, string voiceName)
@@ -147,7 +218,7 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
         }
 
         var prompt = SanitizeForVoiceGpt(sourceText);
-        var fileName = $"{voiceName}_{fileStem}_0";
+        var fileName = $"{voiceName}_{fileStem}";
         var outputAssetPath = $"{VoicesFolder}/{fileName}.wav";
         var outputFullPath = Path.GetFullPath(outputAssetPath);
 
@@ -365,14 +436,22 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
             return;
 
         var voiceName = VoiceNames[_voiceIndex];
-        var intro = LoadClip($"{voiceName}_Intro_0");
-        var calibration = LoadClip($"{voiceName}_Calibration_0");
-        var sim1 = LoadClip($"{voiceName}_Sim1Briefing_0");
-        var sim2 = LoadClip($"{voiceName}_Sim2Briefing_0");
+        _flow.introNarrationSentenceClips = LoadClipSequence(voiceName, "Intro");
+        _flow.calibrationNarrationSentenceClips = LoadClipSequence(voiceName, "Calibration");
+        _flow.learnBriefingNarrationSentenceClips = LoadClipSequence(voiceName, "LearnBriefing");
+        _flow.missionBriefingNarrationSentenceClips = LoadClipSequence(voiceName, "Sim1Briefing");
+        _flow.sim2BriefingNarrationSentenceClips = LoadClipSequence(voiceName, "Sim2Briefing");
+
+        var intro = FirstClip(_flow.introNarrationSentenceClips);
+        var calibration = FirstClip(_flow.calibrationNarrationSentenceClips);
+        var learnBriefing = FirstClip(_flow.learnBriefingNarrationSentenceClips);
+        var sim1 = FirstClip(_flow.missionBriefingNarrationSentenceClips);
+        var sim2 = FirstClip(_flow.sim2BriefingNarrationSentenceClips);
 
         Undo.RecordObject(_flow, "Assign panel narration clips");
         if (intro != null) _flow.introNarrationClip = intro;
         if (calibration != null) _flow.calibrationNarrationClip = calibration;
+        if (learnBriefing != null) _flow.learnBriefingNarrationClip = learnBriefing;
         if (sim1 != null) _flow.missionBriefingNarrationClip = sim1;
         if (sim2 != null) _flow.sim2BriefingNarrationClip = sim2;
         EditorUtility.SetDirty(_flow);
@@ -380,8 +459,14 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
         if (_library != null)
         {
             Undo.RecordObject(_library, "Assign panel narration library");
+            _library.introSentenceClips = _flow.introNarrationSentenceClips;
+            _library.calibrationSentenceClips = _flow.calibrationNarrationSentenceClips;
+            _library.learnBriefingSentenceClips = _flow.learnBriefingNarrationSentenceClips;
+            _library.sim1MissionBriefingSentenceClips = _flow.missionBriefingNarrationSentenceClips;
+            _library.sim2BriefingSentenceClips = _flow.sim2BriefingNarrationSentenceClips;
             if (intro != null) _library.introClip = intro;
             if (calibration != null) _library.calibrationClip = calibration;
+            if (learnBriefing != null) _library.learnBriefingClip = learnBriefing;
             if (sim1 != null) _library.sim1MissionBriefingClip = sim1;
             if (sim2 != null) _library.sim2BriefingClip = sim2;
             EditorUtility.SetDirty(_library);
@@ -403,6 +488,38 @@ public class VoiceGPTPanelNarrationWindow : EditorWindow
     {
         var path = $"{VoicesFolder}/{fileStem}.wav";
         return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+    }
+
+    private static AudioClip[] LoadClipSequence(string voiceName, string panelStem)
+    {
+        var clips = new System.Collections.Generic.List<AudioClip>();
+        for (int i = 0; i < 32; i++)
+        {
+            var clip = LoadClip($"{voiceName}_{panelStem}_{i}");
+            if (clip == null)
+                break;
+            clips.Add(clip);
+        }
+
+        return clips.ToArray();
+    }
+
+    private static AudioClip FirstClip(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0)
+            return null;
+        return clips[0];
+    }
+
+    private static int ResolveVoiceIndex(string voiceName)
+    {
+        for (int i = 0; i < VoiceNames.Length; i++)
+        {
+            if (VoiceNames[i] == voiceName)
+                return i;
+        }
+
+        return 0;
     }
 
     /// <summary>Matches VoiceGPT editor sanitization for local model.</summary>

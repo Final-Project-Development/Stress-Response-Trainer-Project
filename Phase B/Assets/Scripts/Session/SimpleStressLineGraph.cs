@@ -1,161 +1,166 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Polyline for SCI, HRV, or other series over time.
-/// On <b>Screen Space Overlay</b> canvases, uses <see cref="StressLineUiGraphic"/> because <see cref="LineRenderer"/> draws behind the UI and is invisible.
+/// Results-panel line chart using the same texture renderer as the live/baseline HR chart.
 /// </summary>
-[RequireComponent(typeof(LineRenderer))]
 public class SimpleStressLineGraph : MonoBehaviour
 {
-    public float widthMeters = 0.8f;
-    public float heightMeters = 0.35f;
-    public float maxSciDisplay = 80f;
-    [Tooltip("Disable for UI/Canvas usage so points are drawn in local space.")]
-    public bool useWorldSpace = false;
-    [Tooltip("When in UI mode, use RectTransform size (pixels) as graph size.")]
-    public bool useRectTransformSizeForUi = true;
-    [Tooltip("Line width used in UI mode (pixels-ish local units).")]
-    public float uiLineWidth = 3f;
-    public float minUiWidth = 500f;
-    public float minUiHeight = 180f;
-    [Tooltip("Clamp UI graph width so stretched RectTransforms do not spread points across full screen.")]
-    public float maxUiWidth = 760f;
-    [Tooltip("Clamp UI graph height for stable in-panel rendering.")]
-    public float maxUiHeight = 220f;
-    [Tooltip("Push line slightly toward camera so it is not hidden by panel image.")]
-    public float uiZOffset = -1f;
-    [Tooltip("Main trace color (line + key for area tint).")]
-    public Color lineColor = new Color(0.3f, 0.75f, 0.95f, 1f);
-    public int sortingOrder = 200;
-    [Tooltip("Extra fallback: draw small UI dots along the graph so data remains visible even if line mesh is clipped.")]
-    public bool drawUiDotsFallback = false;
-    public float uiDotSize = 5f;
-
-    [Header("Chart look (UI canvas)")]
-    [Tooltip("Fills the plot area, grid, and frame. World-space LineRenderer is unchanged.")]
-    public bool useProfessionalChartStyle = true;
-    [Tooltip("Thin border around the data area so the graph reads as a chart, not a random line.")]
-    public bool showPlotFrame = true;
-    [Tooltip("Horizontal reference lines to read magnitude at a glance.")]
-    public bool showHorizontalGrid = true;
-    [Range(2, 12)]
-    public int horizontalGridLines = 5;
-    [Tooltip("Shaded region under the curve to emphasize the stress trace.")]
-    public bool showAreaUnderCurve = true;
-    public Color frameAndGridColor = new Color(0.42f, 0.5f, 0.58f, 0.5f);
-    [Tooltip("If alpha is ~0, the area uses the line color with low opacity.")]
-    public Color areaTopColor = new Color(0f, 0f, 0f, 0f);
-    public Color areaBottomColor = new Color(0.02f, 0.04f, 0.08f, 0.75f);
-    [Tooltip("Optional title, e.g. 'SCI (%)' or 'HRV (ms)'. Fills chartTitleText when set.")]
-    public string chartTitle = "";
-    [Tooltip("Optional: assign a TMP above the graph — title text is set at runtime if chartTitle is non-empty.")]
+    [Header("Designer UI")]
+    [Tooltip("RawImage where the chart texture is drawn (child ChartGraph recommended).")]
+    public RawImage chartImage;
+    [Tooltip("Optional ChartTitle TMP.")]
     public TextMeshProUGUI chartTitleText;
-    [Tooltip("Optional: Y axis max (top) — e.g. scale maximum.")]
-    public TextMeshProUGUI yAxisLabelTop;
-    [Tooltip("Optional: Y axis min (bottom), usually 0 for normalized plots.")]
-    public TextMeshProUGUI yAxisLabelBottom;
-    public TextMeshProUGUI xAxisLabelStart;
-    public TextMeshProUGUI xAxisLabelEnd;
-    [Tooltip("Shown on the left of the time axis (session start).")]
-    public string xLabelStart = "Start";
-    [Tooltip("Shown on the right of the time axis (session end).")]
-    public string xLabelEnd = "End";
-    [Tooltip("Y axis min label, typically 0 for SCI/HRV in this layout.")]
-    public string yLabelBottomText = "0";
+    [Tooltip("Optional ChartInfoText TMP.")]
+    public TextMeshProUGUI chartInfoText;
+    public string chartTitle = "";
+    [TextArea] public string chartInfo = "";
 
-    private LineRenderer _lr;
-    private StressLineUiGraphic _uiGraphic;
-    private bool _useUiOverlayPath;
+    [Header("Data (legacy inspector fields)")]
+    public float maxSciDisplay = 80f;
 
-    private readonly List<Vector2> _uiPointBuffer = new List<Vector2>(256);
-    private readonly List<Image> _uiDotPool = new List<Image>(256);
-    private const float MinRectVisibilityFactor = 0.5f;
+    [Header("Manual design")]
+    public bool manualDesignMode = true;
+    public bool useChartImageRectSize = true;
+    public bool updateTitleAtRuntime = true;
+    public bool updateInfoAtRuntime = true;
+
+    [Header("Chart render")]
+    public int chartWidth = 900;
+    public int chartHeight = 420;
+    public bool useTransparentChartBackground = true;
+    public Color lineColor = new Color(0.3f, 0.75f, 0.95f, 1f);
+    public int chartLineWidth = 3;
+    public Color gridColor = new Color(0.42f, 0.5f, 0.58f, 0.45f);
+    public Color axisColor = new Color(0.75f, 0.82f, 0.9f, 0.9f);
+    public Color pointColor = Color.white;
+    [Tooltip("When enabled, chartImage/caption rects are not moved at runtime.")]
+    public bool preserveManualLayout = false;
+
+    [Header("Axis value labels")]
+    public bool showAxisValueLabels = true;
+    public Color axisLabelColor = new Color(0.85f, 0.9f, 1f, 0.92f);
+    public float axisLabelFontSize = 13f;
+    public string yAxisValueSuffix = "%";
+    [Tooltip("Use a fixed Y range (recommended for SCI % charts).")]
+    public bool useFixedYRange = false;
+    public float fixedYMin = 0f;
+    public float fixedYMax = 0f;
+    public AxisXLabelMode xAxisLabelMode = AxisXLabelMode.RunIndex;
+
+    [Header("SCI stress bands")]
+    [Tooltip("Color line segments green / yellow / red by SCI thresholds.")]
+    public bool useStressBandLineColors;
+    [Tooltip("Draw faint background bands for low / moderate / high SCI.")]
+    public bool drawStressBandZones;
+    public Color stressBandLowColor = new Color(0.35f, 0.88f, 0.48f, 1f);
+    public Color stressBandModerateColor = new Color(0.98f, 0.82f, 0.22f, 1f);
+    public Color stressBandHighColor = new Color(0.95f, 0.32f, 0.28f, 1f);
+    public float stressBandModerateThreshold = 20f;
+    public float stressBandHighThreshold = 50f;
+
+    [Header("Mission markers (results graphs)")]
+    public bool showMissionMarkers;
+    public Color missionMarkerLabelColor = new Color(1f, 0.95f, 0.75f, 0.95f);
+    public float missionMarkerLabelFontSize = 11f;
+
+    public enum AxisXLabelMode
+    {
+        RunIndex,
+        TimeSeconds
+    }
+
+    private Texture2D chartTexture;
+    private Coroutine layoutRefreshRoutine;
+    private float sampleIntervalSeconds = 0.4f;
+    private readonly List<float> cachedValues = new List<float>(256);
+    private readonly List<TextMeshProUGUI> yAxisLabels = new List<TextMeshProUGUI>(6);
+    private readonly List<TextMeshProUGUI> xAxisLabels = new List<TextMeshProUGUI>(6);
+    private readonly List<TextureLineChartRenderer.MissionMarker> cachedMissionMarkers =
+        new List<TextureLineChartRenderer.MissionMarker>(8);
+    private readonly List<TextMeshProUGUI> missionMarkerLabels = new List<TextMeshProUGUI>(8);
+    private RectTransform axisLabelsRoot;
+    private bool hasCachedValues;
 
     void Awake()
     {
-        _lr = GetComponent<LineRenderer>();
-        _uiGraphic = GetComponent<StressLineUiGraphic>();
-        EnsureVisibleUiRectSize();
+        DisableLegacyRenderers();
+        ResolveDesignerReferences();
+        EnsureDesignerChartUi();
+    }
 
-        var canvas = GetComponentInParent<Canvas>();
-        if (canvas != null && !useWorldSpace)
-        {
-            if (_uiGraphic == null)
-                _uiGraphic = gameObject.AddComponent<StressLineUiGraphic>();
-            _useUiOverlayPath = true;
-            _lr.enabled = true;
-        }
+    void OnEnable()
+    {
+        if (hasCachedValues)
+            RenderCachedValues();
         else
-        {
-            _useUiOverlayPath = false;
-            _lr.enabled = true;
-        }
-
-        _lr.useWorldSpace = useWorldSpace;
-        _lr.positionCount = 0;
-        if (useWorldSpace)
-        {
-            _lr.startWidth = 0.006f;
-            _lr.endWidth = 0.006f;
-        }
-        else if (!_useUiOverlayPath)
-        {
-            _lr.startWidth = uiLineWidth;
-            _lr.endWidth = uiLineWidth;
-        }
-
-        if (_lr.material == null)
-        {
-            var shader = Shader.Find("Sprites/Default");
-            if (shader != null)
-                _lr.material = new Material(shader);
-        }
-
-        _lr.startColor = lineColor;
-        _lr.endColor = lineColor;
-        _lr.textureMode = LineTextureMode.Stretch;
-        _lr.numCapVertices = 6;
-        _lr.numCornerVertices = 4;
-        _lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        _lr.receiveShadows = false;
-        _lr.sortingOrder = sortingOrder;
-
-        if (_uiGraphic != null)
-        {
-            _uiGraphic.raycastTarget = false;
-            _uiGraphic.SetThicknessPixels(uiLineWidth);
-        }
-
-        // Do not add a nested Canvas here — it breaks batching / materials (pink "error" shader in Scene view).
-        // Z-order: TrainingFlowController moves graph transforms before buttons after layout.
+            ScheduleChartLayoutRefresh();
     }
 
-    public void SetFromSciPoints(IReadOnlyList<float> sciPoints)
+    void OnDisable()
     {
-        SetFromValues(sciPoints, maxSciDisplay);
+        if (layoutRefreshRoutine != null)
+        {
+            StopCoroutine(layoutRefreshRoutine);
+            layoutRefreshRoutine = null;
+        }
     }
 
-    /// <summary>Clears the line (e.g. when no samples for this metric).</summary>
-    public void Clear()
+    public void SetFromSciPoints(IReadOnlyList<float> sciPoints, float intervalSeconds = 0.4f)
     {
-        if (_lr == null)
-            _lr = GetComponent<LineRenderer>();
-        if (_lr != null)
-            _lr.positionCount = 0;
-
-        if (_uiGraphic == null)
-            _uiGraphic = GetComponent<StressLineUiGraphic>();
-        _uiGraphic?.ClearChartOptions();
-        _uiGraphic?.ClearLine();
-        ClearUiDots();
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = false;
+        cachedMissionMarkers.Clear();
+        SetFromValues(sciPoints, maxSciDisplay, intervalSeconds);
     }
 
-    public void SetFromValues(IReadOnlyList<float> values, float maxDisplayValue)
+    public void SetFromSciPointsWithMarkers(
+        IReadOnlyList<float> sciPoints,
+        IReadOnlyList<SessionStressRecorder.MissionMarker> markers,
+        float intervalSeconds = 0.4f)
     {
-        EnsureVisibleUiRectSize();
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = true;
+        CopyMissionMarkers(markers);
+        SetFromValuesInternal(sciPoints, maxSciDisplay, intervalSeconds, clearMissionMarkers: false);
+    }
+
+    public void SetFromSciPointsWithMarkers(
+        IReadOnlyList<float> sciPoints,
+        float maxDisplayValue,
+        IReadOnlyList<SessionStressRecorder.MissionMarker> markers,
+        float intervalSeconds = 0.4f)
+    {
+        useStressBandLineColors = true;
+        drawStressBandZones = true;
+        showMissionMarkers = true;
+        CopyMissionMarkers(markers);
+        SetFromValuesInternal(sciPoints, maxDisplayValue, intervalSeconds, clearMissionMarkers: false);
+    }
+
+    public void SetFromValues(IReadOnlyList<float> values, float maxDisplayValue, float intervalSeconds = 0.4f)
+    {
+        SetFromValuesInternal(values, maxDisplayValue, intervalSeconds, clearMissionMarkers: true);
+    }
+
+    private void SetFromValuesInternal(
+        IReadOnlyList<float> values,
+        float maxDisplayValue,
+        float intervalSeconds,
+        bool clearMissionMarkers)
+    {
+        sampleIntervalSeconds = Mathf.Max(0.001f, intervalSeconds);
+        if (clearMissionMarkers)
+        {
+            showMissionMarkers = false;
+            cachedMissionMarkers.Clear();
+        }
+        ResolveDesignerReferences();
 
         if (values == null || values.Count == 0)
         {
@@ -163,213 +168,628 @@ public class SimpleStressLineGraph : MonoBehaviour
             return;
         }
 
-        if (_uiGraphic == null)
-            _uiGraphic = GetComponent<StressLineUiGraphic>();
+        cachedValues.Clear();
+        for (int i = 0; i < values.Count; i++)
+            cachedValues.Add(values[i]);
+        hasCachedValues = true;
 
-        int n = values.Count;
-        float max = Mathf.Max(1f, maxDisplayValue);
-        for (int i = 0; i < n; i++)
-            max = Mathf.Max(max, values[i] + 5f);
-
-        float graphWidth = widthMeters;
-        float graphHeight = heightMeters;
-        bool useUiRectSpace = !useWorldSpace && useRectTransformSizeForUi;
-        if (useUiRectSpace && TryGetComponent<RectTransform>(out var rt))
+        if (values.Count == 1)
         {
-            float clampedWidth = Mathf.Clamp(rt.rect.width, Mathf.Max(50f, minUiWidth), Mathf.Max(minUiWidth, maxUiWidth));
-            float clampedHeight = Mathf.Clamp(rt.rect.height, Mathf.Max(40f, minUiHeight), Mathf.Max(minUiHeight, maxUiHeight));
-            graphWidth = clampedWidth;
-            graphHeight = clampedHeight;
-            if (_lr != null && _lr.enabled)
-            {
-                _lr.startWidth = uiLineWidth;
-                _lr.endWidth = uiLineWidth;
-            }
+            DrawEmptyChart();
+            ApplyChartLabels();
+            return;
         }
 
-        if (_useUiOverlayPath && _uiGraphic != null)
-        {
-            _uiPointBuffer.Clear();
-            for (int i = 0; i < n; i++)
-            {
-                float u = n == 1 ? 0.5f : i / (float)(n - 1);
-                float x = (u - 0.5f) * graphWidth;
-                float yNorm = Mathf.Clamp01(values[i] / max);
-                float y = (yNorm - 0.5f) * graphHeight;
-                _uiPointBuffer.Add(new Vector2(x, y));
-            }
+        RenderCachedValues();
+    }
 
-            if (useProfessionalChartStyle)
-            {
-                Color at = areaTopColor;
-                if (at.a < 0.01f)
-                    at = new Color(lineColor.r, lineColor.g, lineColor.b, 0.38f);
-                _uiGraphic.SetChartOptions(
-                    graphWidth,
-                    graphHeight,
-                    showPlotFrame,
-                    showHorizontalGrid,
-                    horizontalGridLines,
-                    showAreaUnderCurve,
-                    frameAndGridColor,
-                    at,
-                    areaBottomColor);
-            }
-            else
-                _uiGraphic.ClearChartOptions();
+    public void SetInfoText(string text)
+    {
+        chartInfo = text ?? string.Empty;
+        ApplyInfo(chartInfo);
+    }
 
-            _uiGraphic.SetLinePoints(_uiPointBuffer, lineColor);
-            if (drawUiDotsFallback)
-                DrawUiDots(_uiPointBuffer);
-            else
-                ClearUiDots();
+    /// <summary>Re-draw using the current ChartGraph RectTransform size (manual layout friendly).</summary>
+    public void RefreshRenderToFitLayout()
+    {
+        ResolveDesignerReferences();
+        if (hasCachedValues)
+            RenderCachedValues();
+        else
+            DrawEmptyChart();
+    }
 
-            ApplyRuntimeChartLabels(max);
-        }
-
-        if (_lr == null)
+    /// <summary>Fills the host RectTransform area with caption strip + chart inset.</summary>
+    public void ApplyInsetFillLayout(float left, float bottom, float right, float top, float captionHeight = 28f)
+    {
+        if (preserveManualLayout)
             return;
 
-        if (_useUiOverlayPath)
+        ResolveDesignerReferences();
+        EnsureDesignerChartUi();
+
+        if (chartTitleText != null)
+            chartTitleText.gameObject.SetActive(false);
+
+        if (chartInfoText != null && captionHeight > 0f)
         {
-            _lr.useWorldSpace = false;
-            _lr.startWidth = Mathf.Max(2.5f, uiLineWidth);
-            _lr.endWidth = Mathf.Max(2.5f, uiLineWidth);
+            var caption = chartInfoText.rectTransform;
+            caption.gameObject.SetActive(true);
+            caption.anchorMin = new Vector2(0f, 1f);
+            caption.anchorMax = new Vector2(1f, 1f);
+            caption.pivot = new Vector2(0.5f, 1f);
+            caption.anchoredPosition = Vector2.zero;
+            caption.offsetMin = new Vector2(left, -captionHeight);
+            caption.offsetMax = new Vector2(-right, 0f);
         }
 
-        int lrCount = n == 1 ? 2 : n;
-        _lr.positionCount = lrCount;
-        float yOne = 0f;
-        if (n == 1)
+        if (chartImage != null)
         {
-            float yNorm0 = Mathf.Clamp01(values[0] / max);
-            yOne = useUiRectSpace
-                ? (yNorm0 - 0.5f) * graphHeight
-                : yNorm0 * graphHeight;
-        }
-
-        for (int i = 0; i < lrCount; i++)
-        {
-            int valueIndex = n == 1 ? 0 : i;
-            float u;
-            if (n == 1)
-                u = i == 0 ? 0.5f - 0.0005f : 0.5f + 0.0005f; // two distinct samples so the line can render
-            else
-                u = i / (float)(n - 1);
-            float x = (u - 0.5f) * graphWidth;
-
-            float yNorm = Mathf.Clamp01(values[valueIndex] / max);
-            float y = n == 1
-                ? yOne
-                : (useUiRectSpace
-                ? (yNorm - 0.5f) * graphHeight
-                : yNorm * graphHeight);
-            Vector3 p = useWorldSpace
-                ? transform.TransformPoint(new Vector3(x, y, 0f))
-                : new Vector3(x, y, _useUiOverlayPath ? 0f : uiZOffset);
-            _lr.SetPosition(i, p);
+            var graph = chartImage.rectTransform;
+            graph.anchorMin = Vector2.zero;
+            graph.anchorMax = Vector2.one;
+            graph.pivot = new Vector2(0.5f, 0.5f);
+            graph.anchoredPosition = Vector2.zero;
+            graph.offsetMin = new Vector2(left, bottom);
+            float topInset = top + (captionHeight > 0f ? captionHeight : 0f);
+            graph.offsetMax = new Vector2(-right, -topInset);
         }
     }
 
-    private void ApplyRuntimeChartLabels(float axisMax)
+    public void Clear()
     {
-        if (!string.IsNullOrEmpty(chartTitle) && chartTitleText != null)
+        hasCachedValues = false;
+        cachedValues.Clear();
+        cachedMissionMarkers.Clear();
+        DrawEmptyChart();
+        chartInfo = string.Empty;
+        ApplyInfo(string.Empty);
+        HideAxisValueLabels();
+        HideMissionMarkerLabels();
+    }
+
+    private void CopyMissionMarkers(IReadOnlyList<SessionStressRecorder.MissionMarker> markers)
+    {
+        cachedMissionMarkers.Clear();
+        if (markers == null)
+            return;
+
+        for (int i = 0; i < markers.Count; i++)
+        {
+            SessionStressRecorder.MissionMarker marker = markers[i];
+            cachedMissionMarkers.Add(new TextureLineChartRenderer.MissionMarker(
+                marker.sampleIndex,
+                marker.secondsFromStart,
+                marker.label));
+        }
+    }
+
+    private void RenderCachedValues()
+    {
+        if (!hasCachedValues || cachedValues.Count == 0)
+        {
+            DrawEmptyChart();
+            ApplyChartLabels();
+            return;
+        }
+
+        if (cachedValues.Count == 1)
+        {
+            DrawEmptyChart();
+            ApplyChartLabels();
+            return;
+        }
+
+        GetChartDimensions(out int renderWidth, out int renderHeight);
+        var style = BuildStyle();
+        ComputeYRangeForDisplay(out float yMin, out float yMax);
+
+        var points = new List<TextureLineChartRenderer.TimeValuePoint>(cachedValues.Count);
+        for (int i = 0; i < cachedValues.Count; i++)
+            points.Add(new TextureLineChartRenderer.TimeValuePoint(i * sampleIntervalSeconds, cachedValues[i]));
+
+        double duration = Mathf.Max(1f, (cachedValues.Count - 1) * sampleIntervalSeconds);
+        IReadOnlyList<TextureLineChartRenderer.MissionMarker> markers =
+            showMissionMarkers && cachedMissionMarkers.Count > 0 ? cachedMissionMarkers : null;
+
+        chartTexture = TextureLineChartRenderer.RenderTimeSeries(
+            points,
+            duration,
+            renderWidth,
+            renderHeight,
+            style,
+            yMin,
+            yMax,
+            markers);
+
+        if (chartImage != null)
+            chartImage.texture = chartTexture;
+
+        UpdateAxisValueLabels(yMin, yMax, cachedValues.Count, duration);
+        try
+        {
+            UpdateMissionMarkerLabels(points, duration, yMin, yMax);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"Mission marker labels could not be drawn: {ex.Message}");
+            HideMissionMarkerLabels();
+        }
+        ApplyChartLabels();
+    }
+
+    private void DisableLegacyRenderers()
+    {
+        var lineRenderer = GetComponent<LineRenderer>();
+        if (lineRenderer != null)
+            lineRenderer.enabled = false;
+
+        var uiGraphic = GetComponent<StressLineUiGraphic>();
+        if (uiGraphic != null)
+            uiGraphic.enabled = false;
+    }
+
+    private void ResolveDesignerReferences()
+    {
+        if (chartImage == null)
+            chartImage = transform.Find("ChartGraph")?.GetComponent<RawImage>();
+
+        if (chartTitleText == null)
+            chartTitleText = transform.Find("ChartTitle")?.GetComponent<TextMeshProUGUI>();
+
+        if (chartInfoText == null)
+            chartInfoText = transform.Find("ChartInfoText")?.GetComponent<TextMeshProUGUI>();
+    }
+
+    private void EnsureDesignerChartUi()
+    {
+        if (chartImage == null)
+        {
+            if (preserveManualLayout)
+                chartImage = CreateStretchFillUiChild<RawImage>("ChartGraph");
+            else
+                chartImage = CreateUiChild<RawImage>("ChartGraph", new Vector2(0f, -82f), new Vector2(900f, 320f));
+        }
+
+        if (preserveManualLayout && chartImage != null)
+        {
+            if (chartTitleText != null)
+                chartTitleText.gameObject.SetActive(false);
+            return;
+        }
+
+        if (chartTitleText == null)
+            chartTitleText = CreateUiChild<TextMeshProUGUI>("ChartTitle", new Vector2(-185f, 159f), new Vector2(500f, 100f));
+
+        if (chartInfoText == null)
+            chartInfoText = CreateUiChild<TextMeshProUGUI>("ChartInfoText", new Vector2(-209f, 91f), new Vector2(700f, 50f));
+
+        if (chartTitleText != null)
+        {
+            chartTitleText.alignment = TextAlignmentOptions.Left;
+            chartTitleText.fontSize = 40f;
+        }
+
+        if (chartInfoText != null)
+        {
+            chartInfoText.alignment = TextAlignmentOptions.Left;
+            chartInfoText.fontSize = 28f;
+        }
+    }
+
+    private T CreateUiChild<T>(string childName, Vector2 anchoredPosition, Vector2 sizeDelta) where T : Component
+    {
+        Transform existing = transform.Find(childName);
+        if (existing != null)
+            return existing.GetComponent<T>();
+
+        var go = new GameObject(childName, typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = sizeDelta;
+
+        if (typeof(T) == typeof(RawImage))
+            return go.AddComponent<RawImage>() as T;
+
+        if (typeof(T) == typeof(TextMeshProUGUI))
+            return go.AddComponent<TextMeshProUGUI>() as T;
+
+        return go.AddComponent<T>();
+    }
+
+    private T CreateStretchFillUiChild<T>(string childName) where T : Component
+    {
+        Transform existing = transform.Find(childName);
+        if (existing != null)
+            return existing.GetComponent<T>();
+
+        var go = new GameObject(childName, typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        if (typeof(T) == typeof(RawImage))
+            return go.AddComponent<RawImage>() as T;
+
+        if (typeof(T) == typeof(TextMeshProUGUI))
+            return go.AddComponent<TextMeshProUGUI>() as T;
+
+        return go.AddComponent<T>();
+    }
+
+    private void DrawEmptyChart()
+    {
+        if (chartImage == null)
+            return;
+
+        GetChartDimensions(out int renderWidth, out int renderHeight);
+        chartTexture = TextureLineChartRenderer.RenderEmpty(renderWidth, renderHeight, BuildStyle());
+        chartImage.texture = chartTexture;
+
+        if (useFixedYRange)
+        {
+            float yMax = fixedYMax > 0f ? fixedYMax : maxSciDisplay;
+            UpdateAxisValueLabels(fixedYMin, yMax, 0, 1.0);
+        }
+        else
+            HideAxisValueLabels();
+
+        HideMissionMarkerLabels();
+    }
+
+    private TextureLineChartRenderer.Style BuildStyle()
+    {
+        var style = TextureLineChartRenderer.Style.Default;
+        style.useTransparentBackground = useTransparentChartBackground;
+        style.lineColor = lineColor;
+        style.chartLineWidth = chartLineWidth;
+        style.gridColor = gridColor;
+        style.axisColor = axisColor;
+        style.pointColor = pointColor;
+        style.useStressBandLineColors = useStressBandLineColors;
+        style.drawStressBandZones = drawStressBandZones;
+        style.stressBandLowColor = stressBandLowColor;
+        style.stressBandModerateColor = stressBandModerateColor;
+        style.stressBandHighColor = stressBandHighColor;
+        style.stressBandModerateThreshold = stressBandModerateThreshold;
+        style.stressBandHighThreshold = stressBandHighThreshold;
+        return style;
+    }
+
+    private void GetChartDimensions(out int width, out int height)
+    {
+        if (manualDesignMode && useChartImageRectSize && chartImage != null)
+        {
+            Rect rect = chartImage.rectTransform.rect;
+            width = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.width)), 64, 4096);
+            height = Mathf.Clamp(Mathf.RoundToInt(Mathf.Abs(rect.height)), 64, 4096);
+            return;
+        }
+
+        width = chartWidth;
+        height = chartHeight;
+    }
+
+    private void ApplyChartLabels()
+    {
+        if (updateTitleAtRuntime && chartTitleText != null && !string.IsNullOrEmpty(chartTitle))
             chartTitleText.text = chartTitle;
-        if (yAxisLabelTop != null)
-            yAxisLabelTop.text = axisMax < 1f ? axisMax.ToString("F1") : axisMax.ToString("F0");
-        if (yAxisLabelBottom != null)
-            yAxisLabelBottom.text = yLabelBottomText;
-        if (xAxisLabelStart != null)
-            xAxisLabelStart.text = xLabelStart;
-        if (xAxisLabelEnd != null)
-            xAxisLabelEnd.text = xLabelEnd;
+
+        if (updateInfoAtRuntime)
+            ApplyInfo(chartInfo);
     }
 
-    /// <summary>
-    /// Some scene setups accidentally leave graph RectTransforms at near-zero width (e.g. 0.01),
-    /// which causes UI clipping and makes lines look "missing". Enforce a practical minimum size.
-    /// </summary>
-    private void EnsureVisibleUiRectSize()
+    private void ApplyInfo(string text)
     {
-        if (useWorldSpace || !useRectTransformSizeForUi)
-            return;
-
-        if (!TryGetComponent<RectTransform>(out var rt))
-            return;
-
-        float minWidth = Mathf.Max(1f, minUiWidth);
-        float minHeight = Mathf.Max(1f, minUiHeight);
-        float currentWidth = Mathf.Abs(rt.rect.width);
-        float currentHeight = Mathf.Abs(rt.rect.height);
-
-        if (currentWidth < minWidth * MinRectVisibilityFactor)
-            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, minWidth);
-
-        if (currentHeight < minHeight * MinRectVisibilityFactor)
-            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, minHeight);
+        if (chartInfoText != null)
+            chartInfoText.text = text;
     }
 
-    private void DrawUiDots(IReadOnlyList<Vector2> points)
+    private void ComputeYRangeForDisplay(out float yMin, out float yMax)
     {
-        if (!TryGetComponent<RectTransform>(out _))
-            return;
-
-        int needed = points != null ? points.Count : 0;
-        EnsureDotPoolSize(needed);
-
-        for (int i = 0; i < _uiDotPool.Count; i++)
+        if (useFixedYRange)
         {
-            bool on = i < needed;
-            var dot = _uiDotPool[i];
-            if (dot == null)
+            yMin = fixedYMin;
+            yMax = fixedYMax > 0f ? fixedYMax : maxSciDisplay;
+            return;
+        }
+
+        float minValue = cachedValues[0];
+        float maxValue = cachedValues[0];
+        for (int i = 1; i < cachedValues.Count; i++)
+        {
+            minValue = Mathf.Min(minValue, cachedValues[i]);
+            maxValue = Mathf.Max(maxValue, cachedValues[i]);
+        }
+
+        TextureLineChartRenderer.ComputeYRange(minValue, maxValue, out yMin, out yMax);
+    }
+
+    private void EnsureAxisValueLabels()
+    {
+        if (chartImage == null)
+            return;
+
+        if (axisLabelsRoot == null)
+        {
+            var rootGo = new GameObject("ChartAxisLabels", typeof(RectTransform));
+            axisLabelsRoot = rootGo.GetComponent<RectTransform>();
+            axisLabelsRoot.SetParent(chartImage.transform, false);
+            axisLabelsRoot.anchorMin = Vector2.zero;
+            axisLabelsRoot.anchorMax = Vector2.one;
+            axisLabelsRoot.offsetMin = Vector2.zero;
+            axisLabelsRoot.offsetMax = Vector2.zero;
+        }
+
+        const int tickCount = 5;
+        EnsureAxisLabelSet(yAxisLabels, "Y", tickCount + 1, TextAlignmentOptions.MidlineRight);
+        EnsureAxisLabelSet(xAxisLabels, "X", tickCount + 1, TextAlignmentOptions.Top);
+    }
+
+    private void EnsureAxisLabelSet(
+        List<TextMeshProUGUI> labels,
+        string prefix,
+        int count,
+        TextAlignmentOptions alignment)
+    {
+        TMP_FontAsset font = chartInfoText != null
+            ? chartInfoText.font
+            : chartTitleText != null
+                ? chartTitleText.font
+                : TMP_Settings.defaultFontAsset;
+
+        while (labels.Count < count)
+        {
+            int index = labels.Count;
+            var go = new GameObject($"{prefix}AxisLabel_{index}", typeof(RectTransform));
+            go.transform.SetParent(axisLabelsRoot, false);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.raycastTarget = false;
+            label.font = font;
+            label.fontSize = axisLabelFontSize;
+            label.color = axisLabelColor;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 9f;
+            label.fontSizeMax = axisLabelFontSize;
+            label.alignment = alignment;
+            label.overflowMode = TextOverflowModes.Overflow;
+
+            var rt = label.rectTransform;
+            rt.sizeDelta = prefix == "Y" ? new Vector2(52f, 22f) : new Vector2(36f, 22f);
+            labels.Add(label);
+        }
+    }
+
+    private void UpdateAxisValueLabels(float yMin, float yMax, int pointCount, double durationSeconds)
+    {
+        if (!showAxisValueLabels || chartImage == null)
+        {
+            HideAxisValueLabels();
+            return;
+        }
+
+        EnsureAxisValueLabels();
+
+        var style = BuildStyle();
+        Rect chartRect = chartImage.rectTransform.rect;
+        float plotLeft = style.plotLeft;
+        float plotBottom = style.plotBottom;
+        float plotWidth = chartRect.width - style.plotLeft - style.plotRight;
+        float plotHeight = chartRect.height - style.plotBottom - style.plotTop;
+
+        const int tickCount = 5;
+        float scaledFont = Mathf.Clamp(axisLabelFontSize, 9f, Mathf.Max(9f, chartRect.height * 0.045f));
+
+        for (int i = 0; i <= tickCount; i++)
+        {
+            float t = i / (float)tickCount;
+            float yValue = Mathf.Lerp(yMin, yMax, t);
+            float yPos = plotBottom + plotHeight * t;
+
+            TextMeshProUGUI label = yAxisLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = axisLabelColor;
+            label.text = FormatYAxisValue(yValue);
+            label.gameObject.SetActive(true);
+            PlaceAxisLabel(label, plotLeft - 6f, yPos, new Vector2(1f, 0.5f));
+        }
+
+        for (int i = 0; i <= tickCount; i++)
+        {
+            float t = i / (float)tickCount;
+            float xPos = plotLeft + plotWidth * t;
+
+            TextMeshProUGUI label = xAxisLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = axisLabelColor;
+            label.text = FormatXAxisValue(i, tickCount, pointCount, durationSeconds);
+            label.gameObject.SetActive(pointCount >= 2 && !string.IsNullOrEmpty(label.text));
+            PlaceAxisLabel(label, xPos, plotBottom - 8f, new Vector2(0.5f, 1f));
+        }
+
+        axisLabelsRoot.SetAsLastSibling();
+    }
+
+    private void PlaceAxisLabel(TextMeshProUGUI label, float x, float y, Vector2 pivot)
+    {
+        RectTransform rt = label.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.zero;
+        rt.pivot = pivot;
+        rt.anchoredPosition = new Vector2(x, y);
+    }
+
+    private string FormatYAxisValue(float value)
+    {
+        string numeric = Mathf.Abs(value - Mathf.Round(value)) < 0.05f
+            ? Mathf.RoundToInt(value).ToString()
+            : value.ToString("0.0");
+        return string.IsNullOrEmpty(yAxisValueSuffix) ? numeric : numeric + yAxisValueSuffix;
+    }
+
+    private string FormatXAxisValue(int tickIndex, int tickCount, int pointCount, double durationSeconds)
+    {
+        if (pointCount < 2)
+            return string.Empty;
+
+        float t = tickIndex / (float)tickCount;
+
+        switch (xAxisLabelMode)
+        {
+            case AxisXLabelMode.TimeSeconds:
+                return Mathf.RoundToInt((float)(durationSeconds * t)).ToString();
+
+            case AxisXLabelMode.RunIndex:
+            default:
+                int runNumber = 1 + Mathf.RoundToInt((pointCount - 1) * t);
+                return runNumber.ToString();
+        }
+    }
+
+    private void HideAxisValueLabels()
+    {
+        for (int i = 0; i < yAxisLabels.Count; i++)
+            yAxisLabels[i].gameObject.SetActive(false);
+        for (int i = 0; i < xAxisLabels.Count; i++)
+            xAxisLabels[i].gameObject.SetActive(false);
+    }
+
+    private void EnsureMissionMarkerLabels(int count)
+    {
+        if (chartImage == null)
+            return;
+
+        EnsureAxisValueLabels();
+
+        TMP_FontAsset font = chartInfoText != null
+            ? chartInfoText.font
+            : chartTitleText != null
+                ? chartTitleText.font
+                : TMP_Settings.defaultFontAsset;
+        if (font == null)
+            return;
+
+        while (missionMarkerLabels.Count < count)
+        {
+            int index = missionMarkerLabels.Count;
+            var go = new GameObject($"MissionMarkerLabel_{index}", typeof(RectTransform));
+            go.transform.SetParent(axisLabelsRoot, false);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.raycastTarget = false;
+            label.font = font;
+            label.fontSize = missionMarkerLabelFontSize;
+            label.color = missionMarkerLabelColor;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 8f;
+            label.fontSizeMax = missionMarkerLabelFontSize;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.fontStyle = FontStyles.Bold;
+
+            var rt = label.rectTransform;
+            rt.sizeDelta = new Vector2(118f, 42f);
+            missionMarkerLabels.Add(label);
+        }
+    }
+
+    private void UpdateMissionMarkerLabels(
+        IReadOnlyList<TextureLineChartRenderer.TimeValuePoint> points,
+        double durationSeconds,
+        float yMin,
+        float yMax)
+    {
+        if (!showMissionMarkers || cachedMissionMarkers.Count == 0 || chartImage == null)
+        {
+            HideMissionMarkerLabels();
+            return;
+        }
+
+        EnsureMissionMarkerLabels(cachedMissionMarkers.Count);
+
+        var style = BuildStyle();
+        Rect chartRect = chartImage.rectTransform.rect;
+        float plotLeft = style.plotLeft;
+        float plotBottom = style.plotBottom;
+        float plotWidth = chartRect.width - style.plotLeft - style.plotRight;
+        float plotHeight = chartRect.height - style.plotBottom - style.plotTop;
+        float scaledFont = Mathf.Clamp(missionMarkerLabelFontSize, 8f, Mathf.Max(8f, chartRect.height * 0.04f));
+
+        for (int i = 0; i < missionMarkerLabels.Count; i++)
+        {
+            if (i >= cachedMissionMarkers.Count)
+            {
+                missionMarkerLabels[i].gameObject.SetActive(false);
                 continue;
+            }
 
-            dot.gameObject.SetActive(on);
-            if (!on)
-                continue;
+            TextureLineChartRenderer.MissionMarker marker = cachedMissionMarkers[i];
+            int sampleIndex = Mathf.Clamp(marker.SampleIndex, 0, points.Count - 1);
+            TextureLineChartRenderer.TimeValuePoint point = points[sampleIndex];
 
-            dot.color = lineColor;
-            var rt = dot.rectTransform;
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = points[i];
-            float s = Mathf.Max(2f, uiDotSize);
-            rt.sizeDelta = new Vector2(s, s);
+            float seconds = marker.SecondsFromStart > 0f
+                ? marker.SecondsFromStart
+                : (float)point.SecondsFromStart;
+            float xNorm = Mathf.Clamp01((float)(seconds / durationSeconds));
+            float yNorm = Mathf.Clamp01((point.Value - yMin) / (yMax - yMin));
+            float xPos = plotLeft + plotWidth * xNorm;
+            float yPos = plotBottom + plotHeight * yNorm;
+            float labelOffsetY = 14f + (i % 3) * 16f;
+            float labelOffsetX = ((i % 2) == 0 ? -1f : 1f) * 8f;
+
+            TextMeshProUGUI label = missionMarkerLabels[i];
+            label.fontSize = scaledFont;
+            label.fontSizeMax = scaledFont;
+            label.color = missionMarkerLabelColor;
+            label.text = marker.Label;
+            label.gameObject.SetActive(!string.IsNullOrEmpty(marker.Label));
+            PlaceAxisLabel(label, xPos + labelOffsetX, yPos + labelOffsetY, new Vector2(0.5f, 0f));
         }
+
+        axisLabelsRoot.SetAsLastSibling();
     }
 
-    private void EnsureDotPoolSize(int needed)
+    private void HideMissionMarkerLabels()
     {
-        while (_uiDotPool.Count < needed)
-        {
-            var go = new GameObject($"GraphDot_{_uiDotPool.Count}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            go.transform.SetParent(transform, false);
-            var img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            img.sprite = GetUiWhiteSprite();
-            _uiDotPool.Add(img);
-        }
+        for (int i = 0; i < missionMarkerLabels.Count; i++)
+            missionMarkerLabels[i].gameObject.SetActive(false);
     }
 
-    private void ClearUiDots()
+    private void ScheduleChartLayoutRefresh()
     {
-        for (int i = 0; i < _uiDotPool.Count; i++)
-        {
-            if (_uiDotPool[i] != null)
-                _uiDotPool[i].gameObject.SetActive(false);
-        }
+        if (!isActiveAndEnabled || chartImage == null)
+            return;
+
+        if (layoutRefreshRoutine != null)
+            StopCoroutine(layoutRefreshRoutine);
+
+        layoutRefreshRoutine = StartCoroutine(RefreshChartAfterLayout());
     }
 
-    private static Sprite _uiWhiteSprite;
-    private static Sprite GetUiWhiteSprite()
+    private IEnumerator RefreshChartAfterLayout()
     {
-        if (_uiWhiteSprite == null)
-        {
-            var tex = Texture2D.whiteTexture;
-            _uiWhiteSprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-
-        return _uiWhiteSprite;
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        if (hasCachedValues)
+            RenderCachedValues();
+        else
+            DrawEmptyChart();
+        ApplyChartLabels();
+        layoutRefreshRoutine = null;
     }
 }

@@ -35,13 +35,55 @@ public class UDPReceiver : MonoBehaviour
 
     public bool ReceivedAnyPacket => LastReceiveRealtime > 0f;
 
+    public event Action<WatchSample> OnSampleReceived;
+
     private UdpClient _client;
     private IPEndPoint _remoteEndPoint;
 
+    [Serializable]
+    public class WatchSample
+    {
+        public string type;
+        public string mode;
+        public string source;
+        public string device;
+        public string sessionId;
+        public int sampleIndex;
+        public int sampleCount;
+        public float bpm;
+        public string measuredAt;
+        public string startedAt;
+        public string endedAt;
+        public string sentAt;
+
+        public bool IsSessionStart => string.Equals(type, "hr_session_start", StringComparison.OrdinalIgnoreCase);
+        public bool IsSessionEnd => string.Equals(type, "hr_session_end", StringComparison.OrdinalIgnoreCase);
+        public bool IsHeartRate => string.Equals(type, "hr", StringComparison.OrdinalIgnoreCase);
+    }
+
     void Start()
+    {
+        if (_client == null)
+            OpenSocket();
+    }
+
+    public void ConfigurePort(int port, bool expectTraffic)
+    {
+        expectGatewayTraffic = expectTraffic;
+        if (listenPort == port && _client != null)
+            return;
+
+        listenPort = port;
+        OpenSocket();
+    }
+
+    private void OpenSocket()
     {
         try
         {
+            try { _client?.Close(); } catch { /* ignore */ }
+            _client = null;
+
             _remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             _client = new UdpClient(listenPort);
             status = $"Listening UDP on port {listenPort}";
@@ -84,9 +126,17 @@ public class UDPReceiver : MonoBehaviour
 
         if (msg.StartsWith("{", StringComparison.Ordinal))
         {
-            any = TryParseJsonLoose(msg, out int hr, out float hrv);
-            if (any)
+            if (TryParseWatchTimeline(msg, out WatchSample watchSample))
             {
+                any = true;
+                if (watchSample.bpm > 0f)
+                    heartRate = Mathf.RoundToInt(watchSample.bpm);
+                OnSampleReceived?.Invoke(watchSample);
+            }
+
+            if (TryParseJsonLoose(msg, out int hr, out float hrv))
+            {
+                any = true;
                 if (hr > 0) heartRate = hr;
                 if (hrv > 0.01f) hrvMs = hrv;
             }
@@ -117,6 +167,27 @@ public class UDPReceiver : MonoBehaviour
         {
             LastReceiveRealtime = Time.realtimeSinceStartup;
             packetsReceived++;
+        }
+    }
+
+    private static bool TryParseWatchTimeline(string msg, out WatchSample sample)
+    {
+        sample = null;
+        if (string.IsNullOrWhiteSpace(msg) || msg.IndexOf("\"type\"", StringComparison.OrdinalIgnoreCase) < 0)
+            return false;
+
+        try
+        {
+            var parsed = JsonUtility.FromJson<WatchSample>(msg);
+            if (parsed == null || string.IsNullOrWhiteSpace(parsed.type))
+                return false;
+
+            sample = parsed;
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 

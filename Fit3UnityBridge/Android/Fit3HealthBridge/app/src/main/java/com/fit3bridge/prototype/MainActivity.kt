@@ -80,10 +80,10 @@ class MainActivity : ComponentActivity() {
 
         val explanation = TextView(this).apply {
             text = """
-                This app reads heart-rate samples from Health Connect and sends them to your Windows PC over local Wi-Fi.
+                This app reads heart-rate samples from Health Connect and sends them over local Wi-Fi.
 
-                Start the PC bridge first.
-                Then enter the PC IPv4 address below.
+                Recommended for PC VR / Quest Link: start the PC bridge, then enter the PC IPv4 address and port 7777.
+                For standalone Quest: enter the Quest IPv4 address and Unity port 5055.
             """.trimIndent()
             textSize = 16f
             setPadding(0, 20, 0, 20)
@@ -209,7 +209,7 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
 
-            val sessionLookbackStart = Instant.now().minus(Duration.ofHours(2))
+            val sessionLookbackStart = Instant.now().minus(Duration.ofMinutes(2))
 
             setStatus("Streaming started. Polling Health Connect every 3 seconds.")
 
@@ -327,8 +327,11 @@ class MainActivity : ComponentActivity() {
             .put("type", "hr")
             .put("source", source)
             .put("device", "galaxy_fit3_via_samsung_health_health_connect")
+            .put("mode", "live")
             .put("seq", seq.incrementAndGet())
+            .put("sessionId", "live-health-connect")
             .put("bpm", bpm)
+            .put("hr", bpm)
             .put("measuredAt", measuredAt.toString())
             .put("sentAt", sentAt.toString())
             .put("ageMs", ageMs)

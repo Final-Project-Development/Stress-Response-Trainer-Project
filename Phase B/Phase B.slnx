@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="SampleAssembly.csproj" />
+  <Project Path="VG_Scripts.csproj" />
+  <Project Path="Gleechi.VirtualGrasp.Onboarding.csproj" />
+  <Project Path="Gleechi.VirtualGrasp.Tests.csproj" />
+  <Project Path="Dependencies.csproj" />
+  <Project Path="Gleechi.VirtualGrasp.Editor.csproj" />
+</Solution>

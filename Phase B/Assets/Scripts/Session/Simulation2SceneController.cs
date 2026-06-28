@@ -74,13 +74,13 @@ public class Simulation2SceneController : MonoBehaviour
 
     void Update()
     {
-        if (_physiology != null && _recorder != null && _physiology.BaselineLocked)
+        if (_physiology != null && _recorder != null && _physiology.BaselineLocked && _physiology.UsingLiveUdpSample)
         {
             float sci = StressChangeIndexCalculator.ComputeSciPercent(_physiology.HrvBaselineMs, _physiology.CurrentHrvMs);
             _recorder.TickRecord(sci, _physiology.CurrentHrvMs);
         }
 
-        if (Input.GetKeyDown(KeyCode.B))
+        if (Input.GetKeyDown(KeyCode.B) || (XRInputBridge.IsVrActive && XRInputBridge.PausePressed))
             ReturnToHub();
     }
 
@@ -106,7 +106,13 @@ public class Simulation2SceneController : MonoBehaviour
                 if (s > peak) peak = s;
             }
             mean = sum / _recorder.SciHistory.Count;
-            SessionHistoryStore.FinalizeAfterSim2(_recorder.SciHistory, _recorder.sampleIntervalSeconds);
+            var outcome = SimulationRunOutcome.Create(
+                _recorder.SciHistory.Count * _recorder.sampleIntervalSeconds,
+                0f,
+                missionCompleted: true,
+                timedOut: false,
+                completionRatio: 1f);
+            SessionHistoryStore.FinalizeAfterSim2(_recorder.SciHistory, outcome, _recorder.sampleIntervalSeconds);
         }
 
         string recovery = SessionHistoryStore.BuildPhysiologicalRecoverySummary(peak, mean);
