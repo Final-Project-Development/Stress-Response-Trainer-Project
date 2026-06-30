@@ -13,6 +13,8 @@ public class MissionHintService : MonoBehaviour
     readonly List<WorldItemLabel> _activeHintLabels = new List<WorldItemLabel>();
     Coroutine _hideRoutine;
 
+    public bool IsHintActive => _activeHintLabels.Count > 0 || _hideRoutine != null;
+
     public void ShowHintForObject(string objectName)
     {
         if (string.IsNullOrWhiteSpace(objectName))

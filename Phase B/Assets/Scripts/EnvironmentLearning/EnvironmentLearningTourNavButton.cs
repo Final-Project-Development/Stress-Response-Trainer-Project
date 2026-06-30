@@ -8,7 +8,7 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Button))]
 public class EnvironmentLearningTourNavButton : MonoBehaviour
 {
-    [Tooltip("Hierarchy object name to visit, e.g. Map, PhoneBox, PFB_DoorDouble.")]
+    [Tooltip("Hierarchy object name to visit, e.g. key, PhoneBox, PFB_DoorDouble.")]
     public string sceneObjectName;
 
     [Tooltip("Meters from the item focus point. 0 = use EnvironmentLearningTourGuide default.")]

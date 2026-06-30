@@ -16,20 +16,24 @@ public class UINavigationManager : MonoBehaviour
     public GameObject topBar;
     public GameObject helpPanel;
     public GameObject confirmBackPanel;
+    public UserProfileController userProfile;
 
     [Header("Help")]
     public TextMeshProUGUI helpBodyText;
     [TextArea] public string helpDefault =
-        "Use Pause to stop safely.\nUse Back to return to hub.\nUse Help anytime for current task instructions.";
+        "Use Pause to stop safely.\nUse Back to return to hub.\nUse Help anytime for current task instructions.\n\n" +
+        "VR: Point with your right controller and pull Right Trigger to click UI.\n" +
+        "Login fields open the system keyboard when clicked in VR.\n" +
+        "Left stick = move | Right stick = turn | Menu = pause | A+X = help.";
     [TextArea] public string helpSimulation1 =
-        "Simulation 1:\n1) Enter the home and collect 5 items (E): water bottle, flash light, radio, compass, map.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
+        "Simulation 1:\n1) Enter the home and collect 5 items (E / Right Trigger): water bottle, flash light, radio, phone, key.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
-        "Simulation 2:\n1) First aid kit — E\n2) Wounded — E (go call for help)\n3) Phone — E door once, E coin, E Receiver, dial 1, 0, 1\n4) Wounded — E, then 1, 2, 3 treatment";
+        "Simulation 2:\n1) First aid kit — E / Right Trigger\n2) Wounded — E (go call for help)\n3) Phone — E door, E coin, E Receiver, dial 1 (A), 0 (B), 1 (A)\n4) Wounded — E, then 1, 2, 3 treatment (A, B, Grip)";
     [TextArea] public string helpEnvironmentLearning =
         "Environment Learning:\nWalk around and read item names in the world.\n" +
-        "Use the left sidebar list — click a name to jump to that location.\n" +
-        "Move the mouse over the left panel to click buttons.\n" +
-        "Back or Esc — return to simulation selection.";
+        "Use the left sidebar list — look at a name and pull Right Trigger to jump there.\n" +
+        "VR: Left stick move, right stick turn, Right Trigger interact.\n" +
+        "Back or Menu — return to simulation selection.";
 
     [Header("Keys")]
     public KeyCode pauseKey = KeyCode.Escape;
@@ -41,8 +45,10 @@ public class UINavigationManager : MonoBehaviour
 
     public bool IsOverlayUiOpen =>
         _helpOpen
+        || (userProfile != null && userProfile.IsProfileOpen)
         || (confirmBackPanel != null && confirmBackPanel.activeSelf)
-        || (flow != null && flow.IsPaused);
+        || (flow != null && flow.IsPaused)
+        || (flow != null && flow.IsSafetyWarningVisible);
 
     void Start()
     {
@@ -50,16 +56,19 @@ public class UINavigationManager : MonoBehaviour
             flow = FindFirstObjectByType<TrainingFlowController>(FindObjectsInactive.Include);
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>(FindObjectsInactive.Include);
+        if (userProfile == null)
+            userProfile = FindFirstObjectByType<UserProfileController>(FindObjectsInactive.Include);
 
         SetActiveSafe(topBar, true);
         SetActiveSafe(helpPanel, false);
         SetActiveSafe(confirmBackPanel, false);
+        userProfile?.RefreshProfileButtonVisibility();
         ApplyPlayerCursorMode();
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(helpKey))
+        if (VrGameplayInput.HelpPressed)
             ToggleHelp();
     }
 
@@ -72,6 +81,12 @@ public class UINavigationManager : MonoBehaviour
         if (_helpOpen)
         {
             CloseHelp();
+            return true;
+        }
+
+        if (userProfile != null && userProfile.IsProfileOpen)
+        {
+            userProfile.CloseProfile();
             return true;
         }
 
@@ -276,6 +291,14 @@ public class UINavigationManager : MonoBehaviour
 
         if (environmentLearning)
         {
+            if (flow != null && flow.IsSafetyWarningVisible)
+            {
+                playerController.SetOverlayUiOpen(true);
+                playerController.SetUiMenuMode(false);
+                playerController.SetSimulationToolbarMode(false);
+                return;
+            }
+
             playerController.SetOverlayUiOpen(false);
             playerController.SetUiMenuMode(false);
             playerController.SetSimulationToolbarMode(false);

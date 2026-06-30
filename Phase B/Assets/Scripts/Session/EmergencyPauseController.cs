@@ -12,7 +12,7 @@ public class EmergencyPauseController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (Input.GetKeyDown(toggleKey) || VrGameplayInput.PausePressed)
             SetPaused(!_paused);
     }
 

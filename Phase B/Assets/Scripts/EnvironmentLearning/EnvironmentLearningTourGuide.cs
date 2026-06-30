@@ -23,6 +23,18 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
     public float defaultStandoffMeters = 2.5f;
     public float eyeHeightMeters = 1.6f;
 
+    [Header("Tour options menu (Background (1))")]
+    public string optionsMenuObjectName = "Background (1)";
+    public string optionsMenuTitleObjectName = "learnMenue";
+    public string optionsMenuTitleText = "Tour options";
+    public string toggleAlarmButtonName = "addAlarm";
+    public string startSim1ButtonName = "startsim1";
+    public string startSim2ButtonName = "startsim2";
+    public string alarmOnButtonLabel = "Alarm on";
+    public string alarmOffButtonLabel = "Alarm off";
+    public string startSim1ButtonLabel = "Simulation 1";
+    public string startSim2ButtonLabel = "Simulation 2";
+
     Transform _playerRoot;
     SimpleFPSController _playerController;
     bool _active;
@@ -86,6 +98,7 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
 
         ApplySectionHeaderTexts();
         WireNavButtons();
+        WireOptionsMenu();
 
         if (sidebarPanel != null)
             sidebarPanel.SetActive(true);
@@ -99,6 +112,7 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
     {
         _active = false;
         UnwireNavButtons();
+        UnwireOptionsMenu();
         EnsureSidebarHidden();
         WirePlayerCursorMode(false);
     }
@@ -129,6 +143,9 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         {
             var nav = navButtons[i];
             if (nav == null || string.IsNullOrWhiteSpace(nav.sceneObjectName))
+                continue;
+
+            if (IsOptionsMenuControl(nav.transform))
                 continue;
 
             var button = nav.GetComponent<Button>();
@@ -201,6 +218,64 @@ public class EnvironmentLearningTourGuide : MonoBehaviour
         }
 
         _wiredButtons.Clear();
+    }
+
+    public void RefreshOptionsMenuPresentation()
+    {
+        ResolveOptionsMenu()?.ApplyPresentation();
+    }
+
+    void WireOptionsMenu()
+    {
+        UnwireOptionsMenu();
+        EnvironmentLearningTourOptionsMenu optionsMenu = ResolveOptionsMenu();
+        if (optionsMenu == null)
+        {
+            Debug.LogWarning(
+                $"EnvironmentLearningTourGuide: options menu '{optionsMenuObjectName}' was not found under the sidebar.");
+            return;
+        }
+
+        optionsMenu.titleObjectName = optionsMenuTitleObjectName;
+        optionsMenu.titleText = optionsMenuTitleText;
+        optionsMenu.toggleAlarmButtonName = toggleAlarmButtonName;
+        optionsMenu.startSim1ButtonName = startSim1ButtonName;
+        optionsMenu.startSim2ButtonName = startSim2ButtonName;
+        optionsMenu.alarmOnButtonLabel = alarmOnButtonLabel;
+        optionsMenu.alarmOffButtonLabel = alarmOffButtonLabel;
+        optionsMenu.startSim1ButtonLabel = startSim1ButtonLabel;
+        optionsMenu.startSim2ButtonLabel = startSim2ButtonLabel;
+        optionsMenu.Wire();
+    }
+
+    void UnwireOptionsMenu()
+    {
+        ResolveOptionsMenu()?.Unwire();
+    }
+
+    EnvironmentLearningTourOptionsMenu ResolveOptionsMenu()
+    {
+        Transform searchRoot = sidebarPanel != null ? sidebarPanel.transform : sidebarRoot;
+        if (searchRoot == null)
+            return null;
+
+        Transform optionsRoot = FindChildByName(searchRoot, optionsMenuObjectName);
+        if (optionsRoot == null)
+            return null;
+
+        var optionsMenu = optionsRoot.GetComponent<EnvironmentLearningTourOptionsMenu>();
+        if (optionsMenu == null)
+            optionsMenu = optionsRoot.gameObject.AddComponent<EnvironmentLearningTourOptionsMenu>();
+
+        return optionsMenu;
+    }
+
+    bool IsOptionsMenuControl(Transform control)
+    {
+        if (control == null)
+            return false;
+
+        return control.GetComponentInParent<EnvironmentLearningTourOptionsMenu>(true) != null;
     }
 
     void WirePlayerCursorMode(bool tourActive)

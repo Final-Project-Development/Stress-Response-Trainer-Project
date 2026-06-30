@@ -44,6 +44,14 @@ public class MockPhysiologySource : MonoBehaviour
     private readonly List<float> _baselineSamples = new List<float>(600);
     private bool _capturingBaseline;
 
+    public void SetUdpReceiver(UDPReceiver receiver) => udpReceiver = receiver;
+
+    public bool useSyntheticFallback
+    {
+        get => !useLiveUdpWhenAvailable;
+        set => useLiveUdpWhenAvailable = !value;
+    }
+
     public void StartBaselineCapture()
     {
         _capturingBaseline = true;
