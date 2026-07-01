@@ -19,18 +19,18 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype for alternate wearables (not connected to Unity by default). |
 
-**Recommended branch:** `main` — latest VR build, mission UI, watch integration, and automated tests.
+**Recommended branch:** `main` : latest VR build, mission UI, watch integration, and automated tests.
 
 ---
 
 ## What the application does
 
-1. **Login / registration** — user accounts and session history.
-2. **Calibration** — ~60 seconds to establish a personal HR/HRV baseline.
-3. **Environment Learning** — optional guided tour of the training hub.
-4. **Simulation 1 — Indoor Survival** — shelter and safety tasks under air-raid stressors.
-5. **Simulation 2 — First Aid** — locate and treat a wounded casualty.
-6. **Results** — SCI score, performance summary, and Pressure Graph (HR timeline vs. baseline).
+1. **Login / registration** : user accounts and session history.
+2. **Calibration** : ~60 seconds to establish a personal HR/HRV baseline.
+3. **Environment Learning** : optional guided tour of the training hub.
+4. **Simulation 1 : Indoor Survival** : shelter and safety tasks under air-raid stressors.
+5. **Simulation 2 : First Aid** : locate and treat a wounded casualty.
+6. **Results** : SCI score, performance summary, and Pressure Graph (HR timeline vs. baseline).
 
 Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline below) or from **simulated HR/HRV** when no watch is connected (`MockPhysiologySource`; toolbar shows *Simulated*).
 
@@ -38,7 +38,7 @@ Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline belo
 
 ## System architecture
 
-The system uses a **four-node distributed pipeline**. In the primary lab setup (PC VR with Meta Quest Link), Unity runs on the Windows PC; the Quest is the VR display only.
+The system uses a **four-node distributed pipeline**. In the primary lab setup (PC VR with Meta Quest Link), Unity runs on the Windows PC, the Quest is the VR display only.
 
 ```
 Samsung Watch → (BLE) → Samsung Health (phone)
@@ -49,9 +49,9 @@ Samsung Watch → (BLE) → Samsung Health (phone)
 
 | Node | Component | Role |
 |------|-----------|------|
-| ① Wearable | Samsung Galaxy Fit3 | Records HR via PPG; syncs to Samsung Health over BLE |
-| ② Gateway | Fit3 Samsung Bridge (Android) | Reads HR from Samsung Health Data SDK; sends to PC on port **7777** |
-| ③ Processing | **HrPcBridge** + **Unity Phase B** | HrPcBridge normalizes and forwards to Unity on **UDP 5055**; Unity runs SCI and training flow |
+| ① Wearable | Samsung Galaxy Fit3 | Records HR via PPG, syncs to Samsung Health over BLE |
+| ② Gateway | Fit3 Samsung Bridge (Android) | Reads HR from Samsung Health Data SDK, sends to PC on port **7777** |
+| ③ Processing | **HrPcBridge** + **Unity Phase B** | HrPcBridge normalizes and forwards to Unity on **UDP 5055**, Unity runs SCI and training flow |
 | ④ Visualization | Meta Quest (Link / Air Link) | Displays the VR scene rendered by Unity on the PC |
 
 **Important:** The Android app does **not** talk to Unity on port 7777. All watch traffic goes through **HrPcBridge** first; Unity listens only on **UDP 5055**.
