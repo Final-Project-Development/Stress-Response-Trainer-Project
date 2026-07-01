@@ -21,7 +21,7 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 
 **Recommended branch:** `main` : latest VR build, mission UI, watch integration and automated tests.
 
-**Run instructions:** [`RUN_INSTRUCTIONS.md`](RUN_INSTRUCTIONS.md) — full setup, VR, watch pipeline, Help User system, and troubleshooting.
+**Run instructions:** [`RUN_INSTRUCTIONS.md`](RUN_INSTRUCTIONS.md) : full setup, VR, watch pipeline, Help User system and troubleshooting.
 
 ---
 
