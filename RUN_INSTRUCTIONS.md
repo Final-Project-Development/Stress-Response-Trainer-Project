@@ -1,4 +1,4 @@
-# Run Instructions — VR Stress Response Trainer
+# Run Instructions - VR Stress Response Trainer
 
 **Project number:** 26-1-D-18  
 **Department:** Software Engineering, Braude College of Engineering  
@@ -15,12 +15,12 @@
 1. [Overview](#1-overview)
 2. [System requirements](#2-system-requirements)
 3. [Downloading the code and setting up the environment](#3-downloading-the-code-and-setting-up-the-environment)
-4. [Basic run — Unity Editor (no VR, no watch)](#4-basic-run--unity-editor-no-vr-no-watch)
+4. [Basic run - Unity Editor (no VR, no watch)](#4-basic-run--unity-editor-no-vr-no-watch)
 5. [Running with Meta Quest (VR)](#5-running-with-meta-quest-vr)
 6. [Running with Samsung watch (optional)](#6-running-with-samsung-watch-optional)
-7. [Application flow — screen by screen](#7-application-flow--screen-by-screen)
+7. [Application flow - screen by screen](#7-application-flow--screen-by-screen)
 8. [Help User guidance system](#8-help-user-guidance-system)
-9. [Controls — keyboard and VR](#9-controls--keyboard-and-vr)
+9. [Controls - keyboard and VR](#9-controls--keyboard-and-vr)
 10. [Automated tests](#10-automated-tests)
 11. [Project folder structure](#11-project-folder-structure)
 12. [Troubleshooting](#12-troubleshooting)
@@ -31,9 +31,9 @@
 
 The **VR Stress Response Trainer** is a VR training system for practicing decision-making and self-regulation under pressure. The repository includes:
 
-- Main Unity application (`Phase B/`) — simulations, user interface, **SCI** (Stress Change Index) computation
-- Smartwatch data bridge (`Fit3UnityBridge/`) — Android app + Windows **HrPcBridge**
-- Previous-semester prototype (`Phase A/`) — presentation, project book PDF, demo video
+- Main Unity application (`Phase B/`) - simulations, user interface, **SCI** (Stress Change Index) computation
+- Smartwatch data bridge (`Fit3UnityBridge/`) - Android app + Windows **HrPcBridge**
+- Previous-semester prototype (`Phase A/`) - presentation, project book PDF, demo video
 
 **Default behaviour:** simulated HR/HRV data (`MockPhysiologySource`). A real watch connection is optional.
 
@@ -41,7 +41,7 @@ The **VR Stress Response Trainer** is a VR training system for practicing decisi
 
 ## 2. System requirements
 
-### 2.1 Hardware — minimum for Editor testing (no VR)
+### 2.1 Hardware - minimum for Editor testing (no VR)
 
 | Component | Requirement |
 |-----------|-------------|
@@ -51,7 +51,7 @@ The **VR Stress Response Trainer** is a VR training system for practicing decisi
 | GPU | GTX 1060 6 GB or better |
 | Storage | Free space for Unity project (~15 GB including Library) |
 
-### 2.2 Hardware — full lab deployment (VR + watch)
+### 2.2 Hardware - full lab deployment (VR + watch)
 
 | Component | Requirement |
 |-----------|-------------|
@@ -97,19 +97,19 @@ Open: **`Assets/Scenes/MainScene.unity`**
 
 ---
 
-## 4. Basic run — Unity Editor (no VR, no watch)
+## 4. Basic run - Unity Editor (no VR, no watch)
 
-This is the fastest way to test — suitable for development, demos, and use without external hardware.
+This is the fastest way to test - suitable for development, demos and use without external hardware.
 
 | Step | Action |
 |------|--------|
 | 1 | Open `Phase B` in Unity Hub |
 | 2 | Open `MainScene.unity` |
 | 3 | Press **Play** ▶ |
-| 4 | On the opening screen — **Register** (recommended) or continue as guest |
+| 4 | On the opening screen - **Register** (recommended) or continue as guest |
 | 5 | Go through Intro → **Calibration** (~60 seconds; stand or sit still) |
 | 6 | Choose **Simulation 1**, **Simulation 2**, or **Environment Learning** |
-| 7 | After a simulation — view the results screen (SCI, recommendations, Pressure Graph) |
+| 7 | After a simulation - view the results screen (SCI, recommendations, Pressure Graph) |
 
 **Desktop controls:**
 
@@ -122,7 +122,7 @@ This is the fastest way to test — suitable for development, demos, and use wit
 | **Esc** | Pause / close overlays |
 | **1 / 2 / 3** | Treatment steps (Simulation 2) |
 
-The top toolbar shows **Simulated** — mock heart-rate data (expected without a watch).
+The top toolbar shows **Simulated** - mock heart-rate data (expected without a watch).
 
 ---
 
@@ -166,7 +166,7 @@ The top toolbar shows **Simulated** — mock heart-rate data (expected without a
 Watch → Samsung Health → Fit3 Samsung Bridge (phone) → HrPcBridge (PC) → Unity → Quest
 ```
 
-### 6.2 Step 1 — HrPcBridge (PC)
+### 6.2 Step 1 - HrPcBridge (PC)
 
 ```bash
 cd Fit3UnityBridge/PcBridge/HrPcBridge
@@ -177,16 +177,16 @@ dotnet run
 - Forwards to Unity on **localhost UDP 5055**
 - Log file: `hr_log.jsonl`
 
-### 6.3 Step 2 — Fit3 Samsung Bridge (phone)
+### 6.3 Step 2 - Fit3 Samsung Bridge (phone)
 
 1. Build the APK from `Fit3UnityBridge/Android/Fit3SamsungBridge/` (Android Studio).
 2. Install on the phone and grant Samsung Health permissions.
 3. Phone and PC must be on the **same Wi-Fi network**.
 4. Enter the PC’s LAN IP address.
-5. **Send Test Packet To PC** — connectivity test.
-6. **Start Samsung SDK Streaming** — for a training session.
+5. **Send Test Packet To PC** - connectivity test.
+6. **Start Samsung SDK Streaming** - for a training session.
 
-### 6.4 Step 3 — Unity
+### 6.4 Step 3 - Unity
 
 1. Start **HrPcBridge** before pressing **Play**.
 2. Wear the watch before **Calibration**.
@@ -204,32 +204,32 @@ dotnet run
 
 ---
 
-## 7. Application flow — screen by screen
+## 7. Application flow - screen by screen
 
 ```
 Hub → Login (optional) → Intro → Calibration (60s)
     → Simulation pick
         ├── Environment Learning (guided tour)
-        ├── Simulation 1 — indoor survival / shelter
+        ├── Simulation 1 - indoor survival / shelter
         │       Briefing → Safety Warning → mission → results
-        └── Simulation 2 — first aid
+        └── Simulation 2 - first aid
                 Briefing → Safety Warning → mission → results
     → Return to simulation pick / Profile
 ```
 
-### Simulation 1 — mission steps
+### Simulation 1 - mission steps
 
 1. Enter the home and collect 5 items: water bottle, flashlight, radio, phone, key.
 2. Turn off the lights (switch).
 3. Close the double door.
 4. Run to the outdoor shelter (Mamad).
 
-### Simulation 2 — mission steps
+### Simulation 2 - mission steps
 
 1. Pick up the first aid kit.
-2. Go to the wounded person — call for help.
+2. Go to the wounded person - call for help.
 3. Public phone: door → coin → receiver → dial **101**.
-4. Return to the wounded person — treatment steps 1, 2, 3.
+4. Return to the wounded person - treatment steps 1, 2, 3.
 
 ### Results screen
 
@@ -249,12 +249,12 @@ The application includes a **built-in user guidance layer** across all training 
 
 | Component | Source file | Role |
 |-----------|-------------|------|
-| **Help Panel** | `UINavigationManager.cs` | Global help window — available in every phase |
+| **Help Panel** | `UINavigationManager.cs` | Global help window - available in every phase |
 | **Mission Status Panel** | `MissionStatusPanelController.cs` | Current task + last completed step |
 | **Hint** | `MissionHintService.cs` | World labels above mission targets |
 | **Environment Learning** | `EnvironmentLearningController.cs` | Guided tour with sidebar list |
 
-### 8.1 Help — general assistance
+### 8.1 Help - general assistance
 
 - **Keyboard:** **H**
 - **VR:** **A + X** together
@@ -263,19 +263,19 @@ The application includes a **built-in user guidance layer** across all training 
 Content **changes by phase** (Calibration, Sim 1, Sim 2, Environment Learning).  
 During an active simulation, a **Current task** line is also shown from `GameManager`.
 
-### 8.2 Hint — mission hint
+### 8.2 Hint - mission hint
 
 - Available during **Simulation 1 and 2** on the **Mission Status** panel.
 - Pressing **Hint** shows a **world label** (WorldItemLabel) above the relevant target for ~14 seconds.
 - Press again to hide the hint.
-- If no hint exists for the current step — displays "No hint available for this step."
+- If no hint exists for the current step - displays "No hint available for this step."
 
 ### 8.3 Environment Learning
 
 - Optional tour after Calibration.
 - Labels on world objects + a list in the left sidebar.
 - In VR: look at a name in the list + **Right Trigger** to jump to that object.
-- **Back** or **Menu** — return to simulation selection.
+- **Back** or **Menu** - return to simulation selection.
 
 ### 8.4 Pause / Back
 
@@ -286,7 +286,7 @@ During an active simulation, a **Current task** line is also shown from `GameMan
 
 ---
 
-## 9. Controls — keyboard and VR
+## 9. Controls - keyboard and VR
 
 ### Keyboard + mouse (desktop)
 
@@ -378,14 +378,14 @@ Stress-Response-Trainer-Project/
 | VR not detected | Check Quest Link in Meta Quest app; press Play with headset connected |
 | Toolbar shows **Simulated** | Expected without a watch; for live data start HrPcBridge + phone bridge |
 | No packets from watch | Same Wi-Fi; allow port 7777 in firewall; correct PC IP on phone |
-| Pressure Graph empty | HR may arrive only **after** the watch workout ends — complete the full simulation |
+| Pressure Graph empty | HR may arrive only **after** the watch workout ends - complete the full simulation |
 | Help won’t open in VR | Use **A+X** or the Help button in the toolbar |
 | Hint not visible | Confirm you are in active Sim 1/2; press Hint on the Mission Status panel |
 | Phase A files very small | Run `git lfs pull` for PPT/PDF/video files |
 
 ---
 
-## Appendix — recommended pre-submission / demo checklist
+## Appendix - recommended pre-submission / demo checklist
 
 1. `git clone` + `git checkout main` + `git lfs pull`
 2. Open `Phase B` in Unity 6000.2.15f1
