@@ -1,9 +1,9 @@
 # VR Stress Response Trainer
 
 **Project number:** 26-1-D-18  
-**Braude College of Engineering — Software Engineering Department**
+**Braude College of Engineering - Software Engineering Department**
 
-Immersive VR training platform for practicing self-regulation and decision-making under pressure. The system records heart rate during training sessions, computes a **Stress Change Index (SCI)** against a personal baseline, and presents results—including a Pressure Graph—**after each simulation run**.
+Immersive VR training platform for practicing self-regulation and decision-making under pressure. The system records heart rate during training sessions, computes a **Stress Change Index (SCI)** against a personal baseline and presents results-including a Pressure Graph-**after each simulation run**.
 
 **Authors:** Sapir Gerstman · Ido Ben Amara  
 **Advisor:** Dr. Moshe Sulamy
@@ -14,12 +14,12 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 
 | Path | Description |
 |------|-------------|
-| **`Phase A/`** | Previous-semester prototype deliverables (presentation, project book PDF, demo video). Reference only—not the active application. |
+| **`Phase A/`** | Previous-semester prototype deliverables (presentation, project book PDF, demo video). |
 | **`Phase B/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype for alternate wearables (not connected to Unity by default). |
 
-**Recommended branch:** `main` : latest VR build, mission UI, watch integration, and automated tests.
+**Recommended branch:** `main` : latest VR build, mission UI, watch integration and automated tests.
 
 ---
 
@@ -30,9 +30,9 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 3. **Environment Learning** : optional guided tour of the training hub.
 4. **Simulation 1 : Indoor Survival** : shelter and safety tasks under air-raid stressors.
 5. **Simulation 2 : First Aid** : locate and treat a wounded casualty.
-6. **Results** : SCI score, performance summary, and Pressure Graph (HR timeline vs. baseline).
+6. **Results** : SCI score, performance summary and Pressure Graph (HR timeline vs. baseline).
 
-Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline below) or from **simulated HR/HRV** when no watch is connected (`MockPhysiologySource`; toolbar shows *Simulated*).
+Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline below) or from **simulated HR/HRV** when no watch is connected (`MockPhysiologySource` , toolbar shows *Simulated*).
 
 ---
 
@@ -41,22 +41,15 @@ Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline belo
 The system uses a **four-node distributed pipeline**. In the primary lab setup (PC VR with Meta Quest Link), Unity runs on the Windows PC, the Quest is the VR display only.
 
 ```
-Samsung Watch → (BLE) → Samsung Health (phone)
-    → Fit3 Samsung Bridge (Android) → (Wi-Fi, PC :7777)
-    → HrPcBridge (Windows) → (localhost UDP :5055)
-    → Unity Phase B → (OpenXR / Quest Link) → Meta Quest
+Samsung Watch → (BLE) → Samsung Health (phone) → Fit3 Samsung Bridge (Android) → Unity → Quest Link → Meta Quest
 ```
 
 | Node | Component | Role |
 |------|-----------|------|
 | ① Wearable | Samsung Galaxy Fit3 | Records HR via PPG, syncs to Samsung Health over BLE |
 | ② Gateway | Fit3 Samsung Bridge (Android) | Reads HR from Samsung Health Data SDK, sends to PC on port **7777** |
-| ③ Processing | **HrPcBridge** + **Unity Phase B** | HrPcBridge normalizes and forwards to Unity on **UDP 5055**, Unity runs SCI and training flow |
+| ③ Processing | **HrPcBridge** + **Unity Phase B** | HrPcBridge normalizes and forwards to Unity, Unity runs SCI and training flow |
 | ④ Visualization | Meta Quest (Link / Air Link) | Displays the VR scene rendered by Unity on the PC |
-
-**Important:** The Android app does **not** talk to Unity on port 7777. All watch traffic goes through **HrPcBridge** first; Unity listens only on **UDP 5055**.
-
-Samsung Health often exports the full HR timeline when a watch workout **ends**, so the Pressure Graph is shown on the **results screen after the run**, not live during the mission.
 
 **Network ports**
 
@@ -64,19 +57,16 @@ Samsung Health often exports the full HR timeline when a watch workout **ends**,
 |------|----------|---------|
 | **7777** | HrPcBridge | UDP test packets + TCP post-workout HR timeline from phone |
 | **5055** | Unity `WorkoutHeartRateChartReceiver` | Primary HR input from HrPcBridge |
-| **5005** | Unity `UDPReceiver` | Legacy dev format: `HR:72,HRV:48.5` (optional) |
-
-For step-by-step hardware setup, see **`Phase B/HANDOFF_TO_PARTNER.md`**.
 
 ---
 
-## Quick start — run Phase B in Unity
+## Quick start - run Phase B in Unity
 
 ### Prerequisites
 
 - **Unity Hub** + **Unity 6000.2.15f1** (see `Phase B/ProjectSettings/ProjectVersion.txt`)
 - Windows 10/11 PC with a VR-ready GPU (for headset play via Quest Link)
-- **Meta Quest** headset + Meta Quest app (Link or Air Link) — optional for desktop Play mode testing
+- **Meta Quest** headset + Meta Quest app (Link or Air Link) - optional for desktop Play mode testing
 
 ### Steps
 
@@ -93,11 +83,11 @@ git checkout main
 5. Complete calibration, then choose Simulation 1 or 2.
 
 **Desktop testing (no headset):** WASD, mouse, **E** to interact.  
-**VR:** Connect Quest via Link/Air Link; use controllers per in-app prompts (trigger, grip, A/B).
+**VR:** Connect Quest via Link/Air Link , use controllers per in-app prompts (trigger, grip, A/B).
 
 ---
 
-## Optional — live Samsung watch pipeline
+## Optional - live Samsung watch pipeline
 
 Run these **before** starting a Unity session that should use real HR data:
 
@@ -106,15 +96,13 @@ Run these **before** starting a Unity session that should use real HR data:
    cd Fit3UnityBridge/PcBridge/HrPcBridge
    dotnet run
    ```
-   Listens on **7777**; forwards to Unity on **5055**.
+   Listens on **7777** , forwards to Unity on **5055**.
 
-2. **Fit3 Samsung Bridge** — build/install the APK from `Fit3UnityBridge/Android/Fit3SamsungBridge/` on the Android phone. Grant Samsung Health permissions; set the PC’s LAN IP; use *Send Test Packet To PC* or *Start Samsung SDK Streaming*.
+2. **Fit3 Samsung Bridge** - build/install the APK from `Fit3UnityBridge/Android/Fit3SamsungBridge/` on the Android phone. Grant Samsung Health permissions , set the PC’s LAN IP , use *Send Test Packet To PC* or *Start Samsung SDK Streaming*.
 
 3. Phone and PC must be on the **same Wi-Fi network**.
 
 4. Start Unity **after** HrPcBridge is running.
-
-Details: **`Phase B/HANDOFF_TO_PARTNER.md`**.
 
 ---
 
@@ -142,8 +130,6 @@ Unity Test Framework tests live under **`Phase B/Assets/Tests/`**:
 
 Core logic under test is in `Phase B/Assets/Scripts/Core/` (`StressTrainer.Core.asmdef`). Test assemblies are excluded from player builds.
 
-See **`Phase B/Assets/Tests/README.md`** for CLI batch-mode commands.
-
 ---
 
 ## Tech stack
@@ -152,7 +138,6 @@ See **`Phase B/Assets/Tests/README.md`** for CLI batch-mode commands.
 |-------|------------|
 | Game engine | Unity **6000.2.15f1**, C# |
 | Rendering | Universal Render Pipeline (URP) **17.2.0** |
-| VR | XR Management **4.6.0**, OpenXR **1.16.1**, XR Interaction Toolkit |
 | Android gateway | Kotlin, Samsung Health Data SDK |
 | PC relay | .NET 8 (**HrPcBridge**) |
 | Optional bridge | Python 3.10+, FastAPI WebSocket (`data_transfer_FP/`) |
@@ -176,15 +161,15 @@ Phase B is the current, full VR training application developed in the second sem
 
 | Branch | Purpose |
 |--------|---------|
-| **`main`** | **Default.** Latest integrated VR app, tests, and bridges. |
-| `vr-improvements` | Development branch merged into `main` (PR #2). |
-| `unity-game` | Earlier integration branch; kept for history. |
-| `data-transfer` | Watch bridge experiments (selectively merged). |
+| **`main`** | **Default.** Latest integrated VR app, tests and bridges. |
+| `vr-improvements` | Merged into `main` |
+| `unity-game` | Earlier Development branch merged branch |
+| `data-transfer` | Watch bridge experiments. |
 
 ---
 
 ## Contact
 
-- **Sapir Gerstman** — [Sapir.Gerstman@e.braude.ac.il](mailto:Sapir.Gerstman@e.braude.ac.il)
-- **Ido Ben Amara** — [Ido.Ben.Amara@e.braude.ac.il](mailto:Ido.Ben.Amara@e.braude.ac.il)
+- **Sapir Gerstman** - [Sapir.Gerstman@e.braude.ac.il](mailto:Sapir.Gerstman@e.braude.ac.il)
+- **Ido Ben Amara** - [Ido.Ben.Amara@e.braude.ac.il](mailto:Ido.Ben.Amara@e.braude.ac.il)
 - **Advisor:** Dr. Moshe Sulamy
