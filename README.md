@@ -14,8 +14,8 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 
 | Path | Description |
 |------|-------------|
-| **`Submission/`** | **Capstone submission package** — Phase B book, poster, and demo video ([details](Submission/README.md)). |
-| **`Phase A/`** | Previous-semester prototype deliverables (presentation, project book PDF, demo video). |
+| **`Submission/`** | **Capstone submission package** : Phase B book, poster, and demo video ([details](Submission/README.md)). |
+| **`Phase A/`** | Previous-semester prototype deliverables (presentation, project phase A book, demo video). |
 | **`Phase B/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype for alternate wearables (not connected to Unity by default). |
