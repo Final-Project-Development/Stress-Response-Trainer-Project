@@ -12,7 +12,8 @@ using UnityEngine.XR;
 /// - Grip: digit 3 for treatment
 /// - Menu button: pause/back
 /// - Left stick: move
-/// - Right stick horizontal: snap turn
+/// - Left trigger (hold): sprint / run
+/// - Right stick horizontal: smooth turn
 /// </summary>
 [DefaultExecutionOrder(-6000)]
 public sealed class XRInputBridge : MonoBehaviour
@@ -31,6 +32,7 @@ public sealed class XRInputBridge : MonoBehaviour
     public static bool HelpPressed => instance != null && instance.helpDown;
     public static Vector2 MoveAxis => instance != null ? instance.moveAxis : Vector2.zero;
     public static Vector2 TurnAxis => instance != null ? instance.turnAxis : Vector2.zero;
+    public static bool SprintActive => instance != null && instance.sprint;
 
     public static bool TryGetLocalHandPose(XRNode handNode, out Vector3 localPosition, out Quaternion localRotation)
     {
@@ -59,6 +61,7 @@ public sealed class XRInputBridge : MonoBehaviour
     private bool vrActive;
     private Vector2 moveAxis;
     private Vector2 turnAxis;
+    private bool sprint;
 
     private bool interact, prevInteract, interactDown;
     private bool digit1, prevDigit1, digit1Down;
@@ -107,6 +110,9 @@ public sealed class XRInputBridge : MonoBehaviour
 
         moveAxis = ReadAxis(left, CommonUsages.primary2DAxis);
         turnAxis = ReadAxis(right, CommonUsages.primary2DAxis);
+
+        sprint = ReadAnalogButton(left, CommonUsages.trigger, 0.45f) ||
+                 ReadButton(left, CommonUsages.primary2DAxisClick);
 
         interact = ReadButton(right, CommonUsages.triggerButton) || ReadAnalogButton(right, CommonUsages.trigger, 0.75f);
         digit1 = ReadButton(right, CommonUsages.primaryButton) || ReadButton(left, CommonUsages.primaryButton);

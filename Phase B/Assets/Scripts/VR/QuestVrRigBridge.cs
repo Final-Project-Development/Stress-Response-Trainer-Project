@@ -18,15 +18,26 @@ public sealed class QuestVrRigBridge : MonoBehaviour
 
     [Header("Movement")]
     public float vrMoveSpeed = 2.4f;
+    [Tooltip("Walk speed while holding the sprint button (left trigger or left stick click).")]
+    public float vrSprintSpeed = 4.6f;
+    public bool enableSprint = true;
     public float gravity = -9.81f;
     public float fallbackEyeHeight = 1.65f;
     public float stickDeadZone = 0.18f;
 
     [Header("Turning")]
-    public bool snapTurn = true;
+    [Tooltip("When false, the right stick turns smoothly (recommended). When true, each flick snaps by Snap Turn Degrees.")]
+    public bool snapTurn = false;
     public float snapTurnDegrees = 35f;
     public float snapTurnCooldownSeconds = 0.22f;
-    public float smoothTurnDegreesPerSecond = 90f;
+    [Tooltip("Max turn speed (degrees/sec) when the right stick is fully deflected.")]
+    public float smoothTurnDegreesPerSecond = 110f;
+    [Tooltip("Right-stick dead zone before turning starts.")]
+    public float turnDeadZone = 0.12f;
+    [Tooltip("Higher = finer control near center, faster at full tilt (1 = linear).")]
+    public float turnInputExponent = 1.35f;
+    [Tooltip("How quickly turn speed ramps up/down (higher = snappier).")]
+    public float turnSmoothing = 12f;
 
     [Header("VR UI")]
     public float canvasPlaneDistance = 2.0f;
@@ -47,6 +58,7 @@ public sealed class QuestVrRigBridge : MonoBehaviour
     private float verticalVelocity;
     private float nextSnapTurnTime;
     private float nextCanvasRefreshTime;
+    private float currentTurnRateDegreesPerSecond;
 
     private readonly List<InputDevice> headDevices = new List<InputDevice>(2);
 
@@ -256,7 +268,11 @@ public sealed class QuestVrRigBridge : MonoBehaviour
         if (move.sqrMagnitude > 1f)
             move.Normalize();
 
-        characterController.Move(move * vrMoveSpeed * Time.deltaTime);
+        float speed = vrMoveSpeed;
+        if (enableSprint && XRInputBridge.SprintActive && moveAxis.sqrMagnitude > stickDeadZone * stickDeadZone)
+            speed = vrSprintSpeed;
+
+        characterController.Move(move * speed * Time.deltaTime);
 
         if (characterController.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
@@ -265,22 +281,44 @@ public sealed class QuestVrRigBridge : MonoBehaviour
         characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
 
         Vector2 turnAxis = XRInputBridge.TurnAxis;
-        if (Mathf.Abs(turnAxis.x) < 0.65f)
-            return;
+        ApplyVrTurn(turnAxis.x);
+    }
 
-        if (snapTurn)
+    private void ApplyVrTurn(float turnAxisX)
+    {
+        float absInput = Mathf.Abs(turnAxisX);
+        if (absInput < turnDeadZone)
         {
-            if (Time.unscaledTime < nextSnapTurnTime)
-                return;
-
-            float sign = Mathf.Sign(turnAxis.x);
-            playerRoot.Rotate(Vector3.up, sign * snapTurnDegrees, Space.World);
-            nextSnapTurnTime = Time.unscaledTime + snapTurnCooldownSeconds;
+            currentTurnRateDegreesPerSecond = Mathf.Lerp(
+                currentTurnRateDegreesPerSecond,
+                0f,
+                Time.deltaTime * turnSmoothing);
         }
         else
         {
-            playerRoot.Rotate(Vector3.up, turnAxis.x * smoothTurnDegreesPerSecond * Time.deltaTime, Space.World);
+            float normalized = Mathf.Clamp01((absInput - turnDeadZone) / (1f - turnDeadZone));
+            float curved = Mathf.Pow(normalized, turnInputExponent);
+            float targetRate = Mathf.Sign(turnAxisX) * curved * smoothTurnDegreesPerSecond;
+            currentTurnRateDegreesPerSecond = Mathf.Lerp(
+                currentTurnRateDegreesPerSecond,
+                targetRate,
+                Time.deltaTime * turnSmoothing);
         }
+
+        if (snapTurn)
+        {
+            if (absInput < 0.65f || Time.unscaledTime < nextSnapTurnTime)
+                return;
+
+            float sign = Mathf.Sign(turnAxisX);
+            playerRoot.Rotate(Vector3.up, sign * snapTurnDegrees, Space.World);
+            currentTurnRateDegreesPerSecond = 0f;
+            nextSnapTurnTime = Time.unscaledTime + snapTurnCooldownSeconds;
+            return;
+        }
+
+        if (Mathf.Abs(currentTurnRateDegreesPerSecond) > 0.01f)
+            playerRoot.Rotate(Vector3.up, currentTurnRateDegreesPerSecond * Time.deltaTime, Space.World);
     }
 
     private bool CanMoveInCurrentPhase()

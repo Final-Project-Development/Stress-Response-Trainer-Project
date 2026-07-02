@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -237,6 +238,16 @@ public class TrainingFlowController : MonoBehaviour
     public GameObject watchHrChartPanel;
     [Tooltip("WorkoutHeartRateChartReceiver on BioMetrics. Active during Sim 1 & 2 when watch sends UDP timeline on port 5055.")]
     public WorkoutHeartRateChartReceiver workoutHeartRateChart;
+    [Tooltip("When true, the on-screen heart-rate monitor panel is removed (never shown). Watch data is still received for results.")]
+    public bool hideHeartRateMonitor = true;
+
+    [Header("Wait for watch data before results")]
+    [Tooltip("When true, a 'Waiting for data from the watch…' screen is shown after a simulation ends until fresh watch data arrives (or the user skips), before the results window.")]
+    public bool waitForWatchDataBeforeResults = true;
+    [Tooltip("Max seconds to wait for watch data before offering a 'Continue anyway' button.")]
+    public float watchDataWaitTimeoutSeconds = 15f;
+    [Tooltip("A watch packet counts as fresh data if it arrived within this many seconds.")]
+    public float watchDataFreshnessSeconds = 12f;
 
     [Header("Mission status HUD (Sim 1 & 2)")]
     [Tooltip("MissionStatus_Panel — completed step, next objective, hint button.")]
@@ -315,6 +326,19 @@ public class TrainingFlowController : MonoBehaviour
         "Explore important locations and objects in the training environment...\n\n" +
         "Use the left sidebar to jump to each item and read the labels in the world...\n\n" +
         "When you are ready, press Start learn...";
+
+    /// <summary>VR wording for the Environment Learning briefing (controller controls instead of keyboard/mouse).</summary>
+    const string LearnBriefingBodyVr =
+        "Environment Learning - City tour\n\n" +
+        "Explore important locations and objects in the training environment.\n\n" +
+        "Use the left sidebar to jump to each item - point at a name and pull the trigger to jump there, then read the labels in the world.\n\n" +
+        "VR controls:\n" +
+        "Left stick - move around\n" +
+        "Left trigger (hold) - run\n" +
+        "Right stick - turn smoothly\n" +
+        "Move your head - look around\n" +
+        "Trigger - select / interact\n\n" +
+        "When you are ready, press Start learn.";
 
     [TextArea]
     public string sim2BriefingBody =
@@ -470,6 +494,8 @@ public class TrainingFlowController : MonoBehaviour
 
     private bool _tourAlarmActive;
     private PanelNarrationSequencePlayer _narrationPlayer;
+    private float _simulationEndRealtime;
+    private float _effectiveResultsBaselineHrvMs;
 
     void Awake()
     {
@@ -561,12 +587,16 @@ public class TrainingFlowController : MonoBehaviour
         if (missionBriefingBodyText != null && !UsesVisualSim1Briefing())
             missionBriefingBodyText.text = missionBriefingBody;
         if (learnBriefingBodyText != null)
-            learnBriefingBodyText.text = learnBriefingBody;
+            learnBriefingBodyText.text = ResolveLearnBriefingBody();
         if (sim2BriefingBodyText != null)
             sim2BriefingBodyText.text = sim2BriefingBody;
         if (simulationTimerTitleText != null)
             simulationTimerTitleText.text = simulationTimerTitle;
     }
+
+    /// <summary>Environment Learning briefing text, swapped to VR controller wording when VR is active.</summary>
+    string ResolveLearnBriefingBody() =>
+        VrGameplayInput.ShouldUseVrControls ? LearnBriefingBodyVr : learnBriefingBody;
 
     void Update()
     {
@@ -817,7 +847,7 @@ public class TrainingFlowController : MonoBehaviour
     {
         StopCalibrationNarration();
         physiology?.StopBaselineCaptureAndLock();
-        if (physiology != null)
+        if (physiology != null && physiology.BaselineLocked)
             SessionHistoryStore.BeginSession(physiology.HrvBaselineMs);
 
         if (simulationPickPanel != null)
@@ -869,7 +899,7 @@ public class TrainingFlowController : MonoBehaviour
         StopAllNarration();
         CurrentPhase = Phase.EnvironmentLearningBriefing;
         if (learnBriefingBodyText != null)
-            learnBriefingBodyText.text = learnBriefingBody.TrimEnd();
+            learnBriefingBodyText.text = ResolveLearnBriefingBody().TrimEnd();
         SetSimulationGameplayState(false, false);
         ApplyPhaseUI();
         PlayLearnBriefingNarration();
@@ -908,6 +938,7 @@ public class TrainingFlowController : MonoBehaviour
         if (teleportToSpawn)
             MovePlayerToSpawn(simulation1SpawnPoint, simulation1SpawnUseWorldCoordinates, simulation1SpawnWorldPosition, simulation1SpawnWorldEuler);
 
+        _effectiveResultsBaselineHrvMs = 0f;
         recorder?.BeginRecording();
         if (physiology != null)
             physiology.StressorActive = true;
@@ -967,68 +998,125 @@ public class TrainingFlowController : MonoBehaviour
         gameManager?.ClearMissionMessages();
         missionTaskStrikeTracker?.EndTracking();
 
+        _simulationEndRealtime = Time.realtimeSinceStartup;
         var outcome = BuildSim1RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation1Results;
-        SafeApplySimulation1ResultGraphs();
 
-        if (physiology != null && recorder != null)
+        PresentResultsAfterWatchData(() =>
         {
-            float peakSci = recorder.SciHistory.Count > 0 ? MaxSci(recorder.SciHistory) : 0f;
-            float meanSci = recorder.SciHistory.Count > 0 ? MeanSci(recorder.SciHistory) : 0f;
-            var peakBand = StressChangeIndexCalculator.Classify(peakSci);
-            SessionHistoryStore.UpdateAfterSim1(
-                recorder.SciHistory,
-                physiology.HrvBaselineMs,
-                outcome,
-                recorder.sampleIntervalSeconds);
-            string sim1Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
-                recorder.SciHistory,
-                StressRecommendations.SimulationStage.Sim1,
-                outcome,
-                sim1ResultsPanels);
+            ApplySim1ResultsUi(outcome);
+            SafeApplySimulation1ResultGraphs();
+            ApplyPhaseUI();
+            ApplySim1ResultsTab(ResultsTab.Result);
+        });
+    }
 
-            if (UseSim1SplitColumns())
-            {
-                if (resultsSummaryText != null)
-                    resultsSummaryText.gameObject.SetActive(false);
+    private void ApplySim1ResultsUi(SimulationRunOutcome outcome)
+    {
+        TryImportWatchTimelineIntoRecorder();
 
-                string metrics = StressRecommendations.BuildResultsTabMetrics(
-                    StressRecommendations.SimulationStage.Sim1,
-                    peakSci,
-                    meanSci,
-                    outcome,
-                    baselineHrvMs: physiology.HrvBaselineMs,
-                    sciHistory: recorder.SciHistory,
-                    sampleIntervalSeconds: recorder.sampleIntervalSeconds,
-                    display: sim1ResultsPanels);
+        if (physiology == null || recorder == null)
+            return;
 
-                LayoutSim1ResultsPanels();
-                sim1ResultsMetricsText.text = metrics;
-                sim1ResultsRecommendationsText.text = sim1Recommendations;
-            }
-            else if (resultsSummaryText != null)
-            {
-                resultsSummaryText.gameObject.SetActive(true);
-                var sb = new StringBuilder();
-                sb.AppendLine("Simulation 1 — Results");
-                sb.AppendLine();
-                if (outcome != null && outcome.disqualified)
-                    sb.AppendLine("Disqualified — too many task time violations.");
-                else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
-                    sb.AppendLine("Mission not finished in time.");
-                sb.AppendLine($"Baseline HRV: {physiology.HrvBaselineMs:F1} ms");
-                sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
-                sb.AppendLine($"Average SCI: {meanSci:F1}%");
-                sb.AppendLine();
-                sb.AppendLine("Recommendations:");
-                sb.AppendLine(sim1Recommendations);
-                PrepareResultsPanelText(resultsSummaryText, preserveManualSim1ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
-                resultsSummaryText.text = sb.ToString();
-            }
+        if (!recorder.HasRecordedSamples)
+        {
+            ApplySim1ResultsNoWatchData(outcome);
+            return;
         }
 
-        ApplyPhaseUI();
-        ApplySim1ResultsTab(ResultsTab.Result);
+        float baselineHrv = ResolveResultsBaselineHrvMs();
+        float peakSci = MaxSci(recorder.SciHistory);
+        float meanSci = MeanSci(recorder.SciHistory);
+        var peakBand = StressChangeIndexCalculator.Classify(peakSci);
+        SessionHistoryStore.UpdateAfterSim1(
+            recorder.SciHistory,
+            baselineHrv,
+            outcome,
+            recorder.sampleIntervalSeconds);
+        string sim1Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
+            recorder.SciHistory,
+            StressRecommendations.SimulationStage.Sim1,
+            outcome,
+            sim1ResultsPanels);
+
+        if (UseSim1SplitColumns())
+        {
+            if (resultsSummaryText != null)
+                resultsSummaryText.gameObject.SetActive(false);
+
+            string metrics = StressRecommendations.BuildResultsTabMetrics(
+                StressRecommendations.SimulationStage.Sim1,
+                peakSci,
+                meanSci,
+                outcome,
+                baselineHrvMs: baselineHrv,
+                sciHistory: recorder.SciHistory,
+                sampleIntervalSeconds: recorder.sampleIntervalSeconds,
+                display: sim1ResultsPanels);
+
+            LayoutSim1ResultsPanels();
+            sim1ResultsMetricsText.text = metrics;
+            sim1ResultsRecommendationsText.text = sim1Recommendations;
+        }
+        else if (resultsSummaryText != null)
+        {
+            resultsSummaryText.gameObject.SetActive(true);
+            var sb = new StringBuilder();
+            sb.AppendLine("Simulation 1 — Results");
+            sb.AppendLine();
+            if (outcome != null && outcome.disqualified)
+                sb.AppendLine("Disqualified — too many task time violations.");
+            else if (outcome != null && outcome.timedOut && outcome.timeLimitSeconds > 0f)
+                sb.AppendLine("Mission not finished in time.");
+            sb.AppendLine($"Baseline HRV: {baselineHrv:F1} ms");
+            sb.AppendLine($"Peak SCI: {peakSci:F1}% ({StressChangeIndexCalculator.BandLabel(peakBand)})");
+            sb.AppendLine($"Average SCI: {meanSci:F1}%");
+            sb.AppendLine();
+            sb.AppendLine("Recommendations:");
+            sb.AppendLine(sim1Recommendations);
+            PrepareResultsPanelText(resultsSummaryText, preserveManualSim1ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
+            resultsSummaryText.text = sb.ToString();
+        }
+    }
+
+    private void ApplySim1ResultsNoWatchData(SimulationRunOutcome outcome)
+    {
+        string timeLine = StressRecommendations.BuildResultsTabMetrics(
+            StressRecommendations.SimulationStage.Sim1,
+            0f,
+            0f,
+            outcome,
+            display: sim1ResultsPanels);
+
+        string noDataMessage =
+            "No watch data was recorded for this run.\n" +
+            "Connect your smartwatch and sync after the workout to see stress metrics.";
+
+        if (UseSim1SplitColumns())
+        {
+            if (resultsSummaryText != null)
+                resultsSummaryText.gameObject.SetActive(false);
+
+            LayoutSim1ResultsPanels();
+            sim1ResultsMetricsText.text = string.IsNullOrEmpty(timeLine)
+                ? noDataMessage
+                : $"{timeLine}\n\n{noDataMessage}";
+            sim1ResultsRecommendationsText.text =
+                "Complete another session with a connected smartwatch to receive tailored feedback.";
+        }
+        else if (resultsSummaryText != null)
+        {
+            resultsSummaryText.gameObject.SetActive(true);
+            var sb = new StringBuilder();
+            sb.AppendLine("Simulation 1 — Results");
+            sb.AppendLine();
+            if (!string.IsNullOrEmpty(timeLine))
+                sb.AppendLine(timeLine);
+            sb.AppendLine();
+            sb.AppendLine(noDataMessage);
+            PrepareResultsPanelText(resultsSummaryText, preserveManualSim1ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
+            resultsSummaryText.text = sb.ToString();
+        }
     }
 
     private SimulationRunOutcome BuildSim1RunOutcome(
@@ -1268,6 +1356,7 @@ public class TrainingFlowController : MonoBehaviour
         bool activeTrainingPhase = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
         if (!activeTrainingPhase || physiology == null || recorder == null) return;
         if (!physiology.BaselineLocked) return;
+        if (!physiology.UsingLiveUdpSample) return;
 
         float sci = StressChangeIndexCalculator.ComputeSciPercent(physiology.HrvBaselineMs, physiology.CurrentHrvMs);
         recorder.TickRecord(sci, physiology.CurrentHrvMs);
@@ -1414,9 +1503,9 @@ public class TrainingFlowController : MonoBehaviour
         SetActiveSafe(sim2BriefingPanel, CurrentPhase == Phase.Simulation2Briefing);
         SetActiveSafe(sim2ResultsPanel, CurrentPhase == Phase.Simulation2Results);
         bool showStressTimer = CurrentPhase == Phase.Simulation1Active || CurrentPhase == Phase.Simulation2Active;
-        bool showHrChartReceiver = CurrentPhase == Phase.Simulation1Calibration || showStressTimer;
+        bool showHrChartReceiver = (CurrentPhase == Phase.Simulation1Calibration || showStressTimer) && !hideHeartRateMonitor;
         SetActiveSafe(timerPanel, showStressTimer);
-        SetActiveSafe(watchHrChartPanel, showStressTimer);
+        SetActiveSafe(watchHrChartPanel, showStressTimer && !hideHeartRateMonitor);
         if (missionStatusPanel != null)
             missionStatusPanel.SetPanelVisible(showStressTimer);
         if (showStressTimer)
@@ -1515,8 +1604,10 @@ public class TrainingFlowController : MonoBehaviour
         if (workoutHeartRateChart == null)
             return;
 
-        if (workoutHeartRateChart.enabled != on)
-            workoutHeartRateChart.enabled = on;
+        // Keep the receiver enabled so watch timeline data is always collected for results,
+        // even when the on-screen heart-rate monitor panel is hidden.
+        if (!workoutHeartRateChart.enabled)
+            workoutHeartRateChart.enabled = true;
 
         if (!on)
             return;
@@ -1525,6 +1616,140 @@ public class TrainingFlowController : MonoBehaviour
             CurrentPhase == Phase.Simulation1Calibration
                 ? WorkoutHeartRateChartReceiver.ChartUiMode.Baseline
                 : WorkoutHeartRateChartReceiver.ChartUiMode.Simulation);
+    }
+
+    /// <summary>
+    /// Shows a "Waiting for data from the watch…" screen (if enabled) and only runs
+    /// <paramref name="present"/> — which builds and reveals the results window — once
+    /// fresh watch data has arrived or the user chooses to continue anyway.
+    /// </summary>
+    private void PresentResultsAfterWatchData(Action present)
+    {
+        if (present == null)
+            return;
+
+        if (!waitForWatchDataBeforeResults || IsWatchResultsReady())
+        {
+            present();
+            return;
+        }
+
+        StartCoroutine(WaitForWatchDataThenPresent(present));
+    }
+
+    private IEnumerator WaitForWatchDataThenPresent(Action present)
+    {
+        var overlay = WatchResultWaitOverlay.Show("Waiting for data from the watch\u2026");
+        bool continueRequested = false;
+        if (overlay != null)
+            overlay.OnContinue += () => continueRequested = true;
+
+        float startTime = Time.realtimeSinceStartup;
+        bool offeredSkip = false;
+
+        while (!continueRequested && !IsWatchResultsReady())
+        {
+            if (!offeredSkip && Time.realtimeSinceStartup - startTime >= Mathf.Max(1f, watchDataWaitTimeoutSeconds))
+            {
+                offeredSkip = true;
+                if (overlay != null)
+                {
+                    overlay.SetMessage("Still waiting for data from the watch\u2026\nYou can continue without watch metrics.");
+                    overlay.ShowContinueButton();
+                }
+            }
+
+            yield return null;
+        }
+
+        if (overlay != null)
+            overlay.Hide();
+
+        present();
+    }
+
+    /// <summary>True when live samples were recorded during the run or a watch timeline session completed after it ended.</summary>
+    private bool IsWatchResultsReady()
+    {
+        if (recorder != null && recorder.HasRecordedSamples)
+            return true;
+
+        WatchSessionDataStore store = WatchSessionDataStore.Instance;
+        if (store != null && store.HasUsableResultsData(_simulationEndRealtime))
+            return true;
+
+        if (udpReceiver != null &&
+            udpReceiver.ReceivedAnyPacket &&
+            udpReceiver.LastReceiveRealtime >= _simulationEndRealtime &&
+            udpReceiver.heartRate > 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetWatchHeartRatesForResults(out List<float> heartRatesBpm)
+    {
+        heartRatesBpm = null;
+        WatchSessionDataStore store = WatchSessionDataStore.Instance;
+        if (store != null && store.TryGetHeartRatesForResults(_simulationEndRealtime, out heartRatesBpm))
+            return true;
+
+        if (workoutHeartRateChart != null &&
+            workoutHeartRateChart.LastSessionCompletedRealtime >= _simulationEndRealtime &&
+            workoutHeartRateChart.TryGetLatestCompletedSessionHeartRates(out heartRatesBpm))
+        {
+            return true;
+        }
+
+        if (udpReceiver != null &&
+            udpReceiver.ReceivedAnyPacket &&
+            udpReceiver.LastReceiveRealtime >= _simulationEndRealtime &&
+            udpReceiver.heartRate > 0)
+        {
+            heartRatesBpm = new List<float> { udpReceiver.heartRate };
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TryImportWatchTimelineIntoRecorder()
+    {
+        if (recorder == null || physiology == null || recorder.HasRecordedSamples)
+            return;
+
+        if (!TryGetWatchHeartRatesForResults(out List<float> heartRates) || heartRates.Count == 0)
+            return;
+
+        float lockedBaseline = physiology.BaselineLocked && physiology.LiveBaselineSampleCount > 0
+            ? physiology.HrvBaselineMs
+            : 0f;
+
+        WatchSessionResultsImporter.ImportedWatchResults imported = WatchSessionResultsImporter.BuildFromHeartRates(
+            heartRates,
+            lockedBaseline,
+            physiology.nominalRestHeartRate,
+            physiology.nominalRestHrvMs);
+
+        if (!imported.HasData)
+            return;
+
+        recorder.ImportWatchTimelineResults(imported.SciPercent, imported.HrvMs);
+        _effectiveResultsBaselineHrvMs = imported.BaselineHrvMs;
+        Debug.Log($"Imported {imported.SciPercent.Count} watch HR samples into results (baseline HRV {imported.BaselineHrvMs:F1} ms).");
+    }
+
+    private float ResolveResultsBaselineHrvMs()
+    {
+        if (_effectiveResultsBaselineHrvMs > 0.01f)
+            return _effectiveResultsBaselineHrvMs;
+
+        if (physiology != null && physiology.BaselineLocked && physiology.LiveBaselineSampleCount > 0)
+            return physiology.HrvBaselineMs;
+
+        return 0f;
     }
 
     void HideEnvironmentLearningTourSidebar()
@@ -2008,6 +2233,7 @@ public class TrainingFlowController : MonoBehaviour
         }
 
         recorder?.Clear();
+        _effectiveResultsBaselineHrvMs = 0f;
         recorder?.BeginRecording();
         if (physiology != null)
             physiology.StressorActive = true;
@@ -2149,37 +2375,48 @@ public class TrainingFlowController : MonoBehaviour
         SetHudVisible(false);
         SetActiveSafe(highStressWarningRoot, false);
 
+        _simulationEndRealtime = Time.realtimeSinceStartup;
         var outcome = BuildSim2RunOutcome(missionCompleted, timedOut, disqualified, disqualificationReason);
         CurrentPhase = Phase.Simulation2Results;
 
-        float peakSci = 0f;
-        float meanSci = 0f;
-        if (recorder != null && recorder.SciHistory.Count > 0)
+        PresentResultsAfterWatchData(() =>
         {
-            peakSci = MaxSci(recorder.SciHistory);
-            meanSci = MeanSci(recorder.SciHistory);
-            SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, outcome, recorder.sampleIntervalSeconds);
-        }
-        else if (timedOut || disqualified)
+            ApplySim2ResultsUi(outcome);
+            SafeApplySimulation2ResultGraphs();
+            ApplyPhaseUI();
+            ApplySim2ResultsTab(ResultsTab.Result);
+        });
+    }
+
+    private void ApplySim2ResultsUi(SimulationRunOutcome outcome)
+    {
+        TryImportWatchTimelineIntoRecorder();
+
+        if (recorder == null)
+            return;
+
+        if (!recorder.HasRecordedSamples)
         {
-            SessionHistoryStore.FinalizeAfterSim2(null, outcome, recorder?.sampleIntervalSeconds ?? 0.4f);
+            ApplySim2ResultsNoWatchData(outcome);
+            if (timedOutOrDisqualified(outcome))
+                SessionHistoryStore.FinalizeAfterSim2(null, outcome, recorder.sampleIntervalSeconds);
+            return;
         }
 
-        string sim2Recommendations = recorder != null && recorder.SciHistory.Count > 0
-            ? StressRecommendations.BuildRecommendationsTabOnly(
-                recorder.SciHistory,
-                StressRecommendations.SimulationStage.Sim2,
-                outcome,
-                sim2ResultsPanels)
-            : StressRecommendations.BuildRecommendationsTabOnly(
-                null,
-                StressRecommendations.SimulationStage.Sim2,
-                outcome,
-                sim2ResultsPanels);
+        float peakSci = MaxSci(recorder.SciHistory);
+        float meanSci = MeanSci(recorder.SciHistory);
+        SessionHistoryStore.FinalizeAfterSim2(recorder.SciHistory, outcome, recorder.sampleIntervalSeconds);
+
+        string sim2Recommendations = StressRecommendations.BuildRecommendationsTabOnly(
+            recorder.SciHistory,
+            StressRecommendations.SimulationStage.Sim2,
+            outcome,
+            sim2ResultsPanels);
+
         float minHrv = 0f;
         float maxHrv = 0f;
         float avgHrv = 0f;
-        if (recorder != null && recorder.HrvHistory.Count > 0)
+        if (recorder.HrvHistory.Count > 0)
         {
             minHrv = MinValue(recorder.HrvHistory);
             maxHrv = MaxValue(recorder.HrvHistory);
@@ -2199,8 +2436,8 @@ public class TrainingFlowController : MonoBehaviour
                 minHrvMs: minHrv,
                 maxHrvMs: maxHrv,
                 avgHrvMs: avgHrv,
-                sciHistory: recorder?.SciHistory,
-                sampleIntervalSeconds: recorder?.sampleIntervalSeconds ?? 0.4f,
+                sciHistory: recorder.SciHistory,
+                sampleIntervalSeconds: recorder.sampleIntervalSeconds,
                 display: sim2ResultsPanels);
 
             LayoutSim2ResultsPanels();
@@ -2227,15 +2464,56 @@ public class TrainingFlowController : MonoBehaviour
         }
         else if (sim2BriefingBodyText != null)
         {
-            // Avoid showing fallback status text over the custom Results panel design.
             sim2BriefingBodyText.text = string.Empty;
         }
-
-        SafeApplySimulation2ResultGraphs();
-
-        ApplyPhaseUI();
-        ApplySim2ResultsTab(ResultsTab.Result);
     }
+
+    private void ApplySim2ResultsNoWatchData(SimulationRunOutcome outcome)
+    {
+        string timeLine = StressRecommendations.BuildResultsTabMetrics(
+            StressRecommendations.SimulationStage.Sim2,
+            0f,
+            0f,
+            outcome,
+            display: sim2ResultsPanels);
+
+        string noDataMessage =
+            "No watch data was recorded for this run.\n" +
+            "Connect your smartwatch and sync after the workout to see stress metrics.";
+
+        if (UseSim2SplitColumns())
+        {
+            if (sim2ResultsSummaryText != null)
+                sim2ResultsSummaryText.gameObject.SetActive(false);
+
+            LayoutSim2ResultsPanels();
+            sim2ResultsMetricsText.text = string.IsNullOrEmpty(timeLine)
+                ? noDataMessage
+                : $"{timeLine}\n\n{noDataMessage}";
+            sim2ResultsRecommendationsText.text =
+                "Complete another session with a connected smartwatch to receive tailored feedback.";
+        }
+        else if (sim2ResultsSummaryText != null)
+        {
+            sim2ResultsSummaryText.gameObject.SetActive(true);
+            var sb = new StringBuilder();
+            sb.AppendLine("Simulation 2 — Results");
+            sb.AppendLine();
+            if (!string.IsNullOrEmpty(timeLine))
+                sb.AppendLine(timeLine);
+            sb.AppendLine();
+            sb.AppendLine(noDataMessage);
+            PrepareResultsPanelText(sim2ResultsSummaryText, preserveManualSim2ResultsLayout && !VrGameplayInput.ShouldUseVrControls);
+            sim2ResultsSummaryText.text = sb.ToString();
+        }
+        else if (sim2BriefingBodyText != null)
+        {
+            sim2BriefingBodyText.text = string.Empty;
+        }
+    }
+
+    private static bool timedOutOrDisqualified(SimulationRunOutcome outcome) =>
+        outcome != null && (outcome.timedOut || outcome.disqualified);
 
     private void SafeApplySimulation1ResultGraphs()
     {

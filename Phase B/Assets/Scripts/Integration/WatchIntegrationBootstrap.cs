@@ -66,6 +66,7 @@ public sealed class WatchIntegrationBootstrap : MonoBehaviour
     private void ConfigureScene()
     {
         UDPReceiver udp = FindOrCreateUdpReceiver();
+        WatchSessionDataStore sessionStore = FindOrCreateSessionStore();
         MockPhysiologySource physiology = FindBestPhysiologySource();
         TrainingFlowController flow = TrainingFlowController.Instance != null
             ? TrainingFlowController.Instance
@@ -79,6 +80,8 @@ public sealed class WatchIntegrationBootstrap : MonoBehaviour
             physiology.useSyntheticFallback = false;
             physiology.liveDataStaleSeconds = LiveDataStaleSeconds;
         }
+
+        sessionStore.Configure(udp);
 
         if (flow != null)
         {
@@ -120,6 +123,22 @@ public sealed class WatchIntegrationBootstrap : MonoBehaviour
 
         udp.ConfigurePort(UnityWatchPort, true);
         return udp;
+    }
+
+    private static WatchSessionDataStore FindOrCreateSessionStore()
+    {
+        WatchSessionDataStore store = WatchSessionDataStore.Instance;
+        if (store != null)
+            return store;
+
+        store = FindFirstObjectByType<WatchSessionDataStore>(FindObjectsInactive.Include);
+        if (store == null)
+        {
+            var go = new GameObject("Watch Session Data Store");
+            store = go.AddComponent<WatchSessionDataStore>();
+        }
+
+        return store;
     }
 
     private static MockPhysiologySource FindBestPhysiologySource()

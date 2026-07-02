@@ -24,7 +24,7 @@ public class UINavigationManager : MonoBehaviour
         "Use Pause to stop safely.\nUse Back to return to hub.\nUse Help anytime for current task instructions.\n\n" +
         "VR: Point with your right controller and pull Right Trigger to click UI.\n" +
         "Login fields open the system keyboard when clicked in VR.\n" +
-        "Left stick = move | Right stick = turn | Menu = pause | A+X = help.";
+        "Left stick = move | Left trigger = run | Right stick = smooth turn | Menu = pause | A+X = help.";
     [TextArea] public string helpSimulation1 =
         "Simulation 1:\n1) Enter the home and collect 5 items (E / Right Trigger): water bottle, flash light, radio, phone, key.\n2) Turn off the lights — PFB_Lightswitch (1).\n3) Close the door — PFB_DoorDouble.\n4) Run to the Mamad outside.";
     [TextArea] public string helpSimulation2 =
@@ -32,7 +32,7 @@ public class UINavigationManager : MonoBehaviour
     [TextArea] public string helpEnvironmentLearning =
         "Environment Learning:\nWalk around and read item names in the world.\n" +
         "Use the left sidebar list — look at a name and pull Right Trigger to jump there.\n" +
-        "VR: Left stick move, right stick turn, Right Trigger interact.\n" +
+        "VR: Left stick move, left trigger run, right stick smooth turn, Right Trigger interact.\n" +
         "Back or Menu — return to simulation selection.";
 
     [Header("Keys")]

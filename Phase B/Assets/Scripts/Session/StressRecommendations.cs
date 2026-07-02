@@ -268,18 +268,18 @@ public static class StressRecommendations
 
         if (stage == SimulationStage.Sim1)
         {
-            if (options.showBaselineHrv)
+            if (options.showBaselineHrv && baselineHrvMs > 0.01f)
                 sb.AppendLine($"Baseline HRV: {baselineHrvMs:F0} ms");
-            if (options.showPeakSci)
+            if (options.showPeakSci && peakSci > 0.01f)
                 sb.AppendLine($"Peak SCI: {peakSci:F0}% ({band})");
-            if (options.showAvgSci)
+            if (options.showAvgSci && meanSci > 0.01f)
                 sb.AppendLine($"Avg SCI: {meanSci:F0}%");
             return sb.ToString().TrimEnd();
         }
 
-        if (options.showPeakSci)
+        if (options.showPeakSci && peakSci > 0.01f)
             sb.AppendLine($"Peak SCI: {peakSci:F0}% ({band})");
-        if (options.showAvgSci)
+        if (options.showAvgSci && meanSci > 0.01f)
             sb.AppendLine($"Avg SCI: {meanSci:F0}%");
         if (options.showHrvRange && minHrvMs > 0f && maxHrvMs > 0f)
             sb.AppendLine($"HRV: {minHrvMs:F0}–{maxHrvMs:F0} ms (avg {avgHrvMs:F0})");

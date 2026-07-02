@@ -51,6 +51,10 @@ public class UDPReceiver : MonoBehaviour
         public int sampleIndex;
         public int sampleCount;
         public float bpm;
+        public float hr;
+
+        public float ResolvedHeartRateBpm => bpm > 0f ? bpm : hr;
+
         public string measuredAt;
         public string startedAt;
         public string endedAt;
@@ -129,15 +133,34 @@ public class UDPReceiver : MonoBehaviour
             if (TryParseWatchTimeline(msg, out WatchSample watchSample))
             {
                 any = true;
-                if (watchSample.bpm > 0f)
-                    heartRate = Mathf.RoundToInt(watchSample.bpm);
+                float resolvedBpm = watchSample.ResolvedHeartRateBpm;
+                if (resolvedBpm > 0f)
+                {
+                    watchSample.bpm = resolvedBpm;
+                    heartRate = Mathf.RoundToInt(resolvedBpm);
+                }
+
                 OnSampleReceived?.Invoke(watchSample);
             }
 
             if (TryParseJsonLoose(msg, out int hr, out float hrv))
             {
                 any = true;
-                if (hr > 0) heartRate = hr;
+                if (hr > 0)
+                {
+                    heartRate = hr;
+                    if (!msg.Contains("\"type\"", StringComparison.OrdinalIgnoreCase))
+                    {
+                        OnSampleReceived?.Invoke(new WatchSample
+                        {
+                            type = "hr",
+                            mode = "live",
+                            bpm = hr,
+                            hr = hr
+                        });
+                    }
+                }
+
                 if (hrv > 0.01f) hrvMs = hrv;
             }
         }
@@ -181,6 +204,9 @@ public class UDPReceiver : MonoBehaviour
             var parsed = JsonUtility.FromJson<WatchSample>(msg);
             if (parsed == null || string.IsNullOrWhiteSpace(parsed.type))
                 return false;
+
+            if (parsed.bpm <= 0f && parsed.hr > 0f)
+                parsed.bpm = parsed.hr;
 
             sample = parsed;
             return true;

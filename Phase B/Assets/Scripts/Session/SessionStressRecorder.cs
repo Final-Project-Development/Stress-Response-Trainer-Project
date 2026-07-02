@@ -95,4 +95,27 @@ public class SessionStressRecorder : MonoBehaviour
         if (hrvMs > 0f)
             _hrv.Add(hrvMs);
     }
+
+    /// <summary>Replace recorded SCI/HRV with values derived from a completed watch timeline.</summary>
+    public void ImportWatchTimelineResults(IReadOnlyList<float> sciPercent, IReadOnlyList<float> hrvMs)
+    {
+        _sci.Clear();
+        _hrv.Clear();
+        if (sciPercent != null)
+        {
+            for (int i = 0; i < sciPercent.Count; i++)
+                _sci.Add(sciPercent[i]);
+        }
+
+        if (hrvMs != null)
+        {
+            for (int i = 0; i < hrvMs.Count; i++)
+            {
+                if (hrvMs[i] > 0f)
+                    _hrv.Add(hrvMs[i]);
+            }
+        }
+    }
+
+    public bool HasRecordedSamples => _sci.Count > 0;
 }

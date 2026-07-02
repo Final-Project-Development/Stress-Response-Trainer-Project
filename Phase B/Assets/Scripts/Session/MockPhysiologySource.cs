@@ -41,6 +41,9 @@ public class MockPhysiologySource : MonoBehaviour
 
     public bool UsingLiveUdpSample { get; private set; }
 
+    /// <summary>Baseline samples collected from live watch packets during calibration.</summary>
+    public int LiveBaselineSampleCount => _baselineSamples.Count;
+
     private readonly List<float> _baselineSamples = new List<float>(600);
     private bool _capturingBaseline;
 
@@ -65,18 +68,35 @@ public class MockPhysiologySource : MonoBehaviour
         _capturingBaseline = false;
         if (_baselineSamples.Count == 0)
         {
-            HrvBaselineMs = nominalRestHrvMs;
-        }
-        else
-        {
-            float sum = 0f;
-            for (int i = 0; i < _baselineSamples.Count; i++)
-                sum += _baselineSamples[i];
-            HrvBaselineMs = sum / _baselineSamples.Count;
+            if (!useLiveUdpWhenAvailable)
+            {
+                HrvBaselineMs = nominalRestHrvMs;
+                BaselineLocked = true;
+                CurrentHrvMs = HrvBaselineMs;
+            }
+
+            return;
         }
 
+        float sum = 0f;
+        for (int i = 0; i < _baselineSamples.Count; i++)
+            sum += _baselineSamples[i];
+        HrvBaselineMs = sum / _baselineSamples.Count;
         BaselineLocked = true;
         CurrentHrvMs = HrvBaselineMs;
+    }
+
+    /// <summary>HRV proxy (ms) from heart rate when the watch does not send HRV directly.</summary>
+    public static float EstimateHrvMsFromHeartRate(
+        float heartRateBpm,
+        float nominalRestHeartRate = 72f,
+        float nominalRestHrvMs = 52f)
+    {
+        if (heartRateBpm <= 0f)
+            return nominalRestHrvMs;
+
+        float drop = Mathf.Clamp01((heartRateBpm - nominalRestHeartRate) / 40f);
+        return Mathf.Max(5f, nominalRestHrvMs * (1f - drop * 0.6f));
     }
 
     private bool TryApplyLiveSample()
@@ -103,8 +123,7 @@ public class MockPhysiologySource : MonoBehaviour
         }
         else if (haveHr)
         {
-            float drop = Mathf.Clamp01((udpReceiver.heartRate - nominalRestHeartRate) / 40f);
-            CurrentHrvMs = Mathf.Max(5f, nominalRestHrvMs * (1f - drop * 0.6f));
+            CurrentHrvMs = EstimateHrvMsFromHeartRate(udpReceiver.heartRate, nominalRestHeartRate, nominalRestHrvMs);
         }
 
         if (!haveHr && haveHrv)
@@ -121,6 +140,9 @@ public class MockPhysiologySource : MonoBehaviour
                 _baselineSamples.Add(CurrentHrvMs);
             return;
         }
+
+        if (useLiveUdpWhenAvailable)
+            return;
 
         float t = Time.time;
         float n = (Mathf.PerlinNoise(t * 0.22f, 0.13f) - 0.5f) * 2f;

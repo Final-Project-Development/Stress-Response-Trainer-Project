@@ -31,6 +31,8 @@ public class TopBarLayoutController : MonoBehaviour
     [SerializeField] private bool preserveManualWatchStatusLayout = true;
     [SerializeField] private bool applyInStart = true;
     [SerializeField] private bool applyInLateUpdateOnce = true;
+    [Tooltip("Pin the whole bar flush to the top edge of its parent canvas (stretched full width).")]
+    [SerializeField] private bool anchorBarToTop = true;
 
     public bool PreserveManualProfileLayout => preserveManualProfileLayout;
     public bool PreserveManualWatchStatusLayout => preserveManualWatchStatusLayout;
@@ -74,6 +76,17 @@ public class TopBarLayoutController : MonoBehaviour
             topBarRoot = GetComponent<RectTransform>();
         if (topBarRoot == null)
             return;
+
+        if (anchorBarToTop)
+        {
+            // Pin the whole bar to the very top of its parent, stretched full width, keeping its height.
+            float barHeight = topBarRoot.rect.height;
+            topBarRoot.anchorMin = new Vector2(0f, 1f);
+            topBarRoot.anchorMax = new Vector2(1f, 1f);
+            topBarRoot.pivot = new Vector2(0.5f, 1f);
+            topBarRoot.anchoredPosition = Vector2.zero;
+            topBarRoot.sizeDelta = new Vector2(0f, barHeight);
+        }
 
         ResolveWatchStatusContainer();
 

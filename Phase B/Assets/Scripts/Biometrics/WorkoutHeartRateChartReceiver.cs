@@ -132,6 +132,8 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     private string currentSessionId;
     private float lastPacketUnityTime;
+    private float lastSessionCompletedRealtime;
+    private string lastCompletedSessionId;
     private bool chartDirty;
 
     private Canvas runtimeCanvas;
@@ -356,7 +358,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
             sessionId = string.IsNullOrWhiteSpace(sample.sessionId) ? BuildLiveSessionId(sample.source, sample.device) : sample.sessionId,
             sampleIndex = sample.sampleIndex,
             sampleCount = sample.sampleCount,
-            bpm = sample.bpm,
+            bpm = sample.ResolvedHeartRateBpm,
             measuredAt = string.IsNullOrWhiteSpace(sample.measuredAt) ? DateTimeOffset.UtcNow.ToString("O") : sample.measuredAt,
             sentAt = sample.sentAt
         });
@@ -541,6 +543,16 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
         RenderCurrentSession();
         chartDirty = false;
+
+        if (!string.IsNullOrWhiteSpace(currentSessionId) &&
+            currentSessionId != FallbackSessionId &&
+            sessions.TryGetValue(currentSessionId, out HrSessionData completedSession) &&
+            completedSession.samples.Count > 0)
+        {
+            lastCompletedSessionId = currentSessionId;
+            lastSessionCompletedRealtime = Time.realtimeSinceStartup;
+            OnWatchSessionCompleted?.Invoke(currentSessionId);
+        }
 
         Debug.Log($"HR session ended: {message.sessionId}");
     }
@@ -742,6 +754,35 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
         return bpm > 0f;
     }
 
+    /// <summary>Fired when a watch timeline session ends with at least one HR sample.</summary>
+    public event Action<string> OnWatchSessionCompleted;
+
+    /// <summary>Unity realtime when the most recent watch session completed.</summary>
+    public float LastSessionCompletedRealtime => lastSessionCompletedRealtime;
+
+    /// <summary>Heart-rate samples (BPM) from the latest completed watch timeline session.</summary>
+    public bool TryGetLatestCompletedSessionHeartRates(out List<float> heartRatesBpm)
+    {
+        heartRatesBpm = null;
+        if (string.IsNullOrWhiteSpace(lastCompletedSessionId) ||
+            lastCompletedSessionId == FallbackSessionId ||
+            !sessions.TryGetValue(lastCompletedSessionId, out HrSessionData session) ||
+            session.samples.Count == 0)
+        {
+            return false;
+        }
+
+        List<HrSample> ordered = session.samples.OrderBy(s => s.measuredAt).ToList();
+        heartRatesBpm = new List<float>(ordered.Count);
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            if (ordered[i].bpm > 0f)
+                heartRatesBpm.Add(ordered[i].bpm);
+        }
+
+        return heartRatesBpm.Count > 0;
+    }
+
     private string BuildInfoStatus() => GetWatchConnectionStatusText();
 
     /// <summary>Same status line used on Baseline_Panel and the top-bar watch indicator.</summary>
@@ -903,7 +944,7 @@ public class WorkoutHeartRateChartReceiver : MonoBehaviour
 
     void OnDisable()
     {
-        UnsubscribeExternalReceiver();
+        // Do not unsubscribe from UDP — watch data must keep flowing for results even when the chart UI is hidden.
 
         if (layoutRefreshRoutine != null)
         {

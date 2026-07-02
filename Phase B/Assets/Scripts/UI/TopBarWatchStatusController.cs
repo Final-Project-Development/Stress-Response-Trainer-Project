@@ -116,7 +116,7 @@ public class TopBarWatchStatusController : MonoBehaviour
 
         if (workoutChart == null)
         {
-            ApplyDisplay("No smartwatch connected", WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected, force);
+            ApplyDisplay(string.Empty, WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected, force);
             return;
         }
 
@@ -140,6 +140,11 @@ public class TopBarWatchStatusController : MonoBehaviour
 
         _lastLabel = label;
         _lastState = state;
+
+        // Hide the whole pill (text + dot + background) when there is no watch connected,
+        // so the login/top bar no longer shows a "No smartwatch connected" note.
+        bool connected = state != WorkoutHeartRateChartReceiver.WatchLinkState.Disconnected;
+        SetVisualsVisible(connected);
 
         if (statusText != null)
         {
@@ -168,6 +173,16 @@ public class TopBarWatchStatusController : MonoBehaviour
             return;
 
         _layout.ApplyLayout();
+    }
+
+    void SetVisualsVisible(bool visible)
+    {
+        var graphics = GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != null)
+                graphics[i].enabled = visible;
+        }
     }
 
     void ResizeContainerToText()
