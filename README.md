@@ -14,6 +14,7 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 
 | Path | Description |
 |------|-------------|
+| **`Submission/`** | **Capstone submission package** — Phase B book, poster, and demo video ([details](Submission/README.md)). |
 | **`Phase A/`** | Previous-semester prototype deliverables (presentation, project book PDF, demo video). |
 | **`Phase B/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
@@ -156,6 +157,8 @@ Core logic under test is in `Phase B/Assets/Scripts/Core/` (`StressTrainer.Core.
 - `prototype_video.mp4`
 
 Phase B is the current, full VR training application developed in the second semester.
+
+**Phase B submission files** (book PDF, poster, demo video) go in [`Submission/Phase B/`](Submission/Phase%20B/).
 
 ---
 
