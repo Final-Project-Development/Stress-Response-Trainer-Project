@@ -31,11 +31,14 @@
 
 The **VR Stress Response Trainer** is a VR training system for practicing decision-making and self-regulation under pressure. The repository includes:
 
-- Main Unity application (`Unity_Project/`) - simulations, user interface, **SCI** (Stress Change Index) computation
-- Smartwatch data bridge (`Fit3UnityBridge/`) - Android app + Windows **HrPcBridge**
-- Previous-semester prototype (`Submission/Phase A/`) — presentation, project book PDF, demo video
+- Main Unity application (`Unity_Project/`) — simulations, user interface, **SCI** (Stress Change Index) computation
+- Smartwatch data bridge (`Fit3UnityBridge/`) — Android app + Windows **HrPcBridge**
+- Capstone deliverables (`Submission/`) — Phase A & B books, poster, demo video
+- Run guide (`RUN_INSTRUCTIONS.md`) — this document
 
 **Default behaviour:** simulated HR/HRV data (`MockPhysiologySource`). A real watch connection is optional.
+
+**Important:** The Android app sends data to **HrPcBridge on port 7777**, not directly to Unity. Unity listens on **UDP 5055**. SCI and the Pressure Graph are shown **after each simulation run**, not as a live in-mission graph.
 
 ---
 
@@ -163,8 +166,10 @@ The top toolbar shows **Simulated** - mock heart-rate data (expected without a w
 ### 6.1 Startup order (must follow this sequence)
 
 ```
-Watch → Samsung Health → Fit3 Samsung Bridge (phone) → HrPcBridge (PC) → Unity → Quest
+Watch → Samsung Health → Fit3 Samsung Bridge (phone) → HrPcBridge :7777 → Unity UDP :5055 → Quest
 ```
+
+The phone and PC must be on the same Wi-Fi network. Start **HrPcBridge** before Unity Play.
 
 ### 6.2 Step 1 - HrPcBridge (PC)
 
@@ -356,6 +361,8 @@ Stress-Response-Trainer-Project/
 ├── README.md                   # Project overview
 └── RUN_INSTRUCTIONS.md         # This file
 ```
+
+**Submission deliverables** (books, poster, video) are in `Submission/` — not inside `Unity_Project/`.
 
 ### Key scripts
 
