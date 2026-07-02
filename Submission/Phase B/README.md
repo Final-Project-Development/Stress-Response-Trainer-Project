@@ -6,9 +6,9 @@ Add your final Phase B submission files to **this folder**.
 
 | File | Description | Added |
 |------|-------------|-------|
-| `Phase B - final project 26-1-D-18.pdf` | Project book (cover, chapters 1–4, Appendix A & B) | ☐ |
-| `Poster.pdf` or `Poster.png` | A0 poster (English) for final presentation | ☐ |
-| `demo_video.mp4` | Demo video, **up to 2 minutes** | ☐ |
+| `Phase B - final project 26-D-1-18.pdf` | Project book (cover, chapters 1-4, Appendix A & B) | Yes |
+| `Poster.pdf` | A0 poster (English) for final presentation | Yes |
+| `demo_video.mp4` | Demo video, **up to 2 minutes** | No |
 
 ## Naming tips
 
