@@ -16,8 +16,8 @@ This folder holds **all submission deliverables** for the Software Engineering c
 | **Phase A project book** | [`Phase A/`](Phase%20A/) | Included (`Our Final project 26-D-1-18.pdf`) |
 | **Phase A presentation** | [`Phase A/`](Phase%20A/) | Included (`Our Final Presentation.pptx`) |
 | **Phase A demo video** | [`Phase A/`](Phase%20A/) | Included (`prototype_video.mp4`) |
-| **Phase B project book** | [`Phase B/`](Phase%20B/) | *To be added* |
-| **Poster (A0, English)** | [`Phase B/`](Phase%20B/) | *To be added* |
+| **Phase B project book** | [`Phase B/`](Phase%20B/) | Included (`Phase B - final project 26-D-1-18.pdf`) |
+| **Poster (A0, English)** | [`Phase B/`](Phase%20B/) | Included (`Poster.pdf`) |
 | **Demo video (≤ 2 min)** | [`Phase B/`](Phase%20B/) | *To be added* |
 
 **Source code and run instructions** (not in this folder):
