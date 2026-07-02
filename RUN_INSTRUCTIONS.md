@@ -31,7 +31,7 @@
 
 The **VR Stress Response Trainer** is a VR training system for practicing decision-making and self-regulation under pressure. The repository includes:
 
-- Main Unity application (`Phase B/`) - simulations, user interface, **SCI** (Stress Change Index) computation
+- Main Unity application (`Unity_Project/`) - simulations, user interface, **SCI** (Stress Change Index) computation
 - Smartwatch data bridge (`Fit3UnityBridge/`) - Android app + Windows **HrPcBridge**
 - Previous-semester prototype (`Submission/Phase A/`) — presentation, project book PDF, demo video
 
@@ -65,7 +65,7 @@ The **VR Stress Response Trainer** is a VR training system for practicing decisi
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| **Unity Hub** + **Unity Editor** | **6000.2.15f1** | Open `Phase B` |
+| **Unity Hub** + **Unity Editor** | **6000.2.15f1** | Open `Unity_Project` |
 | **Meta Quest app** | Latest | Quest Link / Air Link |
 | **.NET SDK** | 8.0 | Run HrPcBridge |
 | **Android Studio** | Latest | Build APK (watch pipeline only) |
@@ -87,8 +87,8 @@ git lfs pull
 
 ### 3.2 Install Unity
 
-1. Open **Unity Hub** → **Installs** → install **6000.2.15f1** (same version as `Phase B/ProjectSettings/ProjectVersion.txt`).
-2. **Projects** → **Add** → select the **`Phase B`** folder (not the repository root).
+1. Open **Unity Hub** → **Installs** → install **6000.2.15f1** (same version as `Unity_Project/ProjectSettings/ProjectVersion.txt`).
+2. **Projects** → **Add** → select the **`Unity_Project`** folder (not the repository root).
 3. Wait for the first import to finish (may take a while).
 
 ### 3.3 Main scene
@@ -103,7 +103,7 @@ This is the fastest way to test - suitable for development, demos and use withou
 
 | Step | Action |
 |------|--------|
-| 1 | Open `Phase B` in Unity Hub |
+| 1 | Open `Unity_Project` in Unity Hub |
 | 2 | Open `MainScene.unity` |
 | 3 | Press **Play** ▶ |
 | 4 | On the opening screen - **Register** (recommended) or continue as guest |
@@ -319,7 +319,7 @@ During an active simulation, a **Current task** line is also shown from `GameMan
 
 The project includes an automated test layer (Unity Test Framework).
 
-**Location:** `Phase B/Assets/Tests/`
+**Location:** `Unity_Project/Assets/Tests/`
 
 | Suite | Files |
 |-------|-------|
@@ -332,7 +332,7 @@ The project includes an automated test layer (Unity Test Framework).
 2. Open the **EditMode** or **PlayMode** tab
 3. Click **Run All**
 
-See also: `Phase B/Assets/Tests/README.md`
+See also: `Unity_Project/Assets/Tests/README.md`
 
 ---
 
@@ -343,7 +343,7 @@ Stress-Response-Trainer-Project/
 ├── Submission/
 │   ├── Phase A/                # Phase A deliverables (book, presentation, video)
 │   └── Phase B/                # Phase B deliverables (book, poster, video)
-├── Phase B/                    # Main Unity application
+├── Unity_Project/              # Main Unity application
 │   ├── Assets/
 │   │   ├── Scenes/MainScene.unity
 │   │   ├── Scripts/            # Gameplay, UI, VR, biometrics
@@ -390,7 +390,7 @@ Stress-Response-Trainer-Project/
 ## Appendix - recommended pre-submission / demo checklist
 
 1. `git clone` + `git checkout main` + `git lfs pull`
-2. Open `Phase B` in Unity 6000.2.15f1
+2. Open `Unity_Project` in Unity 6000.2.15f1
 3. Play → Register → Calibration → complete **Simulation 1** → results
 4. Return to Hub → complete **Simulation 2** → results
 5. Test **Help (H)** and **Hint** during a simulation

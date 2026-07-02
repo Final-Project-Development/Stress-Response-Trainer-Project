@@ -26,8 +26,8 @@ This folder holds the project's automated test layer, built on the **Unity Test 
 You can also run from the command line:
 
 ```bash
-Unity.exe -runTests -batchmode -projectPath "Phase B" -testPlatform EditMode -testResults results-editmode.xml
-Unity.exe -runTests -batchmode -projectPath "Phase B" -testPlatform PlayMode -testResults results-playmode.xml
+Unity.exe -runTests -batchmode -projectPath "Unity_Project" -testPlatform EditMode -testResults results-editmode.xml
+Unity.exe -runTests -batchmode -projectPath "Unity_Project" -testPlatform PlayMode -testResults results-playmode.xml
 ```
 
 ## What is covered today

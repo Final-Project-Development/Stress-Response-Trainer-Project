@@ -24,7 +24,7 @@ This folder holds **all submission deliverables** for the Software Engineering c
 
 | Item | Location |
 |------|----------|
-| Unity VR application | [`Phase B/`](../Phase%20B/) (repository root) |
+| Unity VR application | [`Unity_Project/`](../Unity_Project/) (repository root) |
 | Watch bridge | [`Fit3UnityBridge/`](../Fit3UnityBridge/) |
 | Run instructions | [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md) 
 
@@ -32,6 +32,6 @@ This folder holds **all submission deliverables** for the Software Engineering c
 
 ## Software
 
-The runnable system is the Unity project and bridges at the repository root. Open **`Phase B`** in Unity Hub and follow [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md).
+The runnable system is the Unity project and bridges at the repository root. Open **`Unity_Project`** in Unity Hub and follow [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md).
 
 The application includes a built-in **Help User** system (Help panel, mission hints, Environment Learning tour).

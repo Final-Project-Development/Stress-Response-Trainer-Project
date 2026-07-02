@@ -24,5 +24,5 @@ git push origin main
 
 ## Do not put here
 
-- Unity source code → use [`Phase B/`](../../Phase%20B/) at repository root  
+- Unity source code → use [`Unity_Project/`](../../Unity_Project/) at repository root  
 - Android / PC bridge code → use [`Fit3UnityBridge/`](../../Fit3UnityBridge/)

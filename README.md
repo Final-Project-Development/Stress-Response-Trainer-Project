@@ -15,7 +15,7 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 | Path | Description |
 |------|-------------|
 | **`Submission/`** | **Capstone submission package** — Phase A & B books, poster, demo video ([details](Submission/README.md)). |
-| **`Phase B/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
+| **`Unity_Project/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype for alternate wearables (not connected to Unity by default). |
 
@@ -62,11 +62,11 @@ Samsung Watch → (BLE) → Samsung Health (phone) → Fit3 Samsung Bridge (Andr
 
 ---
 
-## Quick start - run Phase B in Unity
+## Quick start - run Unity_Project in Unity
 
 ### Prerequisites
 
-- **Unity Hub** + **Unity 6000.2.15f1** (see `Phase B/ProjectSettings/ProjectVersion.txt`)
+- **Unity Hub** + **Unity 6000.2.15f1** (see `Unity_Project/ProjectSettings/ProjectVersion.txt`)
 - Windows 10/11 PC with a VR-ready GPU (for headset play via Quest Link)
 - **Meta Quest** headset + Meta Quest app (Link or Air Link) - optional for desktop Play mode testing
 
@@ -78,7 +78,7 @@ cd Stress-Response-Trainer-Project
 git checkout main
 ```
 
-1. Open **`Phase B`** in Unity Hub (not the repo root).
+1. Open **`Unity_Project`** in Unity Hub (not the repo root).
 2. Open scene **`Assets/Scenes/MainScene.unity`**.
 3. Press **Play**.
 4. Register on the login screen (needed for profile and history).
@@ -121,7 +121,7 @@ Run these **before** starting a Unity session that should use real HR data:
 
 ## Automated tests
 
-Unity Test Framework tests live under **`Phase B/Assets/Tests/`**:
+Unity Test Framework tests live under **`Unity_Project/Assets/Tests/`**:
 
 | Suite | Tests |
 |-------|-------|
@@ -130,7 +130,7 @@ Unity Test Framework tests live under **`Phase B/Assets/Tests/`**:
 
 **Run in editor:** Window → General → **Test Runner** → EditMode or PlayMode → Run All.
 
-Core logic under test is in `Phase B/Assets/Scripts/Core/` (`StressTrainer.Core.asmdef`). Test assemblies are excluded from player builds.
+Core logic under test is in `Unity_Project/Assets/Scripts/Core/` (`StressTrainer.Core.asmdef`). Test assemblies are excluded from player builds.
 
 ---
 
@@ -154,9 +154,9 @@ All capstone submission files are under **`Submission/`**:
 | Folder | Contents |
 |--------|----------|
 | [`Submission/Phase A/`](Submission/Phase%20A/) | Phase A book PDF, presentation, prototype video |
-| [`Submission/Phase B/`](Submission/Phase%20B/) | Phase B book PDF, poster, demo video (to be added) |
+| [`Submission/Phase B/`](Submission/Phase%20B/) | Phase B book PDF, poster, demo video |
 
-The **Unity source code** for Phase B is in [`Phase B/`](Phase%20B/) at the repository root (not inside `Submission/`).
+The **Unity source code** for Phase B is in [`Unity_Project/`](Unity_Project/) at the repository root (not inside `Submission/`).
 
 ---
 
