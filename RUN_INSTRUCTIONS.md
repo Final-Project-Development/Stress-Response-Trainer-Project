@@ -31,10 +31,10 @@
 
 The **VR Stress Response Trainer** is a VR training system for practicing decision-making and self-regulation under pressure. The repository includes:
 
-- Main Unity application (`Unity_Project/`) — simulations, user interface, **SCI** (Stress Change Index) computation
-- Smartwatch data bridge (`Fit3UnityBridge/`) — Android app + Windows **HrPcBridge**
-- Capstone deliverables (`Submission/`) — Phase A & B books, poster, demo video
-- Run guide (`RUN_INSTRUCTIONS.md`) — this document
+- Main Unity application (`Unity_Project/`) - simulations, user interface, **SCI** (Stress Change Index) computation
+- Smartwatch data bridge (`Fit3UnityBridge/`) - Android app + Windows **HrPcBridge**
+- Capstone deliverables (`Submission/`) - Phase A & B books, poster, demo video
+- Run guide (`RUN_INSTRUCTIONS.md`) - this document
 
 **Default behaviour:** simulated HR/HRV data (`MockPhysiologySource`). A real watch connection is optional.
 
@@ -110,7 +110,7 @@ This is the fastest way to test - suitable for development, demos and use withou
 | 2 | Open `MainScene.unity` |
 | 3 | Press **Play** ▶ |
 | 4 | On the opening screen - **Register** (recommended) or continue as guest |
-| 5 | Go through Intro → **Calibration** (~60 seconds; stand or sit still) |
+| 5 | Go through Intro → **Calibration** (~60 seconds, stand or sit still) |
 | 6 | Choose **Simulation 1**, **Simulation 2**, or **Environment Learning** |
 | 7 | After a simulation - view the results screen (SCI, recommendations, Pressure Graph) |
 
@@ -362,7 +362,7 @@ Stress-Response-Trainer-Project/
 └── RUN_INSTRUCTIONS.md         # This file
 ```
 
-**Submission deliverables** (books, poster, video) are in `Submission/` — not inside `Unity_Project/`.
+**Submission deliverables** (books, poster, video) are in `Submission/` - not inside `Unity_Project/`.
 
 ### Key scripts
 
@@ -383,14 +383,14 @@ Stress-Response-Trainer-Project/
 
 | Symptom | Fix |
 |---------|-----|
-| Unity won’t open / package errors | Use version **6000.2.15f1**; delete `Library` and reopen |
-| VR not detected | Check Quest Link in Meta Quest app; press Play with headset connected |
-| Toolbar shows **Simulated** | Expected without a watch; for live data start HrPcBridge + phone bridge |
-| No packets from watch | Same Wi-Fi; allow port 7777 in firewall; correct PC IP on phone |
+| Unity won’t open / package errors | Use version **6000.2.15f1**, delete `Library` and reopen |
+| VR not detected | Check Quest Link in Meta Quest app, press Play with headset connected |
+| Toolbar shows **Simulated** | Expected without a watch, for live data start HrPcBridge + phone bridge |
+| No packets from watch | Same Wi-Fi, allow port 7777 in firewall, correct PC IP on phone |
 | Pressure Graph empty | HR may arrive only **after** the watch workout ends - complete the full simulation |
 | Help won’t open in VR | Use **A+X** or the Help button in the toolbar |
-| Hint not visible | Confirm you are in active Sim 1/2; press Hint on the Mission Status panel |
-| Phase A / Phase B files very small | Run `git lfs pull` for PDF, PPT, and video files in `Submission/` |
+| Hint not visible | Confirm you are in active Sim 1/2, press Hint on the Mission Status panel |
+| Phase A / Phase B files very small | Run `git lfs pull` for PDF, PPT and video files in `Submission/` |
 
 ---
 
