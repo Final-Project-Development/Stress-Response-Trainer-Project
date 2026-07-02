@@ -1,26 +1,32 @@
-# Capstone Submission Package (61999 — Phase B)
+# Capstone Submission Package (61999)
 
 **Project:** VR Stress Response Trainer  
 **Team code:** 26-1-D-18  
 **Authors:** Sapir Gerstman, Ido Ben Amara  
 **Advisor:** Dr. Moshe Sulamy  
 
-This folder holds **submission deliverables** for the Software Engineering capstone (Phase B), as required by the department guidelines.
+This folder holds **all submission deliverables** for the Software Engineering capstone (Phases A and B), as required by the department guidelines.
 
 ---
 
-## What belongs in this repository
+## What belongs here
 
 | Deliverable | Location | Status |
 |-------------|----------|--------|
-| **Phase A project book** | [`Phase A/`](../Phase%20A/) | Included (`Our Final project 26-D-1-18.pdf`) |
-| **Phase A presentation** | [`Phase A/`](../Phase%20A/) | Included (`Our Final Presentation.pptx`) |
-| **Phase A demo video** | [`Phase A/`](../Phase%20A/) | Included (`prototype_video.mp4`) |
-| **Phase B project book** | [`Submission/Phase B/`](Phase%20B/) | *To be added* |
-| **Poster (A0, English)** | [`Submission/Phase B/`](Phase%20B/) | *To be added* |
-| **Demo video (≤ 2 min)** | [`Submission/Phase B/`](Phase%20B/) | *To be added* |
-| **Full source code** | [`Phase B/`](../Phase%20B/), [`Fit3UnityBridge/`](../Fit3UnityBridge/) | Included on `main` |
-| **Run instructions** | [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md) | Included |
+| **Phase A project book** | [`Phase A/`](Phase%20A/) | Included (`Our Final project 26-D-1-18.pdf`) |
+| **Phase A presentation** | [`Phase A/`](Phase%20A/) | Included (`Our Final Presentation.pptx`) |
+| **Phase A demo video** | [`Phase A/`](Phase%20A/) | Included (`prototype_video.mp4`) |
+| **Phase B project book** | [`Phase B/`](Phase%20B/) | *To be added* |
+| **Poster (A0, English)** | [`Phase B/`](Phase%20B/) | *To be added* |
+| **Demo video (≤ 2 min)** | [`Phase B/`](Phase%20B/) | *To be added* |
+
+**Source code and run instructions** (not in this folder):
+
+| Item | Location |
+|------|----------|
+| Unity VR application | [`Phase B/`](../Phase%20B/) (repository root) |
+| Watch bridge | [`Fit3UnityBridge/`](../Fit3UnityBridge/) |
+| Run instructions | [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md) |
 
 ---
 
@@ -28,14 +34,14 @@ This folder holds **submission deliverables** for the Software Engineering capst
 
 ```
 Stress-Response-Trainer-Project/
-├── Phase A/                 # Phase A deliverables (semester 1)
 ├── Submission/
 │   ├── README.md            # This file
-│   └── Phase B/             # Phase B submission files (book, poster, video)
+│   ├── Phase A/             # Phase A deliverables (semester 1)
+│   └── Phase B/             # Phase B deliverables (book, poster, video)
 ├── Phase B/                 # Unity VR application (source)
 ├── Fit3UnityBridge/         # Watch bridge (source)
-├── RUN_INSTRUCTIONS.md    # How to build and run
-└── README.md                # Project overview
+├── RUN_INSTRUCTIONS.md
+└── README.md
 ```
 
 ---
@@ -52,8 +58,8 @@ See [`Phase B/README.md`](Phase%20B/README.md) for the checklist.
 
 ---
 
-## Software (not in this folder)
+## Software
 
-The runnable system is the Unity project and bridges in the repository root — not inside `Submission/`. Open **`Phase B`** in Unity Hub and follow [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md).
+The runnable system is the Unity project and bridges at the repository root. Open **`Phase B`** in Unity Hub and follow [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md).
 
 The application includes a built-in **Help User** system (Help panel, mission hints, Environment Learning tour).

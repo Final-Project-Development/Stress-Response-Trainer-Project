@@ -14,8 +14,7 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 
 | Path | Description |
 |------|-------------|
-| **`Submission/`** | **Capstone submission package** : Phase B book, poster, and demo video ([details](Submission/README.md)). |
-| **`Phase A/`** | Previous-semester prototype deliverables (presentation, project phase A book, demo video). |
+| **`Submission/`** | **Capstone submission package** — Phase A & B books, poster, demo video ([details](Submission/README.md)). |
 | **`Phase B/`** | **Main Unity VR training application** (Unity 6000.2.15f1). Open this folder in Unity Hub. |
 | **`Fit3UnityBridge/`** | Wearable data pipeline: Android bridge apps + Windows **HrPcBridge** relay. |
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype for alternate wearables (not connected to Unity by default). |
@@ -148,17 +147,16 @@ Core logic under test is in `Phase B/Assets/Scripts/Core/` (`StressTrainer.Core.
 
 ---
 
-## Phase A (previous semester)
+## Submission deliverables
 
-`Phase A/` holds the **first-semester prototype** submission materials:
+All capstone submission files are under **`Submission/`**:
 
-- `Our Final Presentation.pptx`
-- `Our Final project 26-D-1-18.pdf`
-- `prototype_video.mp4`
+| Folder | Contents |
+|--------|----------|
+| [`Submission/Phase A/`](Submission/Phase%20A/) | Phase A book PDF, presentation, prototype video |
+| [`Submission/Phase B/`](Submission/Phase%20B/) | Phase B book PDF, poster, demo video (to be added) |
 
-Phase B is the current, full VR training application developed in the second semester.
-
-**Phase B submission files** (book PDF, poster, demo video) go in [`Submission/Phase B/`](Submission/Phase%20B/).
+The **Unity source code** for Phase B is in [`Phase B/`](Phase%20B/) at the repository root (not inside `Submission/`).
 
 ---
 

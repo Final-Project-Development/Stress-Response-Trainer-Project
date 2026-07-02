@@ -33,7 +33,7 @@ The **VR Stress Response Trainer** is a VR training system for practicing decisi
 
 - Main Unity application (`Phase B/`) - simulations, user interface, **SCI** (Stress Change Index) computation
 - Smartwatch data bridge (`Fit3UnityBridge/`) - Android app + Windows **HrPcBridge**
-- Previous-semester prototype (`Phase A/`) - presentation, project book PDF, demo video
+- Previous-semester prototype (`Submission/Phase A/`) — presentation, project book PDF, demo video
 
 **Default behaviour:** simulated HR/HRV data (`MockPhysiologySource`). A real watch connection is optional.
 
@@ -70,7 +70,7 @@ The **VR Stress Response Trainer** is a VR training system for practicing decisi
 | **.NET SDK** | 8.0 | Run HrPcBridge |
 | **Android Studio** | Latest | Build APK (watch pipeline only) |
 | **Git** | Latest | Clone the repository |
-| **Git LFS** | Installed | Large files in `Phase A` |
+| **Git LFS** | Installed | Large files in `Submission/Phase A` and `Submission/Phase B` |
 
 ---
 
@@ -340,7 +340,9 @@ See also: `Phase B/Assets/Tests/README.md`
 
 ```
 Stress-Response-Trainer-Project/
-├── Phase A/                    # Previous-semester prototype deliverables
+├── Submission/
+│   ├── Phase A/                # Phase A deliverables (book, presentation, video)
+│   └── Phase B/                # Phase B deliverables (book, poster, video)
 ├── Phase B/                    # Main Unity application
 │   ├── Assets/
 │   │   ├── Scenes/MainScene.unity
@@ -381,7 +383,7 @@ Stress-Response-Trainer-Project/
 | Pressure Graph empty | HR may arrive only **after** the watch workout ends - complete the full simulation |
 | Help won’t open in VR | Use **A+X** or the Help button in the toolbar |
 | Hint not visible | Confirm you are in active Sim 1/2; press Hint on the Mission Status panel |
-| Phase A files very small | Run `git lfs pull` for PPT/PDF/video files |
+| Phase A / Phase B files very small | Run `git lfs pull` for PDF, PPT, and video files in `Submission/` |
 
 ---
 
