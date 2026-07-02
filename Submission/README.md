@@ -26,35 +26,7 @@ This folder holds **all submission deliverables** for the Software Engineering c
 |------|----------|
 | Unity VR application | [`Phase B/`](../Phase%20B/) (repository root) |
 | Watch bridge | [`Fit3UnityBridge/`](../Fit3UnityBridge/) |
-| Run instructions | [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md) |
-
----
-
-## Folder layout
-
-```
-Stress-Response-Trainer-Project/
-├── Submission/
-│   ├── README.md            # This file
-│   ├── Phase A/             # Phase A deliverables (semester 1)
-│   └── Phase B/             # Phase B deliverables (book, poster, video)
-├── Phase B/                 # Unity VR application (source)
-├── Fit3UnityBridge/         # Watch bridge (source)
-├── RUN_INSTRUCTIONS.md
-└── README.md
-```
-
----
-
-## Phase B files to upload
-
-Place the following in **`Submission/Phase B/`** before final submission:
-
-1. **`Phase B - final project 26-1-D-18.pdf`** — project book (main chapters + appendices)
-2. **`Poster.pdf`** or **`Poster.png`** — A0 summary poster (English)
-3. **`demo_video.mp4`** — software demo (maximum 2 minutes)
-
-See [`Phase B/README.md`](Phase%20B/README.md) for the checklist.
+| Run instructions | [`RUN_INSTRUCTIONS.md`](../RUN_INSTRUCTIONS.md) 
 
 ---
 
