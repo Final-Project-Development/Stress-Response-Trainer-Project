@@ -22,20 +22,18 @@ Immersive VR training platform for practicing self-regulation and decision-makin
 | **`data_transfer_FP/`** | Optional Python FastAPI WebSocket prototype |
 | **`RUN_INSTRUCTIONS.md`** | Full setup, VR, watch pipeline, Help User system and troubleshooting |
 
-**Recommended branch:** `main` - latest VR build, mission UI, watch integration and automated tests.
-
 ---
 
 ## What the application does
 
 1. **Login / registration** - user accounts and session history
-2. **Calibration** - ~60 seconds to establish a personal HR/HRV baseline
+2. **Calibration** - 60 seconds to establish a personal HR/HRV baseline
 3. **Environment Learning** - optional guided tour of the training hub
-4. **Simulation 1 - Indoor Survival** - shelter and safety tasks under air-raid stressors
+4. **Simulation 1 - Indoor Survival** - shelter and safety tasks under stressors
 5. **Simulation 2 - First Aid** - locate and treat a wounded casualty
-6. **Results** - SCI score, performance summary and Pressure Graph (HR timeline vs. baseline)
+6. **Results** - SCI score, performance summary and Pressure Graph
 
-Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline below) or from **simulated HR/HRV** when no watch is connected (`MockPhysiologySource`, toolbar shows *Simulated*).
+Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline below) or from **simulated HR/HRV** when no watch is connected.
 
 ---
 
@@ -44,7 +42,7 @@ Physiology can come from a **Samsung Galaxy Fit3** (via the bridge pipeline belo
 The system uses a **four-node distributed pipeline**. In the primary lab setup (PC VR with Meta Quest Link), Unity runs on the Windows PC, the Quest is the VR display only.
 
 ```
-Samsung Watch → (BLE) → Samsung Health (phone) → Fit3 Samsung Bridge (Android) → Unity (Unity_Project) → Quest Link → Meta Quest
+Samsung Watch → Samsung Health (phone) → Fit3 Samsung Bridge (Android) → Unity Project → Quest Link to Meta Quest
 ```
 
 | Node | Component | Role |
@@ -163,7 +161,7 @@ The **Unity source code** is in [`Unity_Project/`](Unity_Project/) at the reposi
 |--------|---------|
 | **`main`** | **Default.** Latest integrated VR app, tests and bridges |
 | `vr-improvements` | Merged into `main` |
-| `unity-game` | Earlier integration branch (historical) |
+| `unity-game` | Earlier integration branch |
 | `data-transfer` | Watch bridge experiments (selectively merged) |
 
 ---
