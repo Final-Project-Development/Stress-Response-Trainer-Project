@@ -5,7 +5,7 @@
 **Authors:** Sapir Gerstman, Ido Ben Amara  
 **Advisor:** Dr. Moshe Sulamy  
 
-This folder holds **all submission deliverables** for the Software Engineering capstone (Phases A and B), as required by the department guidelines.
+This folder holds **all submission deliverables** for the Software Engineering capstone (Phases A and B).
 
 ---
 
@@ -44,19 +44,6 @@ Stress-Response-Trainer-Project/
 └── README.md
 ```
 
----
-
-## Phase B files
-
-| File | Status |
-|------|--------|
-| `Phase B - final project 26-D-1-18.pdf` | Uploaded |
-| `Poster.pdf` | Uploaded |
-| `demo_video.mp4` | Pending |
-
-See [`Phase B/README.md`](Phase%20B/README.md) for the checklist and upload commands.
-
----
 
 ## Software
 
